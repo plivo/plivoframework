@@ -13,11 +13,11 @@ __name__ = "telephonie"
 
 __author__ = "Telephonie Team"
 
-__author_email__ = "telephonie.team@gmail.com"
+__author_email__ = "telephonie@miglu.com"
 
 __maintainer__ = "Telephonie Team"
 
-__maintainer_email__ = "telephonie.team@gmail.com"
+__maintainer_email__ = "telephonie@miglu.com"
 
 __licence__ = "unknown"
 
