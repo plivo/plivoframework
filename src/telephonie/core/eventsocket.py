@@ -5,6 +5,7 @@ Event Socket class
 
 import types
 import gevent
+import gevent.socket as socket
 import gevent.queue as queue
 import gevent.pool
 from telephonie.core.commands import Commands
@@ -18,24 +19,24 @@ MAXLINES_PER_EVENT = 2000
 
 
 
-class BaseEventSocket(object):
-    '''BaseEventSocket class'''
-    def __init__(self, poolSize=1000, eventCallback=None):
-        # callbacks for response events
+class EventSocket(Commands):
+    '''EventSocket class'''
+    def __init__(self, filter="ALL", poolSize=1000):
+        # callbacks for reading events and sending response
         self._responseCallbacks = {'api/response':self._apiResponse,
-                                   'command/reply':self._commandReplyResponse,
-                                   'text/disconnect-notice':self._disconnectResponse
+                                   'command/reply':self._commandReply,
+                                   'text/event-plain':self._eventPlain,
+                                   'auth/request':self._authRequest,
+                                   'text/disconnect-notice':self._disconnectNotice
                                   }
+        # default event filter
+        self._filter = filter
         # queue for response events
         self.queue = queue.Queue()
         # set connected to False
         self.connected = False
         # create pool for spawning
         self.pool = gevent.pool.Pool(poolSize)
-        # event callback class
-        self._eventCallbackClass = eventCallback
-        # current jobs from bgapi command
-        self._bgapiJobs = {}
         # handler thread
         self._handlerThread = None
 
@@ -60,17 +61,20 @@ class BaseEventSocket(object):
         if self._handlerThread:
             self._handlerThread.kill()
         
-        
     def handleEvents(self):
         '''
         Endless loop getting and dispatching event.
         '''
         while True:
-            ev = self.getEvent()
-            # Dispatch this event
-            if ev:
-                self.pool.spawn(self.dispatchEvent, ev)
-            gevent.sleep(0.005)
+            try:
+                # get event and dispatch to handler
+                ev = self.getEvent()
+                if ev:
+                    self.pool.spawn(self.dispatchEvent, ev)
+                    gevent.sleep(0.005)
+            except (LimitExceededError, socket.error):
+                self.connected = False
+                raise
 
     def readEvent(self):
         '''
@@ -120,48 +124,23 @@ class BaseEventSocket(object):
         '''
         ev = self.readEvent()
         # Get callback response for this event (default is self._defaultResponse)
-        _getResponse = self._responseCallbacks.get(ev.getContentType(), self._defaultResponse)
+        _getResponse = self._responseCallbacks.get(ev.getContentType(), self._unknownEvent)
         # If callback response found, start this method to get final event
         if _getResponse:
             ev = _getResponse(ev)
         return ev
 
-    def _catchBgapiJob(self ,ev):
-        # FIXME NOT OPTIMIZED, NEED MORE WORK ... wen can probably use gevent.event.AsyncResult :) 
-        # If Job-UUID header value present in self._bgapiJobs
-        # add this event to bgapi response
-        # and remove bgapi response from self._bgapiJobs
-        jobuuid = ev.getHeader("Job-UUID")
-        eventname = ev.getHeader("Event-Name")
-        if jobuuid and (eventname == "BACKGROUND_JOB"):
-            bgapiResponse = self._bgapiJobs.get(jobuuid, None)
-            if bgapiResponse:
-                bgapiResponse.setBackgroundJob(ev)
-                del self._bgapiJobs[jobuuid]
-
-    def _commandReplyResponse(self, ev):
+    def _authRequest(self, ev):
         '''
-        Callback response for Event type command/reply.
+        Callback for reading auth/request and sending response.
         '''
-        # Get raw data for this event
-        raw = self.readRaw(ev)
-        if raw:
-            # If raw was found drop current event 
-            # and replace with Event created from raw
-            ev = Event(raw)
-            # Get raw response from Event Content-Length header 
-            # and raw buffer
-            rawresponse = self.readRawResponse(ev, raw)
-            # If rawresponse was found, this is our Event body
-            if rawresponse:
-                ev.setBody(rawresponse)
-        # Push Event to response events queue and return Event
+        # Just push Event to response events queue and return Event
         self.queue.put(ev)
         return ev
 
     def _apiResponse(self, ev):
         '''
-        Callback response for Event type api/response.
+        Callback for reading api/response and sending response.
         '''
         # Get raw data for this event
         raw = self.readRaw(ev)
@@ -172,9 +151,17 @@ class BaseEventSocket(object):
         self.queue.put(ev)
         return ev
 
-    def _defaultResponse(self, ev):
+    def _commandReply(self, ev):
         '''
-        Default callback response for Event.
+        Callback for reading command/reply and sending response.
+        '''
+        # Just push Event to response events queue and return Event
+        self.queue.put(ev)
+        return ev
+
+    def _eventPlain(self, ev):
+        '''
+        Callback for reading text/event-plain.
         '''
         # Get raw data for this event
         raw = self.readRaw(ev)
@@ -191,24 +178,53 @@ class BaseEventSocket(object):
         # Just return Event
         return ev
 
-    def _disconnectResponse(self, ev):
+    def _disconnectNotice(self, ev):
         '''
-        Callback response for Event type text/disconnect-notice.
+        Callback for reading text/disconnect-notice.
         '''
         # Stop all and return Event
         self.stop()
-        return ev
+
+    def _unknownEvent(self, ev):
+        '''
+        Callback for reading unknown event type.
+
+        Can be implemented in subclass to process unknown event types.
+        '''
+        pass
 
     def dispatchEvent(self, ev):
         '''
-        Start Event callback for one Event.
+        dispatch one event to eventHandler.
         '''
-        # try to catch background job from event
-        self._catchBgapiJob(ev)
-        # now start event callback
-        if self._eventCallbackClass:
-            self._eventCallbackClass(ev)
+        # now start event handler
+        if self.eventHandler:
+            self.eventHandler(ev)
+
+    def eventHandler(self, ev):
+        '''
+        Event callback handler.
+
+        Can be implemented in subclass to process events in a custom handler.
+        '''
+        pass
         
+    def disconnect(self):
+        '''
+        Disconnect from eventsocket and stop handling events.
+        '''
+        self.transport.close()
+        self.stopEventHandler()
+        self.connected = False
+
+    def connect(self):
+        '''
+        Connect to eventsocket.
+
+        Must be implemented by subclass.
+        '''
+        pass
+
     def _send(self, cmd):
         if isinstance(cmd, types.UnicodeType):
             cmd = cmd.encode("utf-8")
@@ -233,20 +249,14 @@ class BaseEventSocket(object):
         else:
             self._send("%s" % command)
         ev = self.queue.get()
-        # cast to appropriate event type
-        # for _protocolSend, default is CommandResponse
+        # Cast Event to appropriate event type :
         # If event is api, cast to ApiResponse
         if command == 'api':
             ev = ApiResponse.cast(ev)
-        # If event is bgapi :
-        # - cast to BgapiResponse
-        # - add response to current jobs in background.
-        # When Job-UUID will return from event, response will be updated with this event.
+        # If event is bgapi, cast to BgapiResponse
         elif command == "bgapi":
             ev = BgapiResponse.cast(ev)
-            jobuuid = ev.getJobUUID()
-            if jobuuid:
-                self._bgapiJobs[jobuuid] = ev
+        # Default is cast to CommandResponse
         else:
             ev = CommandResponse.cast(ev)
         return ev
@@ -254,31 +264,6 @@ class BaseEventSocket(object):
     def _protocolSendmsg(self, name, args=None, uuid="", lock=False):
         self._sendmsg(name, args, uuid, lock)
         ev = self.queue.get()
-        return ev
+        # Always cast Event to appropriate CommandResponse
+        return CommandResponse.cast(ev)
 
-    def disconnect(self):
-        '''
-        Disconnect from eventsocket and stop handling events.
-        '''
-        self.bgapiJobs = {}
-        self.transport.close()
-        self.stopEventHandler()
-        self.connected = False
-
-    def connect(self):
-        '''
-        Connect to eventsocket.
-
-        Must be implemented by subclass.
-        '''
-        pass
-
-
-
-class EventSocket(BaseEventSocket, Commands):
-    '''
-    EventSocket class
-    '''
-    def __init__(self, filter="ALL", poolSize=1000, eventCallback=None):
-        BaseEventSocket.__init__(self, poolSize, eventCallback)
-        self._filter = filter

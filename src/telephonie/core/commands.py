@@ -25,7 +25,7 @@ class Commands(object):
 
     def event(self, args):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#event"
-        return self._protocolSendmsg("event", args, lock=True)
+        return self._protocolSend("event", args)
 
     def filter(self, args):
         """Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#filter
@@ -45,6 +45,14 @@ class Commands(object):
         >>> filter_delete('Event-Name MYEVENT')
         """
         return self._protocolSend('filter delete', args)
+
+    def divert_events(self, flag):
+        """Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#divert_events
+
+        >>> divert_events("off")
+        >>> divert_events("on")
+        """
+        return self._protocolSend('divert_events', flag)
 
     def verbose_events(self):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_verbose_events

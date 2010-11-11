@@ -11,10 +11,11 @@ from telephonie.core.errors import ConnectError
 
 
 class InboundEventSocket(EventSocket):
-    """FreeSWITCH Inbound Event Socket
-    """
-    def __init__(self, host, port, password, filter="ALL", poolSize=1000, eventCallback=None, connectTimeout=5):
-        EventSocket.__init__(self, filter, poolSize, eventCallback)
+    '''
+    FreeSWITCH Inbound Event Socket
+    '''
+    def __init__(self, host, port, password, filter="ALL", poolSize=1000, connectTimeout=5):
+        EventSocket.__init__(self, filter, poolSize)
         self.password = password
         self._filter = filter
         self.transport = Transport(host, port, connectTimeout=connectTimeout)
@@ -27,7 +28,10 @@ class InboundEventSocket(EventSocket):
         timer = Timeout(self.transport.getConnectTimeout())
         timer.start()
         try:
-            return self.getEvent() 
+            # when auth/request is received, 
+            # _authRequest method in BaseEventSocket push this event to queue
+            # now we just wait this event
+            return self.queue.get()
         except Timeout:
             raise ConnectError("Timeout waiting auth/request") 
         finally:
@@ -45,12 +49,13 @@ class InboundEventSocket(EventSocket):
         except Exception, e:
             raise ConnectError("Transport failure: %s" % str(e))
 
-        # wait auth/request, if timeout, raise ConnectError
-        self._waitAuthRequest()
-
         # start handling events
         self.startEventHandler()
 
+        # wait auth/request, if timeout, raise ConnectError
+        self._waitAuthRequest()
+
+        # we are ready now !
         # authenticate or raise ConnectError
         response = self.auth(self.password)
         if not response.getStatus():
@@ -62,6 +67,7 @@ class InboundEventSocket(EventSocket):
         if not response.getStatus():
             self.disconnect()
             raise ConnectError("Event filter failure")
+
         # set connected flag to True
         self.connected = True
         return True

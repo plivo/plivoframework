@@ -243,39 +243,3 @@ class CommandResponse(Event):
                % (str(self.getHeaders()), str(self.getResponse()))
 
 
-class BackgroundJobEvent(Event):
-    def __init__(self, buffer=""):
-        Event.__init__(self, buffer)
-
-    @classmethod
-    def cast(self, ev):
-        '''
-        Make BackgroundJobEvent instance from Event instance
-        '''
-        cls = BackgroundJobEvent()
-        cls.setHeaders(ev.getHeaders())
-        cls.setBody(ev.getBody())
-        return cls
-
-    def getResponse(self):
-        '''
-        Get response for BACKGROUND_JOB.
-        '''
-        return self.getBody()
-
-    def getJobUUID(self):
-        '''
-        Get Job-UUID from BACKGROUND_JOB.
-        '''
-        return self.getHeader('Job-UUID')
-
-    def getStatus(self):
-        '''
-        Return True if BACKGROUND_JOB success else False.
-        '''
-        return self.getReplyTextStatus()
-
-    def __str__(self):
-        return '<BackgroundJobEvent [headers=%s, response=%s, jobuuid=%s]>' \
-               % (str(self.getHeaders()), str(self.getResponse()), self.getJobUUID())
-
