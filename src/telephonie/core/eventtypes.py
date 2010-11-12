@@ -23,6 +23,12 @@ class Event(object):
                 except ValueError: 
                     pass
 
+    def __getitem__(self, key):
+        return self.getHeader(key)
+
+    def __setitem__(self, key, value):
+        self.setHeader(key, value)
+
     def getContentLength(self):
         '''
         Get Content-Length header as integer.
@@ -95,12 +101,6 @@ class Event(object):
         '''
         return self._body
 
-    def getBodyAsTuple(self):
-        '''
-        Get Event body splitted by line in a tuple.
-        '''
-        return tuple(self._body.splitlines())
-
     def setBody(self, data):
         '''
         Set Event body.
@@ -167,26 +167,6 @@ class BgapiResponse(Event):
         cls.setHeaders(ev.getHeaders())
         cls.setBody(ev.getBody())
         return cls
-
-    def setBackgroundJob(self, ev):
-        '''
-        Set background job Event linked to this jobuuid.
-
-        Return True or False if linking fails.
-        '''
-        # only link background job if Job-UUID match !
-        if ev.getHeader('Job-UUID') == self.getJobUUID():
-            self._backgroundJob = BackgroundJobEvent.cast(ev)  
-            return True
-        return False
-
-    def getBackgroundJob(self):
-        '''
-        Get background job Event.
-
-        Return Event or None.
-        '''
-        return self._backgroundJob
 
     def getResponse(self):
         '''
