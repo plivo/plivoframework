@@ -7,7 +7,6 @@ Core for Telephonie Application Framework
 __all__ = ['transport', 
            'eventsocket', 
            'commands', 
-           'eventcallback', 
            'eventtypes', 
            'errors', 
            'inboundsocket']

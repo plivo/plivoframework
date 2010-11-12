@@ -4,6 +4,7 @@ Event Socket class
 """
 
 import types
+import string
 import gevent
 import gevent.socket as socket
 import gevent.queue as queue
@@ -195,20 +196,32 @@ class EventSocket(Commands):
 
     def dispatchEvent(self, ev):
         '''
-        dispatch one event to eventHandler.
+        Dispatch one event with callback.
         '''
-        # now start event handler
-        if self.eventHandler:
-            self.eventHandler(ev)
+        callback = None
+        eventname = ev.getHeader('Event-Name')
+        # If 'Event-Name' header is found, try to get callback for this event
+        if eventname:
+            method = 'on' + string.capwords(eventname, '_').replace('_', '')
+            callback = getattr(self, method, None)
+        # If no callback found, if onFallback method exists, call it
+        # else return
+        if not callback:
+            if hasattr(self, 'onFallback'):
+                callback = self.onFallback
+            else:
+                return
+        # Call callback.
+        # On exception if onFailure method exists, call it 
+        # else raise current exception
+        try: 
+            callback(ev)
+        except: 
+            if hasattr(self, 'onFailure'):
+                self.onFailure(ev)
+            else:
+                raise
 
-    def eventHandler(self, ev):
-        '''
-        Event callback handler.
-
-        Can be implemented in subclass to process events in a custom handler.
-        '''
-        pass
-        
     def disconnect(self):
         '''
         Disconnect from eventsocket and stop handling events.
