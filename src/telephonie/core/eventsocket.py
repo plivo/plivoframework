@@ -289,6 +289,6 @@ class EventSocket(Commands):
     def _protocolSendmsg(self, name, args=None, uuid="", lock=False):
         self._sendmsg(name, args, uuid, lock)
         ev = self.queue.get()
-        # Always cast Event to appropriate CommandResponse
+        # Always cast Event to CommandResponse
         return CommandResponse.cast(ev)
 

@@ -3,6 +3,9 @@
 Log classes : stdout, syslog and file loggers
 """
 
+import gevent.monkey
+gevent.monkey.patch_thread()
+
 import logging
 import logging.handlers
 from logging import RootLogger

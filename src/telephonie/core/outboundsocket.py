@@ -3,8 +3,6 @@
 Outbound Event Socket class
 """
 
-import gevent.monkey
-gevent.monkey.patch_all()
 from gevent.server import StreamServer
 from gevent.timeout import Timeout
 from telephonie.core.eventsocket import EventSocket
