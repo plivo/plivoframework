@@ -14,7 +14,7 @@ class InboundEventSocket(EventSocket):
     '''
     FreeSWITCH Inbound Event Socket
     '''
-    def __init__(self, host, port, password, filter="ALL", poolSize=1000, connectTimeout=5):
+    def __init__(self, host, port, password, filter="ALL", poolSize=50, connectTimeout=5):
         EventSocket.__init__(self, filter, poolSize)
         self.password = password
         self._filter = filter

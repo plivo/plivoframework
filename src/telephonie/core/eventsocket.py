@@ -22,7 +22,7 @@ MAXLINES_PER_EVENT = 2000
 
 class EventSocket(Commands):
     '''EventSocket class'''
-    def __init__(self, filter="ALL", poolSize=1000):
+    def __init__(self, filter="ALL", poolSize=50):
         # callbacks for reading events and sending response
         self._responseCallbacks = {'api/response':self._apiResponse,
                                    'command/reply':self._commandReply,
@@ -260,13 +260,14 @@ class EventSocket(Commands):
             name = name.encode("utf-8")
         if isinstance(arg, types.UnicodeType):
             arg = arg.encode("utf-8")
-        self.transport.write("sendmsg %s\ncall-command: execute\n" % uuid)
-        self.transport.write("execute-app-name: %s\n" % name)
+        msg = ""
+        msg += "sendmsg %s\ncall-command: execute\n" % uuid
+        msg += "execute-app-name: %s\n" % name
         if arg:
-            self.transport.write("execute-app-arg: %s\n" % arg)
+            msg += "execute-app-arg: %s\n" % arg
         if lock is True:
-            self.transport.write("event-lock: true\n")
-        self.transport.write(EOL)
+            msg += "event-lock: true\n"
+        self.transport.write(msg + EOL)
         
     def _protocolSend(self, command, args=""):
         if args:
