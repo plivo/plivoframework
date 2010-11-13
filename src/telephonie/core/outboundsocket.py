@@ -17,15 +17,17 @@ class OutboundEventSocket(EventSocket):
     '''
     def __init__(self, socket, address, filter="ALL", poolSize=50, connectTimeout=5):
         EventSocket.__init__(self, filter, poolSize)
-        self._filter = filter
         self.transport = OutboundTransport(socket, address, connectTimeout)
-        self.client = None
+        self._uuid = None
+        self._client = None
         # connect
         self.connect()
         # now run 
-        self.run()
-        # stop handler and close socket 
-        self.disconnect()
+        try:
+            self.run()
+        finally:
+            # finish
+            self.disconnect()
 
     def connect(self):
         # start event handler for this client
@@ -35,21 +37,35 @@ class OutboundEventSocket(EventSocket):
         timer = Timeout(self.transport.getConnectTimeout())
         timer.start()
         try:
-            self.client = self._protocolSend("connect")
+            response = self._protocolSend("connect")
+            if not response.getStatus():
+                self.disconnect()
+                raise ConnectError("Error while connecting")
         except Timeout:
             self.disconnect()
             raise ConnectError("Timeout connecting") 
         finally:
             timer.cancel()
 
+        # set channel and channel unique id from this event
+        self._channel = response
+        self._uuid = response.getHeader("Channel-Unique-ID")
+
         # set event filter or raise ConnectError
-        response = self.eventplain(self._filter)
-        if not response.getStatus():
-            self.disconnect()
-            raise ConnectError("Event filter failure")
+        if self._filter:
+            response = self.eventplain(self._filter)
+            if not response.getStatus():
+                self.disconnect()
+                raise ConnectError("Event filter failure")
 
         # set connected flag to True
         self.connected = True
+
+    def getChannel(self):
+        return self.client
+
+    def getChannelUniqueID(self):
+        return self._uuid
 
     def run(self):
         '''

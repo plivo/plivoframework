@@ -195,8 +195,7 @@ class EventSocket(Commands):
         '''
         Callback for reading text/disconnect-notice.
         '''
-        # Stop all and return Event
-        self.stop()
+        self.disconnect()
 
     def _unknownEvent(self, ev):
         '''

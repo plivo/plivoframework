@@ -17,7 +17,6 @@ class InboundEventSocket(EventSocket):
     def __init__(self, host, port, password, filter="ALL", poolSize=50, connectTimeout=5):
         EventSocket.__init__(self, filter, poolSize)
         self.password = password
-        self._filter = filter
         self.transport = InboundTransport(host, port, connectTimeout=connectTimeout)
 
     def _waitAuthRequest(self):
@@ -63,10 +62,11 @@ class InboundEventSocket(EventSocket):
             raise ConnectError("Auth failure")
 
         # set event filter or raise ConnectError
-        response = self.eventplain(self._filter)
-        if not response.getStatus():
-            self.disconnect()
-            raise ConnectError("Event filter failure")
+        if self._filter:
+            response = self.eventplain(self._filter)
+            if not response.getStatus():
+                self.disconnect()
+                raise ConnectError("Event filter failure")
 
         # set connected flag to True
         self.connected = True

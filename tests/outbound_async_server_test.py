@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Outbound server example in sync mode full .
+Outbound server example in async mode full .
 """
 
 from telephonie.core.outboundsocket import (OutboundEventSocket, OutboundServer)
 from telephonie.utils.logger import StdoutLogger
 import gevent.queue
+import gevent
 
 
-class SyncOutboundEventSocket(OutboundEventSocket):
+class AsyncOutboundEventSocket(OutboundEventSocket):
     def __init__(self, socket, address, log, filter=None, poolSize=50, connectTimeout=5):
         self.log = log
         self._action_queue = gevent.queue.Queue()
@@ -16,19 +17,19 @@ class SyncOutboundEventSocket(OutboundEventSocket):
 
     def _protocolSend(self, command, args=""):
         self.log.info("[%s] args='%s'" % (command, args))
-        res = super(SyncOutboundEventSocket, self)._protocolSend(command, args)
+        res = super(AsyncOutboundEventSocket, self)._protocolSend(command, args)
         self.log.info(str(res))
         return res
 
     def _protocolSendmsg(self, name, args=None, uuid="", lock=False):
         self.log.info("[%s] args=%s uuid='%s' lock=%s" % (name, str(args), uuid, str(lock)))
-        res = super(SyncOutboundEventSocket, self)._protocolSendmsg(name, args, uuid, lock)
+        res = super(AsyncOutboundEventSocket, self)._protocolSendmsg(name, args, uuid, lock)
         self.log.info(str(res))
         return res
 
     def onChannelExecuteComplete(self, ev):
         if ev.getHeader('Application') == 'playback':
-            self.log.info("Playback done (%s)" % str(ev.getHeader('Application-Response')))
+            self._action_queue.put(ev)
 
     def onChannelAnswer(self, ev):
         gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer
@@ -47,11 +48,16 @@ class SyncOutboundEventSocket(OutboundEventSocket):
 
         # play file
         self.playback("/usr/local/freeswitch/sounds/en/us/callie/ivr/8000/ivr-hello.wav", terminators="*")
+        # wait until playback is done
+        self.log.info("Waiting end of playback ...")
+        ev = self._action_queue.get()
+        # log playback execute response
+        self.log.info("Playback done (%s)" % str(ev.getHeader('Application-Response')))
         # finally hangup
         self.hangup()
 
 
-class SyncOutboundServer(OutboundServer):
+class AsyncOutboundServer(OutboundServer):
     def __init__(self, address, handleClass, filter=None):
         self.log = StdoutLogger()
         self.log.info("Start server %s ..." % str(address))
@@ -65,6 +71,6 @@ class SyncOutboundServer(OutboundServer):
 
 
 if __name__ == '__main__':
-    outboundserver = SyncOutboundServer(('127.0.0.1', 8084), SyncOutboundEventSocket)
+    outboundserver = AsyncOutboundServer(('127.0.0.1', 8084), AsyncOutboundEventSocket)
     outboundserver.serve_forever()
 
