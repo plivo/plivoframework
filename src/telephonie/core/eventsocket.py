@@ -36,10 +36,22 @@ class EventSocket(Commands):
         self.queue = queue.Queue()
         # set connected to False
         self.connected = False
-        # create pool for spawning
-        self.pool = gevent.pool.Pool(poolSize)
+        # create pool for spawning if poolSize > 0
+        if poolSize > 0:
+            self.pool = gevent.pool.Pool(poolSize)
+        else:
+            self.pool = None
         # handler thread
         self._handlerThread = None
+
+    def _spawn(self, func, *args, **kwargs):
+        '''
+        Spawn with or without pool.
+        '''
+        if self.pool:
+            self.pool.spawn(func, *args, **kwargs)
+        else:
+            gevent.spawn(func, *args, **kwargs)
 
     def isConnected(self):
         '''
@@ -71,7 +83,7 @@ class EventSocket(Commands):
                 # get event and dispatch to handler
                 ev = self.getEvent()
                 if ev:
-                    self.pool.spawn(self.dispatchEvent, ev)
+                    self._spawn(self.dispatchEvent, ev)
                     gevent.sleep(0.005)
             except (LimitExceededError, socket.error):
                 self.connected = False

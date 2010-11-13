@@ -6,7 +6,7 @@ Inbound Event Socket class
 import gevent
 from gevent.timeout import Timeout
 from telephonie.core.eventsocket import EventSocket
-from telephonie.core.transport import Transport
+from telephonie.core.transport import InboundTransport
 from telephonie.core.errors import ConnectError
 
 
@@ -18,7 +18,7 @@ class InboundEventSocket(EventSocket):
         EventSocket.__init__(self, filter, poolSize)
         self.password = password
         self._filter = filter
-        self.transport = Transport(host, port, connectTimeout=connectTimeout)
+        self.transport = InboundTransport(host, port, connectTimeout=connectTimeout)
 
     def _waitAuthRequest(self):
         '''

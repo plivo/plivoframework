@@ -9,4 +9,5 @@ __all__ = ['transport',
            'commands', 
            'eventtypes', 
            'errors', 
-           'inboundsocket']
+           'inboundsocket',
+           'outboundsocket']
