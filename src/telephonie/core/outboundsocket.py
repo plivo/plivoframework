@@ -15,7 +15,7 @@ class OutboundEventSocket(EventSocket):
     '''
     FreeSWITCH Outbound Event Socket
     '''
-    def __init__(self, socket, address, filter="ALL", poolSize=50, connectTimeout=5):
+    def __init__(self, socket, address, filter="ALL", poolSize=500, connectTimeout=5):
         EventSocket.__init__(self, filter, poolSize)
         self.transport = OutboundTransport(socket, address, connectTimeout)
         self._uuid = None

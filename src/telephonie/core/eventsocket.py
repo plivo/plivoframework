@@ -22,7 +22,7 @@ MAXLINES_PER_EVENT = 2000
 
 class EventSocket(Commands):
     '''EventSocket class'''
-    def __init__(self, filter="ALL", poolSize=50):
+    def __init__(self, filter="ALL", poolSize=500):
         # callbacks for reading events and sending response
         self._responseCallbacks = {'api/response':self._apiResponse,
                                    'command/reply':self._commandReply,

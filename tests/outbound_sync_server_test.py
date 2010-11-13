@@ -9,10 +9,10 @@ import gevent.queue
 
 
 class SyncOutboundEventSocket(OutboundEventSocket):
-    def __init__(self, socket, address, log, filter=None, poolSize=50, connectTimeout=5):
+    def __init__(self, socket, address, log, filter=None):
         self.log = log
         self._action_queue = gevent.queue.Queue()
-        OutboundEventSocket.__init__(self, socket, address, filter, poolSize, connectTimeout)
+        OutboundEventSocket.__init__(self, socket, address, filter)
 
     def _protocolSend(self, command, args=""):
         self.log.info("[%s] args='%s'" % (command, args))
