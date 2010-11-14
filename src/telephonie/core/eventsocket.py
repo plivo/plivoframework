@@ -9,6 +9,7 @@ import gevent
 import gevent.socket as socket
 import gevent.queue as queue
 import gevent.pool
+from gevent import GreenletExit
 from telephonie.core.commands import Commands
 from telephonie.core.eventtypes import Event
 from telephonie.core.eventtypes import (CommandResponse, ApiResponse, BgapiResponse)
@@ -88,7 +89,10 @@ class EventSocket(Commands):
             except (LimitExceededError, socket.error):
                 self.connected = False
                 raise
-
+            except GreenletExit, e:
+                self.connected = False
+                raise
+        
     def readEvent(self):
         '''
         Read one Event from socket until EOL.

@@ -18,7 +18,10 @@ class Transport(object):
         return self.sockfd.read(length)
 
     def close(self):
-        self.sock.close()
+        try:
+            self.sock.close()
+        except:
+            pass
 
     def getConnectTimeout(self):
         return self.timeout
