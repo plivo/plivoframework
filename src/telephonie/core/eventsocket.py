@@ -83,7 +83,8 @@ class EventSocket(Commands):
             try:
                 # get event and dispatch to handler
                 ev = self.getEvent()
-                if ev:
+                # only dispatch event if Event-Name header found
+                if ev and ev.getHeader('Event-Name'):
                     self._spawn(self.dispatchEvent, ev)
                     gevent.sleep(0.005)
             except (LimitExceededError, socket.error):
@@ -213,12 +214,8 @@ class EventSocket(Commands):
         '''
         Dispatch one event with callback.
         '''
-        callback = None
-        eventname = ev.getHeader('Event-Name')
-        # If 'Event-Name' header is found, try to get callback for this event
-        if eventname:
-            method = 'on' + string.capwords(eventname, '_').replace('_', '')
-            callback = getattr(self, method, None)
+        method = 'on' + string.capwords(ev.getHeader('Event-Name'), '_').replace('_', '')
+        callback = getattr(self, method, None)
         # If no callback found, if onFallback method exists, call it
         # else return
         if not callback:

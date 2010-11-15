@@ -32,7 +32,7 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
             self._action_queue.put(ev)
 
     def onChannelAnswer(self, ev):
-        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer
+        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer 
         self._action_queue.put(ev)
 
     def run(self):
