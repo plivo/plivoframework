@@ -22,7 +22,7 @@ LOG_FATAL = logging.FATAL
 LOG_NOTSET = logging.NOTSET
 
 
-__default_servicename__ = os.path.basename(sys.argv[0])
+__default_servicename__ = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
 
 class StdoutLogger(object):
@@ -140,9 +140,7 @@ class Syslog(logging.handlers.SysLogHandler):
 
 class SysLogger(StdoutLogger):
     def __init__(self, addr='/dev/log', syslogfacility="local0", \
-                 loglevel=LOG_DEBUG, servicename=None):
-        if not servicename:
-            servicename = default_servicename
+                 loglevel=LOG_DEBUG, servicename=__default_servicename__):
         fac = Syslog.facility_names[syslogfacility]
         h = Syslog(address=addr, facility=fac)
         h.setLevel(loglevel)
@@ -153,10 +151,8 @@ class SysLogger(StdoutLogger):
 
 
 class FileLogger(StdoutLogger):
-    def __init__(self, logfile='/tmp/fshttpstream.log', \
-                 loglevel=LOG_DEBUG, servicename=None):
-        if not servicename:
-            servicename = default_servicename
+    def __init__(self, logfile='/tmp/%s.log' % __default_servicename__, \
+                 loglevel=LOG_DEBUG, servicename=__default_servicename__):
         h = logging.FileHandler(filename=logfile)
         h.setLevel(loglevel)
         fmt = logging.Formatter("%(asctime)s "+servicename+"[%(process)d]: %(levelname)s: %(message)s")
