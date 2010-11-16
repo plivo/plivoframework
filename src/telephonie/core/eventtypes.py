@@ -51,7 +51,7 @@ class Event(object):
         '''
         return self.getHeader('Reply-Text') 
 
-    def getReplyTextStatus(self):
+    def isReplyTextSuccess(self):
         '''
         Return True if ReplyText header is beginning with +OK else False.
         '''
@@ -141,11 +141,11 @@ class ApiResponse(Event):
         '''
         return self.getBody()
 
-    def getStatus(self):
+    def isSuccess(self):
         '''
         Return True if api command success else False.
         '''
-        return self._body and self._body[:3] == '+OK'
+        return self.isReplyTextSuccess()
 
     def __str__(self):
         return '<ApiResponse [headers=%s, response=%s]>' \
@@ -180,11 +180,11 @@ class BgapiResponse(Event):
         '''
         return self.getHeader('Job-UUID')
 
-    def getStatus(self):
+    def isSuccess(self):
         '''
         Return True if bgapi command success else False.
         '''
-        return self.getReplyTextStatus()
+        return self.isReplyTextSuccess()
 
     def __str__(self):
         return '<BgapiResponse [headers=%s, response=%s, jobuuid=%s]>' \
@@ -212,11 +212,11 @@ class CommandResponse(Event):
         '''
         return self.getReplyText()
 
-    def getStatus(self):
+    def isSuccess(self):
         '''
         Return True if command success else False.
         '''
-        return self.getReplyTextStatus()
+        return self.isReplyTextSuccess()
 
     def __str__(self):
         return '<CommandResponse [headers=%s, response=%s]>' \

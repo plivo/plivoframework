@@ -56,15 +56,15 @@ class InboundEventSocket(EventSocket):
 
         # we are ready now !
         # authenticate or raise ConnectError
-        response = self.auth(self.password)
-        if not response.getStatus():
+        authResponse = self.auth(self.password)
+        if not authResponse.isSuccess():
             self.disconnect()
             raise ConnectError("Auth failure")
 
         # set event filter or raise ConnectError
         if self._filter:
-            response = self.eventplain(self._filter)
-            if not response.getStatus():
+            filterResponse = self.eventplain(self._filter)
+            if not filterResponse.isSuccess():
                 self.disconnect()
                 raise ConnectError("Event filter failure")
 

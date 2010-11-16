@@ -13,13 +13,13 @@ if __name__ == '__main__':
             log.error("connect failed: %s" % str(e))
             raise SystemExit('exit')
 
-        response = iev.api("FALSECOMMAND")
-        log.info(str(response))
-        if not response.getStatus():
-            log.error("api failed with response %s" % response.getResponse())
+        apiResponse = iev.api("FALSECOMMAND")
+        log.info(str(apiResponse))
+        if not apiResponse.isSuccess():
+            log.error("api failed with response %s" % apiResponse.isSuccess())
             raise SystemExit('exit')
 
-        log.info("api success with response %s" % response.getResponse())
+        log.info("api success with response %s" % apiResponse.isSuccess())
 
     except (SystemExit, KeyboardInterrupt): pass
 

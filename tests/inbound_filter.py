@@ -13,13 +13,13 @@ if __name__ == '__main__':
             log.error("connect failed: %s" % str(e))
             raise SystemExit('exit')
 
-        response = iev.filter("Event-Name CHANNEL_ANSWER")
-        log.info(str(response))
-        if not response.getStatus():
-            log.error("filter failed with response %s" % response.getResponse())
+        filterResponse = iev.filter("Event-Name CHANNEL_ANSWER")
+        log.info(str(filterResponse))
+        if not filterResponse.isSuccess():
+            log.error("filter failed with response %s" % filterResponse.getResponse())
             raise SystemExit('exit')
 
-        log.info("filter success with response %s" % response.getResponse())
+        log.info("filter success with response %s" % filterResponse.getResponse())
 
     except (SystemExit, KeyboardInterrupt): pass
 

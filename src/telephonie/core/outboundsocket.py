@@ -37,8 +37,8 @@ class OutboundEventSocket(EventSocket):
         timer = Timeout(self.transport.getConnectTimeout())
         timer.start()
         try:
-            response = self._protocolSend("connect")
-            if not response.getStatus():
+            connectResponse = self._protocolSend("connect")
+            if not connectResponse.isSuccess():
                 self.disconnect()
                 raise ConnectError("Error while connecting")
         except Timeout:
@@ -53,8 +53,8 @@ class OutboundEventSocket(EventSocket):
 
         # set event filter or raise ConnectError
         if self._filter:
-            response = self.eventplain(self._filter)
-            if not response.getStatus():
+            filterResponse = self.eventplain(self._filter)
+            if not filterResponse.isSuccess():
                 self.disconnect()
                 raise ConnectError("Event filter failure")
 

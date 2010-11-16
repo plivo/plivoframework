@@ -141,7 +141,7 @@ class EventSocket(Commands):
         Get complete Event, and process response callback.
         '''
         ev = self.readEvent()
-        # Get callback response for this event (default is self._defaultResponse)
+        # Get callback response for this event (set to self._unknownEvent, if no matching callable)
         _getResponse = self._responseCallbacks.get(ev.getContentType(), self._unknownEvent)
         # If callback response found, start this method to get final event
         if _getResponse:
@@ -267,13 +267,10 @@ class EventSocket(Commands):
             msg += "execute-app-arg: %s\n" % arg
         if lock is True:
             msg += "event-lock: true\n"
-        self.transport.write(msg + EOL)
+        self.transport.write(msg + EOL*2)
         
     def _protocolSend(self, command, args=""):
-        if args:
-            self._send("%s %s" % (command, args))
-        else:
-            self._send("%s" % command)
+        self._send("%s %s" % (command, args))
         ev = self.queue.get()
         # Cast Event to appropriate event type :
         # If event is api, cast to ApiResponse

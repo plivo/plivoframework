@@ -13,14 +13,14 @@ if __name__ == '__main__':
             log.error("connect failed: %s" % str(e))
             raise SystemExit('exit')
 
-        response = iev.bgapi("originate user/1000 &playback(/usr/local/freeswitch/sounds/en/us/callie/base256/8000/liberty.wav)")
-        log.info(str(response))
-        log.info(response.getResponse())
-        if not response.getStatus():
+        bgAPIResponse = iev.bgapi("originate user/1000 &playback(/usr/local/freeswitch/sounds/en/us/callie/base256/8000/liberty.wav)")
+        log.info(str(bgAPIResponse))
+        log.info(bgAPIResponse.getResponse())
+        if not bgAPIResponse.isSuccess():
             log.error("bgapi failed !")
             raise SystemExit('exit')
 
-        jobuuid = response.getJobUUID()
+        jobuuid = bgAPIResponse.getJobUUID()
         if not jobuuid:
             log.error("bgapi jobuuid not found !")
             raise SystemExit('exit')

@@ -21,7 +21,7 @@ class Commands(object):
 
     def eventplain(self, args):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#event"
-        return self._protocolSend('eventplain', args)
+        return self._protocolSend('event plain', args)
 
     def event(self, args):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#event"
