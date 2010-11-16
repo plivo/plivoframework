@@ -267,7 +267,7 @@ class EventSocket(Commands):
             msg += "execute-app-arg: %s\n" % arg
         if lock is True:
             msg += "event-lock: true\n"
-        self.transport.write(msg + EOL*2)
+        self.transport.write(msg + EOL)
         
     def _protocolSend(self, command, args=""):
         self._send("%s %s" % (command, args))
