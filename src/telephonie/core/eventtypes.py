@@ -145,7 +145,7 @@ class ApiResponse(Event):
         '''
         Return True if api command success else False.
         '''
-        return self.isReplyTextSuccess()
+        return self._body and self._body[:3] == '+OK'
 
     def __str__(self):
         return '<ApiResponse [headers=%s, response=%s]>' \
