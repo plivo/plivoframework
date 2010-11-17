@@ -3,4 +3,5 @@
 Utils package for Telephonie Application Framework
 """
 
-__all__ = ['logger']
+__all__ = ['logger', 
+           'daemonize']
