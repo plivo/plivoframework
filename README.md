@@ -19,14 +19,14 @@ It aims to export all the functionality of the FreeSWITCH to higher level applic
 
 ## Dependencies
 
-[Python 2.5](http://www.python.org)  
-[gevent](http://www.gevent.org)
+1. [Python 2.5](http://www.python.org)  
+2. [gevent](http://www.gevent.org)
 
 
 ## Documentation
 
-Telephonie Documentation can be found at [Telephonie Wiki](https://github.com/miglu/Telephonie/wiki)
-FreeSWITCH Event Socket documentation at [FreeSWITCH Wiki] (http://wiki.freeswitch.org/wiki/Event_Socket)
+Telephonie Documentation can be found at [Telephonie Wiki](https://github.com/miglu/Telephonie/wiki)  
+FreeSWITCH Event Socket documentation at [FreeSWITCH Wiki](http://wiki.freeswitch.org/wiki/Event_Socket)
 
 
 ## Examples
@@ -38,7 +38,7 @@ Examples are available in the examples/ directory.
 
 (c) 2010 Miglu Communications <telephonie@miglu.com>
 
-Telephonie was inspired by and uses code from [eventsocket] (https://github.com/fiorix/eventsocket) , which is distributed
+Telephonie was inspired by and uses code from [eventsocket](https://github.com/fiorix/eventsocket), which is distributed
 under the Mozilla Public License Version 1.1
 
 Telephonie is distributed under the terms of the Mozilla Public License Version 1.1, see `LICENSE`.
