@@ -12,9 +12,8 @@ Telephonie is a gevent-based Python framework for the FreeSWITCH's Event Socket.
 The framework provides support for both Inbound and Outbound methods of the Event Socket.
 
 Telephonie may be used for a wide variety of purposes (IVRs, Billing System, Voicemail Applications etc).
-
-Telephonie is totally event-driven and allows easy implementation of complex applications in a simple and extensible manner.
-It aims to export all the functionality of the FreeSWITCH to higher level applications.
+It is totally event-driven and allows easy implementation of complex applications in a simple and extensible manner and
+aims to export all the functionality of the FreeSWITCH to higher level applications.
 
 
 ## Documentation
