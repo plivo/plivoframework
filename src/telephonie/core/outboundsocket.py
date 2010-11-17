@@ -50,8 +50,8 @@ class OutboundEventSocket(EventSocket):
             timer.cancel()
 
         # Sets channel and channel unique id from this event
-        self._channel = response
-        self._uuid = response.get_header("Channel-Unique-ID")
+        self._channel = connect_response
+        self._uuid = connect_response.get_header("Channel-Unique-ID")
 
         # Sets event filter or raises ConnectError
         if self._filter:
