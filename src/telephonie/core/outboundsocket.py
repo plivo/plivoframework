@@ -13,32 +13,34 @@ from telephonie.core.errors import ConnectError
 
 class OutboundEventSocket(EventSocket):
     '''
-    FreeSWITCH Outbound Event Socket
+    FreeSWITCH Outbound Event Socket.
+    
+    A new instance of this class is created for every call/ session from FreeSWITCH.
     '''
-    def __init__(self, socket, address, filter="ALL", poolSize=500, connectTimeout=5):
-        EventSocket.__init__(self, filter, poolSize)
-        self.transport = OutboundTransport(socket, address, connectTimeout)
+    def __init__(self, socket, address, filter="ALL", pool_size=500, connect_timeout=5):
+        EventSocket.__init__(self, filter, pool_size)
+        self.transport = OutboundTransport(socket, address, connect_timeout)
         self._uuid = None
         self._client = None
-        # connect
+        # Connects.
         self.connect()
-        # now run 
+        # Runs the main funtion .
         try:
             self.run()
         finally:
-            # finish
+            # Disconnects.
             self.disconnect()
 
     def connect(self):
-        # start event handler for this client
-        self.startEventHandler()
+        # Starts event handler for this client/session.
+        self.start_event_handler()
 
-        # send connect and set timeout while connecting
-        timer = Timeout(self.transport.getConnectTimeout())
+        # Sends connect and sets timeout while connecting.
+        timer = Timeout(self.transport.get_connect_timeout())
         timer.start()
         try:
-            connectResponse = self._protocolSend("connect")
-            if not connectResponse.isSuccess():
+            connect_response = self._protocol_send("connect")
+            if not connect_response.is_success():
                 self.disconnect()
                 raise ConnectError("Error while connecting")
         except Timeout:
@@ -47,24 +49,24 @@ class OutboundEventSocket(EventSocket):
         finally:
             timer.cancel()
 
-        # set channel and channel unique id from this event
+        # Sets channel and channel unique id from this event
         self._channel = response
-        self._uuid = response.getHeader("Channel-Unique-ID")
+        self._uuid = response.get_header("Channel-Unique-ID")
 
-        # set event filter or raise ConnectError
+        # Sets event filter or raises ConnectError
         if self._filter:
-            filterResponse = self.eventplain(self._filter)
-            if not filterResponse.isSuccess():
+            filter_response = self.eventplain(self._filter)
+            if not filter_response.is_success():
                 self.disconnect()
                 raise ConnectError("Event filter failure")
 
-        # set connected flag to True
+        # Set connected flag to True
         self.connected = True
 
-    def getChannel(self):
+    def get_channel(self):
         return self.client
 
-    def getChannelUniqueID(self):
+    def get_channel_unique_id(self):
         return self._uuid
 
     def run(self):
@@ -80,13 +82,13 @@ class OutboundServer(StreamServer):
     '''
     FreeSWITCH Outbound Event Server
     '''
-    def __init__(self, address, handle, filter="ALL"):
+    def __init__(self, address, handle_class, filter="ALL"):
         self._filter = filter
-        self._handleClass = handle
-        StreamServer.__init__(self, address, self.doHandle)
+        self._handle_class = handle_class
+        StreamServer.__init__(self, address, self.do_handle)
 
-    def doHandle(self, socket, address):
-        self._handleClass(socket, address, self._filter)
+    def do_handle(self, socket, address):
+        self._handle_class(socket, address, self._filter)
 
 
 

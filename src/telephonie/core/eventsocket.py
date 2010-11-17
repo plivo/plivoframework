@@ -23,69 +23,69 @@ MAXLINES_PER_EVENT = 2000
 
 class EventSocket(Commands):
     '''EventSocket class'''
-    def __init__(self, filter="ALL", poolSize=500):
-        # callbacks for reading events and sending response
-        self._responseCallbacks = {'api/response':self._apiResponse,
-                                   'command/reply':self._commandReply,
-                                   'text/event-plain':self._eventPlain,
-                                   'auth/request':self._authRequest,
-                                   'text/disconnect-notice':self._disconnectNotice
+    def __init__(self, filter="ALL", pool_size=500):
+        # Callbacks for reading events and sending responses.
+        self._response_callbacks = {'api/response':self._api_response,
+                                   'command/reply':self._command_reply,
+                                   'text/event-plain':self._event_plain,
+                                   'auth/request':self._auth_request,
+                                   'text/disconnect-notice':self._disconnect_notice
                                   }
-        # default event filter
+        # Default event filter.
         self._filter = filter
-        # queue for response events
+        # Synchronized Gevent based Queue for response events.
         self.queue = queue.Queue()
-        # set connected to False
+        # Sets connected to False.
         self.connected = False
-        # create pool for spawning if poolSize > 0
-        if poolSize > 0:
-            self.pool = gevent.pool.Pool(poolSize)
+        # Creates pool for spawning if poolSize > 0
+        if pool_size > 0:
+            self.pool = gevent.pool.Pool(pool_size)
         else:
             self.pool = None
-        # handler thread
-        self._handlerThread = None
+        # Handler thread
+        self._handler_thread = None
 
     def _spawn(self, func, *args, **kwargs):
         '''
-        Spawn with or without pool.
+        Spawns with or without pool.
         '''
         if self.pool:
             self.pool.spawn(func, *args, **kwargs)
         else:
             gevent.spawn(func, *args, **kwargs)
 
-    def isConnected(self):
+    def is_connected(self):
         '''
-        Check if connected and authenticated to eventsocket.
+        Checks if connected and authenticated to eventsocket.
 
-        Return True or False
+        Returns True or False.
         '''
         return self.connected
 
-    def startEventHandler(self):
+    def start_event_handler(self):
         '''
-        Start Event handler in background.
+        Starts Event handler in background.
         '''
-        self._handlerThread = gevent.spawn(self.handleEvents)
+        self._handler_thread = gevent.spawn(self.handle_events)
 
-    def stopEventHandler(self):
+    def stop_event_handler(self):
         '''
-        Stop Event handler.
+        Stops Event handler.
         '''
-        if self._handlerThread:
-            self._handlerThread.kill()
+        if self._handler_thread:
+            self._handler_thread.kill()
         
-    def handleEvents(self):
+    def handle_events(self):
         '''
-        Endless loop getting and dispatching event.
+        Gets and Dispatches events in an endless loop using gevent spawn.
         '''
         while True:
             try:
-                # get event and dispatch to handler
-                ev = self.getEvent()
-                # only dispatch event if Event-Name header found
-                if ev and ev.getHeader('Event-Name'):
-                    self._spawn(self.dispatchEvent, ev)
+                # Gets event and dispatches to handler.
+                ev = self.get_event()
+                # Only dispatches event if Event-Name header found.
+                if ev and ev.get_header('Event-Name'):
+                    self._spawn(self.dispatch_event, ev)
                     gevent.sleep(0.005)
             except (LimitExceededError, socket.error):
                 self.connected = False
@@ -94,157 +94,167 @@ class EventSocket(Commands):
                 self.connected = False
                 raise
         
-    def readEvent(self):
+    def read_event(self):
         '''
-        Read one Event from socket until EOL.
+        Reads one Event from socket until EOL.
 
-        Return Event instance.
+        Returns Event instance.
 
-        Note: raise LimitExceededError if MAXLINES_PER_EVENT is reached.
+        Raises LimitExceededError if MAXLINES_PER_EVENT is reached.
         '''
         buff = ''
         for x in range(MAXLINES_PER_EVENT):
-            line = self.transport.readline()
+            line = self.transport.read_line()
             if line == EOL:
-                # When match EOL, create Event and return it
+                # When matches EOL, creates Event and returns it.
                 return Event(buff)
             else:
-                # Else append line to current buffer
+                # Else appends line to current buffer.
                 buff += line
         raise LimitExceededError("MAXLINES_PER_EVENT (%d) reached" % MAXLINES_PER_EVENT)
 
-    def readRaw(self, ev):
+    def read_raw(self, event):
         '''
-        Read raw data based on Event Content-Length.
+        Reads raw data based on Event Content-Length.
 
-        Return raw string or None if not found.
+        Returns raw string or None if not found.
         '''
-        length = ev.getContentLength()
-        # Read length bytes if length > 0
+        length = event.get_content_length()
+        # Reads length bytes if length > 0
         if length:
             return self.transport.read(int(length))
         return None
 
-    def readRawResponse(self, ev, raw):
+    def read_raw_response(self, event, raw):
         '''
-        Extract raw response from raw buffer and length based on Event Content-Length.
+        Extracts raw response from raw buffer and length based on Event Content-Length.
 
-        Return raw string or None if not found.
+        Returns raw string or None if not found.
         '''
-        length = ev.getContentLength()
+        length = event.get_content_length()
         if length:
             return raw[-length:]
         return None
 
-    def getEvent(self):
+    def get_event(self):
         '''
-        Get complete Event, and process response callback.
+        Gets complete Event, and processes response callback.
         '''
-        ev = self.readEvent()
-        # Get callback response for this event (set to self._unknownEvent, if no matching callable)
-        _getResponse = self._responseCallbacks.get(ev.getContentType(), self._unknownEvent)
-        # If callback response found, start this method to get final event
-        if _getResponse:
-            ev = _getResponse(ev)
-        return ev
+        event = self.read_event()
+        # Gets callback response for this event (sets to self._unknown_event, if no matching callable)
+        _get_response = self._response_callbacks.get(event.get_content_type(), self._unknown_event)
+        # If callback response found, starts this method to get final event.
+        if _get_response:
+            event = _get_response(event)
+        return event
 
-    def _authRequest(self, ev):
+    def _auth_request(self, event):
         '''
-        Callback for reading auth/request and sending response.
+        Receives auth/request callback.
         '''
-        # Just push Event to response events queue and return Event
-        self.queue.put(ev)
-        return ev
+        # Pushes Event to response events syncronized queue and returns Event.
+        self.queue.put(event)
+        return event
 
-    def _apiResponse(self, ev):
+    def _api_response(self, event):
         '''
-        Callback for reading api/response and sending response.
+        Receives api/response callback.
         '''
-        # Get raw data for this event
-        raw = self.readRaw(ev)
-        # If raw was found, this is our Event body
+        # Gets raw data for this event.
+        raw = self.read_raw(event)
+        # If raw was found, this is our Event body.
         if raw:
-            ev.setBody(raw)
-        # Push Event to response events queue and return Event
-        self.queue.put(ev)
-        return ev
+            event.set_body(raw)
+        # Pushes Event to response events queue and returns Event.
+        self.queue.put(event)
+        return event
 
-    def _commandReply(self, ev):
+    def _command_reply(self, event):
         '''
-        Callback for reading command/reply and sending response.
+        Receives command/reply callback.
         '''
-        # Just push Event to response events queue and return Event
-        self.queue.put(ev)
-        return ev
+        # Pushes Event to response events queue and returns Event.
+        self.queue.put(event)
+        return event
 
-    def _eventPlain(self, ev):
+    def _event_plain(self, event):
         '''
-        Callback for reading text/event-plain.
+        Receives text/event-plain callback.
         '''
-        # Get raw data for this event
-        raw = self.readRaw(ev)
-        # If raw was found drop current event 
-        # and replace with Event created from raw
+        # Gets raw data for this event
+        raw = self.read_raw(event)
+        # If raw was found drops current event 
+        # and replaces with Event created from raw
         if raw:
-            ev = Event(raw)
-            # Get raw response from Event Content-Length header 
+            event = Event(raw)
+            # Gets raw response from Event Content-Length header 
             # and raw buffer
-            rawresponse = self.readRawResponse(ev, raw)
+            raw_response = self.read_raw_response(event, raw)
             # If rawresponse was found, this is our Event body
-            if rawresponse:
-                ev.setBody(rawresponse)
-        # Just return Event
-        return ev
+            if raw_response:
+                event.set_body(raw_response)
+        # Returns Event
+        return event
 
-    def _disconnectNotice(self, ev):
+    def _disconnect_notice(self, event):
         '''
-        Callback for reading text/disconnect-notice.
+        Receives text/disconnect-notice callback.
         '''
         self.disconnect()
 
-    def _unknownEvent(self, ev):
+    def _unknown_event(self, event):
         '''
-        Callback for reading unknown event type.
+        Receives unkown event type Callbacks.
 
         Can be implemented in subclass to process unknown event types.
         '''
         pass
 
-    def dispatchEvent(self, ev):
+    def dispatch_event(self, event):
         '''
-        Dispatch one event with callback.
+        Dispatches one event with callback.
+        
+        E.g. Receives Background_Job event and calls on_background_job function.
         '''
-        method = 'on' + string.capwords(ev.getHeader('Event-Name'), '_').replace('_', '')
+        method = 'on_' + event.get_header('Event-Name').lower()
         callback = getattr(self, method, None)
-        # If no callback found, if onFallback method exists, call it
-        # else return
+        # When no callbacks found, call unbound_event.
         if not callback:
-            if hasattr(self, 'onFallback'):
-                callback = self.onFallback
-            else:
-                return
-        # Call callback.
-        # On exception if onFailure method exists, call it 
-        # else raise current exception
+            callback = self.unbound_event(event)
+        # Calls callback.
+        # On exception calls callback_failure method.
         try: 
-            callback(ev)
+            callback(event)
         except: 
-            if hasattr(self, 'onFailure'):
-                self.onFailure(ev)
-            else:
-                raise
-
+            self.callback_failure(event)
+    
+    def unbound_event(self, event):
+        '''
+        Catches all unbound events from FreeSWITCH.
+        
+        Can be implemented by the subclass.
+        '''
+        pass
+    
+    def callback_failure(self, event):
+        '''
+        Called when callback to an event fails.
+        
+        Can be implemented by the subclass.
+        '''
+        pass
+    
     def disconnect(self):
         '''
-        Disconnect from eventsocket and stop handling events.
+        Disconnects from eventsocket and stops handling events.
         '''
         self.transport.close()
-        self.stopEventHandler()
+        self.stop_event_handler()
         self.connected = False
 
     def connect(self):
         '''
-        Connect to eventsocket.
+        Connects to eventsocket.
 
         Must be implemented by subclass.
         '''
@@ -269,24 +279,24 @@ class EventSocket(Commands):
             msg += "event-lock: true\n"
         self.transport.write(msg + EOL)
         
-    def _protocolSend(self, command, args=""):
+    def _protocol_send(self, command, args=""):
         self._send("%s %s" % (command, args))
-        ev = self.queue.get()
-        # Cast Event to appropriate event type :
-        # If event is api, cast to ApiResponse
+        event = self.queue.get()
+        # Casts Event to appropriate event type :
+        # Casts to ApiResponse, if event is api
         if command == 'api':
-            ev = ApiResponse.cast(ev)
-        # If event is bgapi, cast to BgapiResponse
+            event = ApiResponse.cast(event)
+        # Casts to BgapiResponse, if event is bgapi 
         elif command == "bgapi":
-            ev = BgapiResponse.cast(ev)
-        # Default is cast to CommandResponse
+            event = BgapiResponse.cast(event)
+        # Casts to CommandResponse by default
         else:
-            ev = CommandResponse.cast(ev)
-        return ev
+            event = CommandResponse.cast(event)
+        return event
     
-    def _protocolSendmsg(self, name, args=None, uuid="", lock=False):
+    def _protocol_sendmsg(self, name, args=None, uuid="", lock=False):
         self._sendmsg(name, args, uuid, lock)
-        ev = self.queue.get()
-        # Always cast Event to CommandResponse
-        return CommandResponse.cast(ev)
+        event = self.queue.get()
+        # Always casts Event to CommandResponse
+        return CommandResponse.cast(event)
 

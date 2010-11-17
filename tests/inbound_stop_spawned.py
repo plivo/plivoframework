@@ -4,25 +4,25 @@ from telephonie.core.errors import ConnectError
 from telephonie.utils.logger import StdoutLogger
 import gevent
 
-def stop(iev, log):
+def stop(inbound_event_listener, log):
     log.info("stopping now !")
-    iev.disconnect()
+    inbound_event_listener.disconnect()
     log.info("stopped !")
 
 if __name__ == '__main__':
     log = StdoutLogger()
     try:
-        iev = InboundEventSocket('127.0.0.1', 8021, 'ClueCon', filter="ALL")
+        inbound_event_listener = InboundEventSocket('127.0.0.1', 8021, 'ClueCon', filter="ALL")
         try:
-            iev.connect()
+            inbound_event_listener.connect()
         except ConnectError, e:
             log.error("connect failed: %s" % str(e))
             raise SystemExit('exit')
 
         log.info("stopping in 5 seconds !")
-        gevent.spawn_later(5, stop, iev, log)
+        gevent.spawn_later(5, stop, inbound_event_listener, log)
 
-        iev.serve_forever()
+        inbound_event_listener.serve_forever()
 
     except (SystemExit, KeyboardInterrupt): pass
 

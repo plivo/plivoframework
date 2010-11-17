@@ -14,22 +14,22 @@ class InboundEventSocket(EventSocket):
     '''
     FreeSWITCH Inbound Event Socket
     '''
-    def __init__(self, host, port, password, filter="ALL", poolSize=500, connectTimeout=5):
-        EventSocket.__init__(self, filter, poolSize)
+    def __init__(self, host, port, password, filter="ALL", pool_size=500, connect_timeout=5):
+        EventSocket.__init__(self, filter, pool_size)
         self.password = password
-        self.transport = InboundTransport(host, port, connectTimeout=connectTimeout)
+        self.transport = InboundTransport(host, port, connect_timeout=connect_timeout)
 
-    def _waitAuthRequest(self):
+    def _wait_auth_request(self):
         '''
-        Wait until auth/request event was received.
+        Waits until auth/request event is received.
         '''
-        # set timeout waiting auth/request
-        timer = Timeout(self.transport.getConnectTimeout())
+        # Sets timeout to wait for auth/request
+        timer = Timeout(self.transport.get_connect_timeout())
         timer.start()
         try:
-            # when auth/request is received, 
-            # _authRequest method in BaseEventSocket push this event to queue
-            # now we just wait this event
+            # When auth/request is received, 
+            # _authRequest method in BaseEventSocket will push this event to queue
+            # so we will just wait this event here.
             return self.queue.get()
         except Timeout:
             raise ConnectError("Timeout waiting auth/request") 
@@ -38,44 +38,45 @@ class InboundEventSocket(EventSocket):
 
     def connect(self):
         '''
-        Connect to mod_eventsocket, authenticate and set event filter.
+        Connects to mod_eventsocket, authenticates and sets event filter.
 
-        Return True or raise ConnectError exception on failure
+        Returns True on success or raises ConnectError exception on failure.
         '''
-        # connect transport, if connection failed, raise ConnectError
+        # Connects transport, if connection fails, raise ConnectError
         try:
             self.transport.connect()
         except Exception, e:
             raise ConnectError("Transport failure: %s" % str(e))
 
-        # start handling events
-        self.startEventHandler()
+        # Starts handling events
+        self.start_event_handler()
 
-        # wait auth/request, if timeout, raise ConnectError
-        self._waitAuthRequest()
+        # Waits for auth/request, if timeout, raises ConnectError
+        self._wait_auth_request()
 
-        # we are ready now !
-        # authenticate or raise ConnectError
-        authResponse = self.auth(self.password)
-        if not authResponse.isSuccess():
+        # We are ready now !
+        # Authenticate or raise ConnectError
+        auth_response = self.auth(self.password)
+        if not auth_response.is_success():
             self.disconnect()
             raise ConnectError("Auth failure")
 
-        # set event filter or raise ConnectError
+        # Sets event filter or raises ConnectError
         if self._filter:
-            filterResponse = self.eventplain(self._filter)
-            if not filterResponse.isSuccess():
+            filter_response = self.eventplain(self._filter)
+            if not filter_response.is_success():
                 self.disconnect()
                 raise ConnectError("Event filter failure")
 
-        # set connected flag to True
+        # Sets connected flag to True
         self.connected = True
         return True
 
     def serve_forever(self):
-        """Start waiting events in endless loop.
         """
-        while self.isConnected(): 
+        Starts waiting for events in endless loop.
+        """
+        while self.is_connected(): 
             gevent.sleep(0.1)
 
 

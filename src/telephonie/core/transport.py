@@ -11,7 +11,7 @@ class Transport(object):
         self.sockfd.write(data)
         self.sockfd.flush()
 
-    def readline(self):
+    def read_line(self):
         return self.sockfd.readline()
 
     def read(self, length):
@@ -23,15 +23,15 @@ class Transport(object):
         except:
             pass
 
-    def getConnectTimeout(self):
+    def get_connect_timeout(self):
         return self.timeout
 
 
 class InboundTransport(Transport):
-    def __init__(self, host, port, connectTimeout=5):
+    def __init__(self, host, port, connect_timeout=5):
         self.host = host
         self.port = port
-        self.timeout = connectTimeout
+        self.timeout = connect_timeout
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -42,9 +42,9 @@ class InboundTransport(Transport):
 
 
 class OutboundTransport(Transport):
-    def __init__(self, socket, address, connectTimeout=5):
+    def __init__(self, socket, address, connect_timeout=5):
         self.sock = socket
         self.sockfd = socket.makefile()
         self.address = address
-        self.timeout = connectTimeout
+        self.timeout = connect_timeout
 

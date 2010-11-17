@@ -11,15 +11,15 @@ class MyEventSocket(InboundEventSocket):
         self.log = log
         self.jobqueue = gevent.queue.Queue()
 
-    def onBackgroundJob(self, ev):
+    def on_background_job(self, ev):
         '''
-        Event callback for BACKGROUND_JOB .
+        Recieves callbacks for BACKGROUND_JOB event.
         '''
         self.jobqueue.put(ev)
 
-    def waitBackgroundJob(self):
+    def wait_background_job(self):
         '''
-        Wait until BACKGROUND_JOB event was caught and return Event.
+        Waits until BACKGROUND_JOB event was caught and returns Event.
         '''
         return self.jobqueue.get()
 
@@ -28,24 +28,25 @@ class MyEventSocket(InboundEventSocket):
 if __name__ == '__main__':
     log = StdoutLogger()
     try:
-        iev = MyEventSocket('127.0.0.1', 8021, 'ClueCon', filter="BACKGROUND_JOB", log=log)
+        inbound_event_listener = MyEventSocket('127.0.0.1', 8021, 'ClueCon', filter="BACKGROUND_JOB", log=log)
         try:
-            iev.connect()
+            inbound_event_listener.connect()
         except ConnectError, e:
             log.error("connect failed: %s" % str(e))
             raise SystemExit('exit')
 
-        bgAPIResponse = iev.bgapi("originate user/1000 &playback(/usr/local/freeswitch/sounds/en/us/callie/base256/8000/liberty.wav)")
-        log.info(str(bgAPIResponse))
-        log.info(bgAPIResponse.getResponse())
-        if not bgAPIResponse.isSuccess():
+        fs_bg_api_string = "originate user/1000 &playback(/usr/local/freeswitch/sounds/en/us/callie/base256/8000/liberty.wav)"
+        bg_api_response = inbound_event_listener.bgapi(fs_bg_api_string)
+        log.info(str(bg_api_response))
+        log.info(bg_api_response.get_response())
+        if not bg_api_response.is_success():
             log.error("bgapi failed !")
             raise SystemExit('exit')
 
-        jobuuid = bgAPIResponse.getJobUUID()
-        log.info("bgapi success with Job-UUID " + jobuuid)
+        job_uuid = bg_api_response.get_job_uuid()
+        log.info("bgapi success with Job-UUID " + job_uuid)
         log.info("waiting background job ...")
-        ev = iev.waitBackgroundJob()
+        ev = inbound_event_listener.wait_background_job()
         log.info("background job: %s" % str(ev))
 
 
