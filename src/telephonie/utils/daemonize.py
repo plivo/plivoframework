@@ -15,7 +15,7 @@ __default_servicename__ = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
 def daemon(user, group, path='/', pidfile='/tmp/%s.pid' % __default_servicename__, other_groups=()):
     '''
-    Daemonize current application.
+    Daemonizes current application.
     '''
     # Get uid and gid from user and group names
     uid = int(pwd.getpwnam(user)[2])
