@@ -2,7 +2,6 @@
 
 > Framework to create telephony applications using [FreeSWITCH](http://www.freeswitch.org)
 
->**Info:** See the [FreeSWITCH Event Socket documentation] (http://wiki.freeswitch.org/wiki/Event_Socket) for more information. See [github] (http://github.com/fiorix/eventsocket/) for the latest source.  
 >**Authors:** Michael Ricordeau (tamiel) and Venky (bevenky)  
 >**Contact:** <telephonie@miglu.com>    
 
@@ -20,13 +19,14 @@ It aims to export all the functionality of the FreeSWITCH to higher level applic
 
 ## Dependencies
 
-[Python 2.5] (http://www.python.org)  
-[gevent] (http://www.gevent.org)  
+[Python 2.5](http://www.python.org)  
+[gevent](http://www.gevent.org)
 
 
 ## Documentation
 
-Documentation can be found at [Telephonie Wiki] (https://github.com/miglu/Telephonie/wiki) 
+Telephonie Documentation can be found at [Telephonie Wiki](https://github.com/miglu/Telephonie/wiki)
+FreeSWITCH Event Socket documentation at [FreeSWITCH Wiki] (http://wiki.freeswitch.org/wiki/Event_Socket)
 
 
 ## Examples
