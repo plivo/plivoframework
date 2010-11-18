@@ -23,7 +23,3 @@ __licence__ = "unknown"
 
 __all__ = ['core', 'utils']
 
-
-import gevent.monkey
-gevent.monkey.patch_all()
-

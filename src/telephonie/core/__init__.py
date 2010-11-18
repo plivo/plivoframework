@@ -3,6 +3,9 @@
 Core for Telephonie Application Framework
 """
 
+import gevent.monkey
+gevent.monkey.patch_all()
+
 
 __all__ = ['transport', 
            'eventsocket', 
