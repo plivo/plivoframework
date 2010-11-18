@@ -57,10 +57,10 @@ def daemon_script(script, user, group, path='/', pidfile=None, other_groups=(), 
     '''
     Daemonize a python script.
     '''
-    # Set pidfile
+    # Autocreate path for pidfile (based on script arg) if not set
     if not pidfile:
         pidfile = '/tmp/' + os.path.splitext(os.path.basename(script))[0] + '.pid'
-    # Get full path to script
+    # Get full/real path to script
     real_script = os.path.realpath(script)
     # Get uid and gid from user and group names
     uid = int(pwd.getpwnam(user)[2])
