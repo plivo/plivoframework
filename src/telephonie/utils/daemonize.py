@@ -54,7 +54,7 @@ def daemon(user, group, path='/', pidfile='/tmp/%s.pid' % __default_servicename_
     sys.stdout = sys.stderr = open(os.devnull, 'a+')
 
 
-def daemon_script(script, user, group, path='/', pidfile=None, other_groups=(), python_bin=None):
+def daemon_script(script, user, group, path='/', pidfile=None, script_args=(), other_groups=(), python_bin=None):
     '''
     Daemonize a python script.
     '''
@@ -93,12 +93,16 @@ def daemon_script(script, user, group, path='/', pidfile=None, other_groups=(), 
         os.setgroups(other_groups_id)
     # Set user
     os.setuid(uid)
-    # run script
+    # Set python binary
     if not python_bin:
       cmd = ["/usr/bin/env", "python"]
     else:
       cmd = [python_bin]
     cmd.append(real_script)
+    # Add script_args
+    for arg in script_args:
+        cmd.append(arg)
+    # Run script
     pid = Popen(cmd).pid
     # Write pidfile
     open(pidfile, 'w').write(str(pid))
@@ -122,12 +126,15 @@ def main():
     parser.add_option("-g", "--group", action="store", type="string",
                       dest="group", help="set gid to GROUP (argument is mandatory)", 
                       metavar="GROUP")
-    parser.add_option("-G", "--groups", action="append", type="string", default=(),
+    parser.add_option("-G", "--groups", action="append", type="string", default=[],
                       dest="groups", help="set other groups gid to OTHERGROUP (can be added multiple times)", 
                       metavar="OTHERGROUP")
     parser.add_option("-P", "--pybin", action="store", type="string", default=None,
                       dest="pybin", help="set python binary PYBIN to run script", 
                       metavar="PYBIN")
+    parser.add_option("-a", "--scriptarg", action="append", type="string", default=[],
+                      dest="scriptargs", help="add ARG to python script (can be added multiple times)", 
+                      metavar="ARG")
     (options, args) = parser.parse_args()
 
     script = options.script
@@ -136,11 +143,15 @@ def main():
     pidfile = options.pidfile 
     ogroups = options.groups
     pybin = options.pybin
+    scriptargs = options.scriptargs
+
     if not script or not user or not group or not pidfile:
         parser.print_help()
         sys.exit(1)
 
-    daemon_script(script, user, group, pidfile=pidfile, other_groups=ogroups, python_bin=pybin)
+    daemon_script(script, user, group, pidfile=pidfile, 
+                  script_args=scriptargs, other_groups=ogroups, 
+                  python_bin=pybin)
 
 
 if __name__ == '__main__':
