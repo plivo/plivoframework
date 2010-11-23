@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# profile a python script with cProfile
+
 [ -e $1 ] || {
   echo "$(basename $0) PYTHONSCRIPT"
   exit 1

@@ -1,0 +1,170 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          telephonie service
+# Required-Start:    $remote_fs
+# Required-Stop:     $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Telephonie initscript
+# Description:       This file provides a template for creating telephonie init scripts.
+### END INIT INFO
+
+# Author: Michael Ricordeau <michael.ricordeau@gmail.com>
+
+
+#######################################
+# Telephonie args
+#######################################
+# python script to run in daemon mode
+SCRIPT=/fullpath/to/python/script
+# script args
+SCRIPTARGS=""
+# user to set
+USER=telephonie
+# group to set
+GROUP=telephonie
+# pidfile
+PIDFILE=/var/run/telephonie/telephonie-myscript.pid
+
+#######################################
+
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="Telephonie service $(basename $SCRIPT .py)"
+NAME=telephonied
+DAEMON=/usr/bin/$NAME
+INITSCRIPT="telephonie-$(basename $SCRIPT .py)"
+SCRIPTNAME="/etc/init.d/$INITSCRIPT"
+DAEMON_ARGS="-u $USER -g $GROUP -p $PIDFILE -s $SCRIPT -a \"$SCRIPTARGS\""
+
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
+
+# Exit if script is not installed
+[ -x "$SCRIPT" ] || exit 0
+
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$INITSCRIPT ] && . /etc/default/$INITSCRIPT
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+. /lib/lsb/init-functions
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+	# Return
+	#   0 if daemon has been started
+	#   1 if daemon was already running
+	#   2 if daemon could not be started
+        kill -0 $(cat $PIDFILE 2>/dev/null) && return 1;
+        $DAEMON $DAEMON_ARGS                        
+        sleep 0.5
+        kill -0 $(cat $PIDFILE 2>/dev/null) && return 0 || return 2;
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+	# Return
+	#   0 if daemon has been stopped
+	#   1 if daemon was already stopped
+	#   2 if daemon could not be stopped
+	#   other if a failure occurred
+        # If no pidfile or pidfile is empty, return failure (2)
+        [ ! -s $PIDFILE ] && return 2;
+        # If process is not running, return already stopped (1)
+        kill -0 $(cat $PIDFILE 2>/dev/null) && return 1;
+        # Kill with SIGTERM (30 retries) and return 0 on success
+        for i in $seq(1 1 30); do
+                kill -TERM $(cat $PIDFILE 2>/dev/null) 
+                kill -0 $(cat $PIDFILE 2>/dev/null) && rm -f $PIDFILE && return 0;
+                sleep 0.1
+        done
+        # Kill with SIGKILL if already running (5 retries) and return 0 on success
+        for i in $(seq 1 1 5); do
+                kill -KILL $(cat $PIDFILE 2>/dev/null) 
+                kill -0 $(cat $PIDFILE 2>/dev/null) && rm -f $PIDFILE && return 0;
+                sleep 0.1
+        done
+        # failure
+        return 2;
+}
+
+#
+# Function that sends a SIGHUP to the daemon/service
+#
+do_reload() {
+	#
+	# If the daemon can reload its configuration without
+	# restarting (for example, when it is sent a SIGHUP),
+	# then implement that here.
+	#
+	return 0
+}
+
+case "$1" in
+  start)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$INITSCRIPT"
+	do_start
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  stop)
+	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$INITSCRIPT"
+	do_stop
+	case "$?" in
+		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+	esac
+	;;
+  #reload|force-reload)
+	#
+	# If do_reload() is not implemented then leave this commented out
+	# and leave 'force-reload' as an alias for 'restart'.
+	#
+	#log_daemon_msg "Reloading $DESC" "$NAME"
+	#do_reload
+	#log_end_msg $?
+	#;;
+  restart|force-reload)
+	#
+	# If the "reload" option is implemented then remove the
+	# 'force-reload' alias
+	#
+	log_daemon_msg "Restarting $DESC" "$INITSCRIPT"
+	do_stop
+	case "$?" in
+	  0|1)
+		do_start
+		case "$?" in
+			0) log_end_msg 0 ;;
+			1) log_end_msg 1 ;; # Old process is still running
+			*) log_end_msg 1 ;; # Failed to start
+		esac
+		;;
+	  *)
+	  	# Failed to stop
+		log_end_msg 1
+		;;
+	esac
+	;;
+  *)
+	#echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
+	exit 3
+	;;
+esac
+
+:

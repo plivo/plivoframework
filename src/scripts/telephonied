@@ -1,4 +1,6 @@
 #!/usr/bin/env python
-
+"""
+Daemonizer for python scripts.
+"""
 import telephonie.utils.daemonize as daemonize
 daemonize.main()
