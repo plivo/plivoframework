@@ -2,7 +2,7 @@
 
 > Open source framework to create telephony applications using [FreeSWITCH](http://www.freeswitch.org)
 
->**Authors:** Michael Ricordeau (tamiel) and Venky (bevenky)  
+>**Authors:** Michael Ricordeau (tamiel) and Miglu (miglu)  
 >**Contact:** <telephonie@miglu.com>    
 
 
