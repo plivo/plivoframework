@@ -19,7 +19,7 @@ __maintainer__ = "Telephonie Team"
 
 __maintainer_email__ = "telephonie@miglu.com"
 
-__licence__ = "unknown"
+__licence__ = "MPL 1.1"
 
 __all__ = ['core', 'utils']
 
