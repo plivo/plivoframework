@@ -87,12 +87,12 @@ class EventSocket(Commands):
                 if ev and ev.get_header('Event-Name'):
                     self._spawn(self.dispatch_event, ev)
                     gevent.sleep(0.005)
-            except (LimitExceededError, socket.error):
+            except (LimitExceededError, ConnectError, socket.error):
                 self.connected = False
-                raise
+                return
             except GreenletExit, e:
                 self.connected = False
-                raise
+                return
         
     def read_event(self):
         '''
@@ -105,13 +105,15 @@ class EventSocket(Commands):
         buff = ''
         for x in range(MAXLINES_PER_EVENT):
             line = self.transport.read_line()
-            if line == EOL:
+            if line == '':
+                raise ConnectError("connection closed")
+            elif line == EOL:
                 # When matches EOL, creates Event and returns it.
                 return Event(buff)
             else:
                 # Else appends line to current buffer.
                 buff += line
-        raise LimitExceededError("MAXLINES_PER_EVENT (%d) reached" % MAXLINES_PER_EVENT)
+        raise LimitExceededError("max lines per event (%d) reached" % MAXLINES_PER_EVENT)
 
     def read_raw(self, event):
         '''
