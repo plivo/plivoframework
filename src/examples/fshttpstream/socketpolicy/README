@@ -1,0 +1,39 @@
+Flash Socket Policy Server
+http://www.lightsphere.com/dev/articles/flash_socket_policy.html
+----------------
+
+This is a simple Perl script that listens on port 843 and returns a Socket Policy XML string for Flash players. (See http://www.adobe.com/devnet/flashplayer/articles/fplayer9_security_04.html for details.)
+
+You will need root access to run this script. To start the script:
+
+./socketpolicy.pl > /dev/null &
+
+You'll also want to add it to your rc.local or other startup script so that it restarts after a system reboot.
+
+Restricting Ports:
+------------------
+The script currently allows Flash Players to access any socket on the server, from any domain. To limit to certain ports or domains, change the values in xml_policy.
+
+Allowable formats for to-ports: 
+*                   all ports
+port1,port2,port3   a list of ports
+port1-port20        a range of ports
+
+Allowable formats for domain:
+*                   all domains
+domain1,domain2     specific domains
+
+See http://www.adobe.com/xml/schemas/PolicyFileSocket.xsd for the policy file schema.
+
+Note on Logging:
+----------------
+This script does some basic logging of connections. It overwrites the log every time it starts. If you want to append to the log, change this line:
+
+    open(LOG, ">$logfile") or warn "Can't open $logfile: $!\n";
+
+to this:
+
+    open(LOG, ">>$logfile") or warn "Can't open $logfile: $!\n";
+
+If you'd prefer to turn off logging, change $should_be_logging to 0.
+
