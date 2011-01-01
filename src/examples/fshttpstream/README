@@ -1,21 +1,23 @@
 - install gevent
 - install gevent-websocket
 - install telephonie
+- copy fsweb to your web server docroot
+- download and install websocket_js javascript files and swf files in fsweb directory
 - edit fsweb/test.html 
     - set host and port of fshttpstream server
-    - set regexp filter
-- copy fsweb to your web server docroot
-- start socketpolicy (see README in socketpolicy directory)
+    - set regexp filter if needed
+- download, install and start socketpolicy (see README in socketpolicy sources)
 - start fshttpstream : python fshttpstream.py
 - start your browser and open http://yourhostname/fsweb/test.html
 
 
-fshttpstream use
+DEPENDENCIES
+- jquery : http://jquery.com/
 - gevent : http://www.gevent.org/
 - gevent-websocket : http://www.gelens.org/code/gevent-websocket/
-- telephonie : https://github.com/miglu/Telephonie
-- socketpolicy : http://www.lightsphere.com/dev/articles/socketpolicy.pl.html
 - websocket_js : https://github.com/gimite/web-socket-js
+- socketpolicy : http://www.lightsphere.com/dev/articles/flash_socket_policy.html
+- telephonie : https://github.com/miglu/Telephonie
 
 
 
