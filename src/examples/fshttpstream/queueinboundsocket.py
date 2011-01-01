@@ -7,6 +7,13 @@ from telephonie.utils.logger import StdoutLogger
 
 
 class QueueInboundEventSocket(InboundEventSocket):
+    """
+    QueueInboundEventSocket class.
+    
+    All Freeswitch events are pushed to a internal queue. 
+
+    All events can be consumed with wait_for_event method.
+    """
     def __init__(self, host, port, password, filter="ALL", pool_size=500, connect_timeout=5, log=None):
         InboundEventSocket.__init__(self, host, port, password, filter, pool_size, connect_timeout)
         if not log:
@@ -16,12 +23,21 @@ class QueueInboundEventSocket(InboundEventSocket):
         self.event_queue = gevent.queue.Queue()
 
     def unbound_event(self, event):
+        """
+        Put all events in queue.
+        """
         self.event_queue.put(event)
 
     def wait_for_event(self):
+        """
+        Wait until one event is available in queue.
+        """
         return self.event_queue.get()
 
     def start(self):
+        """
+        Start inbound connection to Freeswitch with auto reconnection on failure.
+        """
         self.log.info("Start QueueInboundEventSocket %s:%d with filter %s" \
             % (self.transport.host, self.transport.port, self._filter))
         while True:

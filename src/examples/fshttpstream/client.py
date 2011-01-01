@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Client class
+"""
 import gevent.queue
 import datetime
 import re
@@ -9,6 +12,9 @@ except ImportError:
 
 
 class Client(object):
+    """
+    Websocket client.
+    """
     def __init__(self, ws, raw_config=''):
         self.started = datetime.datetime.now()
         self.raw_config = raw_config
@@ -43,6 +49,9 @@ class Client(object):
 
 
 class ClientFilter(object):
+    """
+    Event filter based on regexp for websocket client.
+    """
     def __init__(self, reg=None):
         if not reg:
             self.__reg = None

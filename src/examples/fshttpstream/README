@@ -1,5 +1,6 @@
 - install gevent
 - install gevent-websocket
+- install simplejson (if python < 2.6)
 - install telephonie
 - copy fsweb to your web server docroot
 - download and install websocket_js javascript files and swf files in fsweb directory
@@ -15,6 +16,7 @@ DEPENDENCIES
 - jquery : http://jquery.com/
 - gevent : http://www.gevent.org/
 - gevent-websocket : http://www.gelens.org/code/gevent-websocket/
+- simplejson : http://code.google.com/p/simplejson/
 - websocket_js : https://github.com/gimite/web-socket-js
 - socketpolicy : http://www.lightsphere.com/dev/articles/flash_socket_policy.html
 - telephonie : https://github.com/miglu/Telephonie

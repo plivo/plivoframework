@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Freeswitch http stream server class
+"""
 import os
 import traceback
 from telephonie.utils.logger import StdoutLogger
@@ -9,6 +12,9 @@ import client
 
 
 class FSWebsocketServer(websocketserver.WebsocketServer):
+    """
+    Freeswitch websocket server.
+    """
     def __init__(self, wshost, wsport, fshost, fsport, fspassword, fsfilter='ALL', log=None):
         websocketserver.WebsocketServer.__init__(self, wshost, wsport, log)
         self.fshost = fshost
@@ -25,6 +31,9 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
                                                                          log=log)
 
     def start(self):
+        """
+        Start inbound connection, dispatcher and listen for websocket clients.
+        """
         self._inbound_process = spawn(self.inbound_socket.start)
         self._dispatch_process = spawn(self.dispatch_events)
         super(FSWebsocketServer, self).start()
@@ -32,6 +41,9 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
         self._inbound_process.kill()
 
     def dispatch_events(self):
+        """
+        Dispatch events to websocket clients.
+        """
         self.log.debug("dispatch_events started")
         while self.is_running():
             try:
@@ -48,6 +60,9 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
                 [ self.log.error(line) for line in traceback.format_exc().splitlines() ]
 
     def application(self, environ, start_response):
+        """
+        Main application when clients are connecting to server.
+        """
         if environ["PATH_INFO"] == '/websock':
             ws = None
             c = None
