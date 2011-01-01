@@ -95,9 +95,9 @@ def daemon_script(script, user, group, path='/', pidfile=None, script_args=(), o
     os.setuid(uid)
     # Set python binary
     if not python_bin:
-      cmd = ["/usr/bin/env", "python"]
+        cmd = ["/usr/bin/env", "python"]
     else:
-      cmd = [python_bin]
+        cmd = [python_bin]
     cmd.append(real_script)
     # Add script_args
     for arg in script_args:
