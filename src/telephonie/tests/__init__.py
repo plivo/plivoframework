@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-__all__ = ['test_events']
+__all__ = ['test_events', 'test_inboundsocket']
 
 def make_test():
     return unittest.TextTestRunner()
@@ -9,6 +9,7 @@ def make_test():
 def make_suite():
     return unittest.TestLoader().loadTestsFromNames([
         'telephonie.tests.test_events',
+        'telephonie.tests.test_inboundsocket',
     ])
 
 def run_test():
