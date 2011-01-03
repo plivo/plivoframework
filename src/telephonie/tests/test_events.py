@@ -10,21 +10,24 @@ class TestEvent(TestCase):
     EVENT_CONTENT_LENGTH = "Content-Length: 491\nContent-Type: text/event-plain\n\n"
     EVENT_PLAIN = """Event-Name: RE_SCHEDULE
 Core-UUID: 12640749-db62-421c-beac-4863eac76510
-FreeSWITCH-Hostname: freeswitchbox
-FreeSWITCH-IPv4: 10.0.0.1
+FreeSWITCH-Hostname: vocaldev
+FreeSWITCH-IPv4: 10.0.0.108
 FreeSWITCH-IPv6: %3A%3A1
-Event-Date-Local: 2011-01-01%2021%3A43%3A56
-Event-Date-GMT: Sat,%2001%20Jan%202011%2020%3A43%3A56%20GMT
-Event-Date-Timestamp: 1293914636341662
+Event-Date-Local: 2011-01-03%2018%3A33%3A56
+Event-Date-GMT: Mon,%2003%20Jan%202011%2017%3A33%3A56%20GMT
+Event-Date-Timestamp: 1294076036427219
 Event-Calling-File: switch_scheduler.c
 Event-Calling-Function: switch_scheduler_execute
 Event-Calling-Line-Number: 65
 Task-ID: 1
 Task-Desc: heartbeat
 Task-Group: core
-Task-Runtime: 1293914656
+Task-Runtime: 1294076056
 
 """
+
+
+
 
     def test_command_reply(self):
         ev = Event(self.EVENT_COMMAND_REPLY)
