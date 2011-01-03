@@ -71,15 +71,15 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
                 client_config = ws.wait()
                 c = client.Client(ws, client_config)
                 self.ws_clients.add(c)
-                self.log.info("New client %s from %s" % (str(id(ws)), environ["REMOTE_ADDR"]))
-                self.log.debug("Set client %s from %s with %s" % (str(id(ws)), environ["REMOTE_ADDR"], str(c.get_client_filter())))
+                self.log.info("New client %s from %s" % (c.get_id(), environ["REMOTE_ADDR"]))
+                self.log.debug("Set client %s from %s with %s" % (c.get_id(), environ["REMOTE_ADDR"], str(c.get_client_filter())))
                 self.log.debug(str(environ))
                 while self.is_running():
                     c.consume_event()
                     sleep(0.005)
                 return
             except socket.error, e:
-                self.log.warn("Websocket %s from %s disconnected" % (str(id(ws)), environ["REMOTE_ADDR"]))
+                self.log.warn("Client %s from %s disconnected" % (c.get_id(), environ["REMOTE_ADDR"]))
                 self.log.debug(str(environ))
                 self.ws_clients.discard(c)
                 return
@@ -100,7 +100,7 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
             status = ""
             for c in self.ws_clients:
                 addr = c.get_peername()
-                status += "Websocket %s since %d seconds\n" % (str(addr), c.get_duration())
+                status += "Client %s (%s) since %d seconds\n" % (c.get_id(), str(addr), c.get_duration())
             start_response('200 OK', [('content-type', 'text/plain')])
             return [status]
         elif environ["PATH_INFO"] == '/status':

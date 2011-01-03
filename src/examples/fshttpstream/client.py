@@ -2,9 +2,10 @@
 """
 Client class
 """
-import gevent.queue
 import datetime
+import uuid
 import re
+import gevent.queue
 try: 
     import simplejson as json
 except ImportError:
@@ -17,6 +18,7 @@ class Client(object):
     """
     def __init__(self, ws, raw_config=''):
         self.started = datetime.datetime.now()
+        self.uuid = str(uuid.uuid4())
         self.raw_config = raw_config
         self.config = json.loads(self.raw_config)
         try:
@@ -25,6 +27,9 @@ class Client(object):
             self.client_filter = ClientFilter(None)
         self.ws = ws
         self.queue = gevent.queue.Queue()
+
+    def get_id(self):
+        return self.uuid
 
     def get_config(self):
         return self.config
