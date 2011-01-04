@@ -6,10 +6,14 @@ from telephonie.core.eventtypes import Event
 from telephonie.core.errors import ConnectError
 import gevent
 from gevent import socket
+from gevent import Timeout
 from gevent.server import StreamServer
 
 
 class TestClient(object):
+    '''
+    Client class on test inbound server side.
+    '''
     def __init__(self, sock):
         self.socket = sock
         self.fd = self.socket.makefile()
@@ -31,13 +35,16 @@ class TestClient(object):
 
 
 class TestEventSocketServer(object):
+    '''
+    Test inbound socket server.
+    '''
     def __init__(self):
-        self.server = StreamServer(('127.0.0.1', 18021), self.emulator)
+        self.server = StreamServer(('127.0.0.1', 18021), self.emulate)
 
     def start(self):
         self.server.serve_forever()
 
-    def emulator(self, sock, address):
+    def emulate(self, sock, address):
         client = TestClient(sock)
         client.send("Content-Type: auth/request\n\n")
         buff = ""
@@ -53,11 +60,14 @@ class TestEventSocketServer(object):
                     break
                 else:
                     buff += line
-            if client.auth is False:
+                    if buff.startswith('exit'):
+                        self.disconnect(client)
+                        return
+            if client.auth is True:
                 break
         if client.auth is False:
             self.disconnect(client)
-            raise ConnectError("auth failure")
+            return
 
         # wait event plain ALL (3 tries)
         buff = ""
@@ -72,17 +82,21 @@ class TestEventSocketServer(object):
                     break
                 else:
                     buff += line
-            if client.event_plain is False:
+                    if buff.startswith('exit'):
+                        self.disconnect(client)
+                        return
+            if client.event_plain is True:
                 break
         if client.event_plain is False:
             self.disconnect(client)
-            raise ConnectError("event plain failure")
+            return
 
         # send fake heartbeat and re_schedule events to client 10 times
         for i in range(10):
             self.send_heartbeat(client)
+            gevent.sleep(0.01)
             self.send_re_schedule(client)
-            gevent.sleep(1.0)
+            gevent.sleep(0.01)
 
         self.disconnect(client)
         return
@@ -93,47 +107,50 @@ class TestEventSocketServer(object):
 
     def send_heartbeat(self, client):
         msg = \
-"""Content-Length: 628
+"""Content-Length: 630
 Content-Type: text/event-plain
 
 Event-Name: HEARTBEAT
 Core-UUID: 12640749-db62-421c-beac-4863eac76510
 FreeSWITCH-Hostname: vocaldev
 FreeSWITCH-IPv4: 10.0.0.108
-FreeSWITCH-IPv6: ::1
-Event-Date-Local: 2011-01-03 17:55:36
-Event-Date-GMT: Mon,03 Jan 2011 16:55:36 GMT
-Event-Date-Timestamp: 1294073736359087
+FreeSWITCH-IPv6: %3A%3A1
+Event-Date-Local: 2011-01-04%2010%3A19%3A56
+Event-Date-GMT: Tue,%2004%20Jan%202011%2009%3A19%3A56%20GMT
+Event-Date-Timestamp: 1294132796167745
 Event-Calling-File: switch_core.c
 Event-Calling-Function: send_heartbeat
 Event-Calling-Line-Number: 65
-Event-Info: System Ready
-Up-Time: 0 years, 3 days, 1 hour, 19 minutes, 19 seconds, 835 milliseconds, 430 microseconds
+Event-Info: System%20Ready
+Up-Time: 0%20years,%203%20days,%2017%20hours,%2043%20minutes,%2039%20seconds,%20644%20milliseconds,%2091%20microseconds
 Session-Count: 0
 Session-Per-Sec: 30
 Session-Since-Startup: 0
-Idle-CPU: 99.000000
+Idle-CPU: 100.000000
 
 """
         client.send(msg)
 
     def send_re_schedule(self, client):
         msg = \
-"""Event-Name: RE_SCHEDULE
+"""Content-Length: 491
+Content-Type: text/event-plain
+
+Event-Name: RE_SCHEDULE
 Core-UUID: 12640749-db62-421c-beac-4863eac76510
 FreeSWITCH-Hostname: vocaldev
 FreeSWITCH-IPv4: 10.0.0.108
-FreeSWITCH-IPv6: ::1
-Event-Date-Local: 2011-01-03 17;58:16
-Event-Date-GMT: Mon, 03 Jan 2011 16:58:16 GMT
-Event-Date-Timestamp: 1294073896363806
+FreeSWITCH-IPv6: %3A%3A1
+Event-Date-Local: 2011-01-04%2010%3A19%3A56
+Event-Date-GMT: Tue,%2004%20Jan%202011%2009%3A19%3A56%20GMT
+Event-Date-Timestamp: 1294132796167745
 Event-Calling-File: switch_scheduler.c
 Event-Calling-Function: switch_scheduler_execute
 Event-Calling-Line-Number: 65
 Task-ID: 1
 Task-Desc: heartbeat
 Task-Group: core
-Task-Runtime: 1294073916
+Task-Runtime: 1294132816
 
 """
         client.send(msg)
@@ -151,35 +168,45 @@ Task-Runtime: 1294073916
             except:
                 client.send("Content-Type: command/reply\nReply-Text: -ERR invalid\n\n")
                 return False
+        client.send("Content-Type: command/reply\nReply-Text: -ERR invalid\n\n")
         return False
 
     def event_plain(self, client, buff):
-        if buff.startswith("event plain"):
+        if buff.startswith('event plain'):
             client.event_plain = True
             client.send("Content-Type: command/reply\nReply-Text: +OK event listener enabled plain\n\n")
             return True
         return False
 
 
-
 class TestInboundEventSocket(InboundEventSocket):
     def __init__(self, host, port, password, filter='ALL', pool_size=500, connect_timeout=5):
         InboundEventSocket.__init__(self, host, port, password, filter, pool_size, connect_timeout)
-        self.heartbeat_event_count = 0
-        self.re_schedule_event_count = 0
-
-    def unbound_event(self, ev):
-        print str(ev)
+        self.heartbeat_events = []
+        self.re_schedule_events = []
 
     def on_re_schedule(self, ev):
-        self.heartbeat_event_count += 1
+        self.re_schedule_events.append(ev)
 
     def on_heartbeat(self, ev):
-        self.re_schedule_event_count += 1
-        
+        self.heartbeat_events.append(ev)
+
+    def serve_for_test(self):
+        timeout = Timeout(10)
+        timeout.start()
+        try:
+            while self.is_connected():
+                if len(self.re_schedule_events) == 10 and len(self.heartbeat_events) == 10:
+                    break
+                gevent.sleep(0.01)
+        finally:
+            timeout.cancel()
 
 
 class TestInboundCase(TestCase):
+    '''
+    Test case for Inbound Event Socket.
+    '''
     def setUp(self):
         s = TestEventSocketServer()
         self.server_proc = gevent.spawn(s.start)
@@ -199,23 +226,27 @@ class TestInboundCase(TestCase):
         isock = InboundEventSocket('127.0.0.1', 18021, 'ClueCon')
         try:
             self.assertTrue(isock.connect())
-        except ConnectError, e:
-            self.fail("connect error: %s" % str(e))
         except socket.error, se:
             self.fail("socket error: %s" % str(se))
-        #self.assertTrue(isock.connect)
-"""
-    def test_event_plain(self):
+        except ConnectError, e:
+            self.fail("connect error: %s" % str(e))
+
+    def test_events(self):
         isock = TestInboundEventSocket('127.0.0.1', 18021, 'ClueCon')
         try:
-            self.assertTrue(isock.connect)
+            self.assertTrue(isock.connect())
         except socket.error, se:
             self.fail("socket error: %s" % str(se))
         except ConnectError, e:
             self.fail("connect error: %s" % str(e))
-        self.assertEquals(isock.heartbeat_event_count, 10)
-        self.assertEquals(isock.re_schedule_event_count, 10)
-"""
-
-
+        try:
+            isock.serve_for_test()
+        except Timeout, t:
+            self.fail("timeout error: cannot get all events")
+        self.assertEquals(len(isock.heartbeat_events), 10)
+        self.assertEquals(len(isock.re_schedule_events), 10)
+        for ev in isock.heartbeat_events:
+            self.assertEquals(ev.get_header('Event-Name'), 'HEARTBEAT')
+        for ev in isock.re_schedule_events:
+            self.assertEquals(ev.get_header('Event-Name'), 'RE_SCHEDULE')
 
