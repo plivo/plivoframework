@@ -2,29 +2,29 @@ $.fn.fshttpstream = function(options) {
     var settings = $.extend({}, $.fn.fshttpstream.defaults, options);
    
     return this.each(function() {
-        window.WEB_SOCKET_SWF_LOCATION = "WebSocketMain.swf";
+        window.WEB_SOCKET_SWF_LOCATION = settings.WebSocketMain_swf_path;
         $.ajax({
-	    url: "swfobject.js",
+	    url: settings.swfobject_js_path,
             dataType: 'script',
             async: false
         });
         $.ajax({
-	    url: "FABridge.js",
+	    url: settings.FABridge_js_path,
             dataType: 'script',
             async: false
         });
         $.ajax({
-	    url: "web_socket.js",
+	    url: settings.web_socket_js_path,
             dataType: 'script',
             async: false
         });
         $.ajax({
-	    url: "fshttpstream.js",
+	    url: settings.fshttpstream_js_path,
             dataType: 'script',
             async: false
         });
         fsconfig = new FSConfig();
-        fsconfig.setFilter(settings.refilter);
+        fsconfig.setFilter(settings.filter);
         $.fn.fshttpstream.fs = new FSHttpStream(settings.host, settings.port, settings.on_message, settings.on_open, settings.on_close, fsconfig);
     });
    
@@ -53,6 +53,11 @@ $.fn.fshttpstream.defaults = {
     on_message : function(){},
     on_open : function(){},
     on_close : function(){},
-    refilter : null
+    filter : null,
+    fshttpstream_js_path : "fshttpstream.js",
+    swfobject_js_path : "swfobject.js",
+    FABridge_js_path : "FABridge.js",
+    web_socket_js_path : "web_socket.js",
+    WebSocketMain_swf_path : "WebSocketMain.swf"
 };
 
