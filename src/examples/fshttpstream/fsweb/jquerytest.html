@@ -1,0 +1,73 @@
+<html>
+<head>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+  <script src="jquery.fshttpstream.js"></script>
+  <script>
+    // set flash websocket
+    WEB_SOCKET_SWF_LOCATION = "WebSocketMain.swf";
+
+    // fshttpstream server host 
+    // WARNING : the host name should be the same as the URL that the client will open on the web server
+    //           (cross domain with websocket are denied)
+    var host = "labiche";
+    // fshttpstream server port
+    var port = 8000;
+
+    function onMessage(fsobj, data) {
+      try {
+        ev = jQuery.parseJSON(data);
+      } catch(e) {
+        alert(e + " " + data);
+        return;
+      }
+      action = ev['Event-Name'];
+      if (!action) {
+        return;
+      }
+      if (ev['Event-Date-Local']) {
+        action = action + " - " + ev['Event-Date-Local'];
+      }
+      $("#events").append("<div>");
+      $("#events").append("<p style=\"border-left: 5px solid #865d23; padding-left:2px; color:#453528; padding: 1px; background-color: #c4946e; font-weight:bold; display:block; width:60%; margin-bottom:0;\">Action &nbsp;" + action + "</p>");
+      $("#events").append("<p style=\"border-left: 5px solid #865d23; padding-left:2px; display:block; background-color:#e1c6b0; color:#4a301b; width:80%; margin-top:0; padding: 5px; font-style: italic;\">" + data + "</p>");
+      $("#events").append("</div>");
+      $("#events").scrollTop($("#events")[0].scrollHeight);
+    };
+
+    function onOpen(fsobj) {
+      $("#status").html("Connection UP - " + fsobj.getAddress());
+    };
+
+    function onClose(fsobj) {
+      $("#status").html("Connection DOWN");
+    };
+
+
+    /* CONNECT
+    connect when dom is ready
+    */
+    $(document).ready(function() {
+      $(document).fshttpstream({"host": host, 
+                                "port": port, 
+                                "on_message": onMessage, 
+                                "on_open": onOpen, 
+                                "on_close": onClose, 
+                                "filter": "Event-Name: (HEARTBEAT|MESSAGE_WAITING)"
+                              });
+      //$("#fstitle").html('Freeswitch Events - ' + $(document).fshttpstream.fs.getStringMode());
+      //var fs = new FSHttpStream(host, port, onMessage, onOpen, onClose, mycfg);
+      //$("#fstitle").html('Freeswitch Events - ' + fs.getStringMode());
+    });
+
+  </script>
+</head>
+
+<body style="background-color:#453528; color:white;">
+  <h3 id="fstitle">Freeswitch Events</h3>
+  <hr/>
+  <h4 id="status">Connection DOWN</h4>
+  <hr/>
+  <div id="events" style="overflow:auto; width:90%; height:400px; margin-left:1%;"></div>
+</body>
+</html>
+
