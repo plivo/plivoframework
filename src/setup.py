@@ -17,6 +17,7 @@ setup_args = {
       'scripts':['scripts/telephonied'],
       'keywords':"telecom voip telephony freeswitch ivr",
       'license':__licence__,
+      'zip_safe':False,
       'classifiers':[
         "Programming Language :: Python",
         "Operating System :: POSIX",
