@@ -12,21 +12,26 @@ except ImportError:
     import json
 
 
+PING_EVENT = '{"Ping": null}'
+
+
 class Client(object):
     """
     Websocket client.
     """
-    def __init__(self, ws, raw_config=''):
+    def __init__(self, ws, raw_config='', inactivity_timeout=20):
         self.started = datetime.datetime.now()
         self.uuid = str(uuid.uuid4())
         self.raw_config = raw_config
         self.config = json.loads(self.raw_config)
+        self.inactivity_timeout = inactivity_timeout
         try:
             self.client_filter = ClientFilter(self.config['filter'])
         except KeyError:
             self.client_filter = ClientFilter(None)
         self.ws = ws
         self.queue = gevent.queue.Queue()
+        self.last_event = datetime.datetime.now()
 
     def get_id(self):
         return self.uuid
@@ -46,11 +51,26 @@ class Client(object):
     def push_event(self, event):
         self.queue.put(event)
 
+    def ping(self):
+        now = datetime.datetime.now()
+        if (now - self.last_event).seconds >= self.inactivity_timeout:
+            self.ws.send(PING_EVENT)
+            self.last_event = now
+            gevent.sleep(0.02)
+            return True
+        return False
+
     def consume_event(self):
-        event = self.queue.get()
-        json_event = json.dumps(event.get_headers())
-        if self.client_filter.event_match(event.get_raw_event()):
-            self.ws.send(json_event)
+        try:
+            event = self.queue.get(timeout=1)
+            json_event = json.dumps(event.get_headers())
+            if self.client_filter.event_match(event.get_raw_event()):
+                self.ws.send(json_event)
+                self.last_event = datetime.datetime.now()
+            return 
+        except gevent.queue.Empty:
+            gevent.sleep(0.02)
+            return
 
 
 class ClientFilter(object):

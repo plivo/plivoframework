@@ -3,6 +3,8 @@
 Freeswitch http stream server class
 """
 import os
+import sys
+import signal
 import traceback
 from telephonie.utils.logger import StdoutLogger
 from gevent import (sleep, spawn, GreenletExit, socket)
@@ -76,7 +78,8 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
                 self.log.debug(str(environ))
                 while self.is_running():
                     c.consume_event()
-                    sleep(0.005)
+                    if c.ping():
+                        self.log.debug("Client %s ping ok" % c.get_id())
                 return
             except socket.error, e:
                 self.log.warn("Client %s from %s disconnected" % (c.get_id(), environ["REMOTE_ADDR"]))
@@ -99,8 +102,11 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
         elif environ["PATH_INFO"] == '/clients':
             status = ""
             for c in self.ws_clients:
-                addr = c.get_peername()
-                status += "Client %s (%s) since %d seconds\n" % (c.get_id(), str(addr), c.get_duration())
+                try:
+                    addr = c.get_peername()
+                    status += "Client %s %s since %d seconds\n" % (c.get_id(), str(addr), c.get_duration())
+                except socket.error, e : 
+                    status += "Client %s disconnecting (%s)\n" % (c.get_id(), str(e))
             start_response('200 OK', [('content-type', 'text/plain')])
             return [status]
         elif environ["PATH_INFO"] == '/status':
