@@ -8,8 +8,8 @@ def make_test():
 
 def make_suite():
     return unittest.TestLoader().loadTestsFromNames([
-        'telephonie.tests.test_events',
-        'telephonie.tests.test_inboundsocket',
+        'tests.test_events',
+        'tests.test_inboundsocket',
     ])
 
 def run_test():
@@ -24,5 +24,6 @@ def run():
 if __name__ == '__main__':
     import os
     import sys
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    #sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    sys.path.insert(0, '.')
     run()

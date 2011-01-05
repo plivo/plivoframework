@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import find_packages, setup
+from distutils.core import setup
 from telephonie import (__version__, __author__, __author_email__, __maintainer__, __maintainer_email__, __licence__)
 
 setup(name='telephonie',
@@ -13,12 +13,11 @@ setup(name='telephonie',
       maintainer_email=__maintainer_email__,
       platforms=['linux'],
       long_description='Framework to create telephony applications using FreeSWITCH',
-      packages=['telephonie', 'telephonie.core', 'telephonie.utils'],
+      packages=['telephonie', 'telephonie.core', 'telephonie.utils', 'telephonie.lib'],
       scripts=['scripts/telephonied'],
-      test_suite="telephonie.tests.run_test",
+      keywords="telecom voip telephony freeswitch ivr",
       license=__licence__,
-      install_requires=['gevent'],
-      zip_safe=False,
+      requires=['gevent'],
       classifiers=[
         "Programming Language :: Python",
         "Operating System :: POSIX",

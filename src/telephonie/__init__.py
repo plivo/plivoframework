@@ -21,5 +21,5 @@ __maintainer_email__ = "telephonie@miglu.com"
 
 __licence__ = "MPL 1.1"
 
-__all__ = ['core', 'utils']
+__all__ = ['core', 'utils', 'lib']
 
