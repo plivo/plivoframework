@@ -51,8 +51,8 @@ class Client(object):
     def get_filters(self):
         return self.client_filters
 
-    def get_filters_str(self):
-        return str([ str(f) for f in self.client_filters ])
+    def list_filters(self):
+        return [ str(f) for f in self.client_filters ]
 
     def get_peername(self):
         return self.ws.socket.getpeername()
@@ -77,7 +77,7 @@ class Client(object):
             event = self.queue.get(timeout=1)
             json_event = json.dumps(event.get_headers())
             for f in self.client_filters:
-                if f.event_match(event.get_raw_event()):
+                if f.event_match(event.get_unquoted_raw_event()):
                     self.ws.send(json_event)
                     self.last_event = datetime.datetime.now()
                     return

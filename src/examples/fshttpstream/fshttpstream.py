@@ -50,7 +50,8 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
         while self.is_running():
             try:
                 ev = self.inbound_socket.wait_for_event()
-                self.log.debug(str(ev))
+                #self.log.debug(str(ev))
+                self.log.debug(str(ev.get_unquoted_raw_event()))
                 for c in self.ws_clients:
                     c.push_event(ev)
                 sleep(0.005)
@@ -70,11 +71,12 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
             c = None
             try:
                 ws = environ["wsgi.websocket"]
+                self.log.debug(str(environ))
                 c = client.Client(ws)
                 self.ws_clients.add(c)
                 self.log.info("New client %s from %s" % (c.get_id(), environ["REMOTE_ADDR"]))
-                self.log.debug("Set client %s from %s with %s" % (c.get_id(), environ["REMOTE_ADDR"], c.get_filters_str()))
-                self.log.debug(str(environ))
+                for f in c.list_filters():
+                    self.log.debug("Client %s, filter '%s'" % (c.get_id(), f))
                 while self.is_running():
                     c.consume_event()
                     if c.ping():
