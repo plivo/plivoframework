@@ -13,14 +13,12 @@
     // fshttpstream server host 
     // WARNING : the host name should be the same as the URL that the client will open on the web server
     //           (cross domain with websocket are denied)
-    var host = "127.0.0.1";
+    var host = "labiche";
     // fshttpstream server port
     var port = 8000;
 
-    // set fs config for this client
-    var mycfg = new FSConfig();
-    // only get events matching : Event-Name: HEARTBEAT and Event-Name: MESSAGE_WAITING
-    mycfg.setFilter("Event-Name: (HEARTBEAT|MESSAGE_WAITING)");
+    // don't match HEARTBEAT and RE_SCHEDULE events
+    filters = ["Event-Name: (?!(HEARTBEAT|RE_SCHEDULE))"];
 
     function onMessage(fsobj, data) {
       try {
@@ -57,7 +55,7 @@
     connect when dom is ready
     */
     $(document).ready(function() {
-      var fs = new FSHttpStream(host, port, onMessage, onOpen, onClose, mycfg);
+      var fs = new FSHttpStream(host, port, onMessage, onOpen, onClose, filters);
       $("#fstitle").html('Freeswitch Events - ' + fs.getStringMode());
     });
 

@@ -1,17 +1,4 @@
-function FSConfig() {
-    this.filter = null;
-}
-
-FSConfig.prototype.setFilter = function(filter) {
-    this.filter = filter;
-};
-
-FSConfig.prototype.stringify = function() {
-    return JSON.stringify(this);
-};
-
-
-function FSHttpStream(host, port, onMessage, onOpen, onClose, config) {
+function FSHttpStream(host, port, onMessage, onOpen, onClose, filters) {
     if ((!port) || (port == null) || (port == "")) { 
         this.address = host;
     } else {
@@ -26,10 +13,10 @@ function FSHttpStream(host, port, onMessage, onOpen, onClose, config) {
     this.onOpen = onOpen;
     this.onClose = onClose;
 
-    if ((!config) || (config == null)) {
-        this.cfg = FSConfig();
+    if ((!filters) || (filters == null)) {
+        this.filters = Array();
     } else {
-        this.cfg = config;
+        this.filters = filters;
     }
 
     if (!window.WebSocket) {
@@ -48,8 +35,10 @@ function FSHttpStream(host, port, onMessage, onOpen, onClose, config) {
     });
     this.sock.onopen = this.Bind(function(e) {
         this.ws_state = 1;
-        cfgstring = this.cfg.stringify();
-        this.sock.send(cfgstring);
+        for(i=0; i<this.filters.length; i++) {
+            this.sock.send(this.filters[i]);
+        }
+        this.sock.send("EOF");
         this.onOpen(this);
     });
     this.sock.onclose = this.Bind(function(e) {
@@ -81,8 +70,8 @@ FSHttpStream.prototype.getStringMode = function() {
     return "NotSupported";
 };
 
-FSHttpStream.prototype.getConfig = function() {
-    return this.cfg;
+FSHttpStream.prototype.getFilters = function() {
+    return this.filters;
 };
 
 FSHttpStream.prototype.getUrl = function() {

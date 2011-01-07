@@ -14,24 +14,33 @@ except ImportError:
 
 PING_EVENT = '{"Ping": null}'
 
+END_FILTERS = 'EOF'
+
+MAX_FILTERS = 100
+
 
 class Client(object):
     """
     Websocket client.
     """
-    def __init__(self, ws, raw_config='', inactivity_timeout=20):
+    def __init__(self, ws, inactivity_timeout=20):
         self.started = datetime.datetime.now()
         self.uuid = str(uuid.uuid4())
-        self.raw_config = raw_config
-        self.config = json.loads(self.raw_config)
         self.inactivity_timeout = inactivity_timeout
-        try:
-            self.client_filter = ClientFilter(self.config['filter'])
-        except KeyError:
-            self.client_filter = ClientFilter(None)
+        self.client_filters = set()
         self.ws = ws
         self.queue = gevent.queue.Queue()
         self.last_event = datetime.datetime.now()
+        for x in range(MAX_FILTERS):
+            f = ws.wait()
+            if f == END_FILTERS:
+                break
+            self.add_filter(f)
+
+    def add_filter(self, refilter):
+        f = ClientFilter(refilter)
+        if not f.get_regexp() is None:
+            self.client_filters.add(f)
 
     def get_id(self):
         return self.uuid
@@ -39,8 +48,11 @@ class Client(object):
     def get_config(self):
         return self.config
 
-    def get_client_filter(self):
-        return self.client_filter
+    def get_filters(self):
+        return self.client_filters
+
+    def get_filters_str(self):
+        return str([ str(f) for f in self.client_filters ])
 
     def get_peername(self):
         return self.ws.socket.getpeername()
@@ -64,9 +76,11 @@ class Client(object):
         try:
             event = self.queue.get(timeout=1)
             json_event = json.dumps(event.get_headers())
-            if self.client_filter.event_match(event.get_raw_event()):
-                self.ws.send(json_event)
-                self.last_event = datetime.datetime.now()
+            for f in self.client_filters:
+                if f.event_match(event.get_raw_event()):
+                    self.ws.send(json_event)
+                    self.last_event = datetime.datetime.now()
+                    return
             return 
         except gevent.queue.Empty:
             gevent.sleep(0.02)

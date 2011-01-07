@@ -70,11 +70,10 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
             c = None
             try:
                 ws = environ["wsgi.websocket"]
-                client_config = ws.wait()
-                c = client.Client(ws, client_config)
+                c = client.Client(ws)
                 self.ws_clients.add(c)
                 self.log.info("New client %s from %s" % (c.get_id(), environ["REMOTE_ADDR"]))
-                self.log.debug("Set client %s from %s with %s" % (c.get_id(), environ["REMOTE_ADDR"], str(c.get_client_filter())))
+                self.log.debug("Set client %s from %s with %s" % (c.get_id(), environ["REMOTE_ADDR"], c.get_filters_str()))
                 self.log.debug(str(environ))
                 while self.is_running():
                     c.consume_event()
@@ -83,7 +82,6 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
                 return
             except socket.error, e:
                 self.log.warn("Client %s from %s disconnected" % (c.get_id(), environ["REMOTE_ADDR"]))
-                self.log.debug(str(environ))
                 self.ws_clients.discard(c)
                 return
             except KeyError:

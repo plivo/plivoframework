@@ -23,9 +23,7 @@ $.fn.fshttpstream = function(options) {
             dataType: 'script',
             async: false,
             success: function(data) {
-                        fsconfig = new FSConfig();
-                        fsconfig.setFilter(settings.filter);
-                        $.fn.fshttpstream.fs = new FSHttpStream(settings.host, settings.port, settings.on_message, settings.on_open, settings.on_close, fsconfig);
+                        $.fn.fshttpstream.fs = new FSHttpStream(settings.host, settings.port, settings.on_message, settings.on_open, settings.on_close, settings.filters);
             }
         });
     });
@@ -55,7 +53,7 @@ $.fn.fshttpstream.defaults = {
     on_message : function(){},
     on_open : function(){},
     on_close : function(){},
-    filter : null,
+    filters : [],
     fshttpstream_js_path : "fshttpstream.js",
     swfobject_js_path : "swfobject.js",
     FABridge_js_path : "FABridge.js",
