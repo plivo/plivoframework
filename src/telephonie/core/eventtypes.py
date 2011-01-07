@@ -110,8 +110,22 @@ class Event(object):
         self._body = data
 
     def get_raw_event(self):
+        '''
+        Gets raw Event (quoted).
+        '''
         raw = ''
         raw += '\n'.join([ '%s: %s' % (k, quote(v)) for k, v in self.get_headers().iteritems() ])
+        raw += '\n'
+        if self._body:
+            raw += self._body
+        return raw
+
+    def get_unquoted_raw_event(self):
+        '''
+        Gets raw Event (unquoted).
+        '''
+        raw = ''
+        raw += '\n'.join([ '%s: %s' % (k, v) for k, v in self.get_headers().iteritems() ])
         raw += '\n'
         if self._body:
             raw += self._body
