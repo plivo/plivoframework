@@ -50,8 +50,7 @@ class FSWebsocketServer(websocketserver.WebsocketServer):
         while self.is_running():
             try:
                 ev = self.inbound_socket.wait_for_event()
-                #self.log.debug(str(ev))
-                self.log.debug(str(ev.get_unquoted_raw_event()))
+                self.log.debug(str(ev))
                 for c in self.ws_clients:
                     c.push_event(ev)
                 sleep(0.005)
