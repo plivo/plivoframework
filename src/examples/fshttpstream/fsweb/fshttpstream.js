@@ -1,6 +1,6 @@
 function FSConfig() {
     this.filter = null;
-};
+}
 
 FSConfig.prototype.setFilter = function(filter) {
     this.filter = filter;

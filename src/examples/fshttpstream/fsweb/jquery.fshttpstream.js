@@ -4,28 +4,30 @@ $.fn.fshttpstream = function(options) {
     return this.each(function() {
         window.WEB_SOCKET_SWF_LOCATION = settings.WebSocketMain_swf_path;
         $.ajax({
-	    url: settings.swfobject_js_path,
+        url: settings.swfobject_js_path,
             dataType: 'script',
             async: false
         });
         $.ajax({
-	    url: settings.FABridge_js_path,
+        url: settings.FABridge_js_path,
+            dataType: 'script',
+            async: false,
+        });
+        $.ajax({
+        url: settings.web_socket_js_path,
             dataType: 'script',
             async: false
         });
         $.ajax({
-	    url: settings.web_socket_js_path,
+        url: settings.fshttpstream_js_path,
             dataType: 'script',
-            async: false
+            async: false,
+            success: function(data) {
+                        fsconfig = new FSConfig();
+                        fsconfig.setFilter(settings.filter);
+                        $.fn.fshttpstream.fs = new FSHttpStream(settings.host, settings.port, settings.on_message, settings.on_open, settings.on_close, fsconfig);
+            }
         });
-        $.ajax({
-	    url: settings.fshttpstream_js_path,
-            dataType: 'script',
-            async: false
-        });
-        fsconfig = new FSConfig();
-        fsconfig.setFilter(settings.filter);
-        $.fn.fshttpstream.fs = new FSHttpStream(settings.host, settings.port, settings.on_message, settings.on_open, settings.on_close, fsconfig);
     });
    
 };
