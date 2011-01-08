@@ -87,7 +87,7 @@ class OrderedDict(dict, DictMixin):
     iteritems = DictMixin.iteritems
 
     def __repr__(self):
-        return "{" + ", ".join([ "%s: %s" % (str(k), str(v)) for k, v in self.items() ]) + "}"
+        return '{' + ', '.join([ "%s: %s" % (str(k), str(v)) for k, v in self.items() ]) + '}'
 
     def copy(self):
         return self.__class__(self)
@@ -113,13 +113,17 @@ class Event(object):
     def __init__(self, buffer=""):
         self._headers = OrderedDict()
         self._body = ''
+        self._raw = ''
+        self._uraw = ''
         if buffer:
+            self._raw = buffer
             # Sets event headers from buffer.
             for line in buffer.splitlines():
                 try:
                     var, val = line.rstrip().split(': ', 1)
                     var = var.strip()
                     val = unquote(val.strip())
+                    self._uraw += "%s: %s\n" % (var, val)
                     self.set_header(var, val)
                 except ValueError: 
                     pass
@@ -210,32 +214,35 @@ class Event(object):
         '''
         self._body = data
 
+    def get_raw_headers(self):
+        '''
+        Gets raw headers (quoted).
+        '''
+        return self._raw
+
+    def get_unquoted_raw_headers(self):
+        '''
+        Gets raw headers (unquoted).
+        '''
+        return self._uraw
+
     def get_raw_event(self):
         '''
         Gets raw Event (quoted).
         '''
-        raw = ''
-        raw += '\n'.join([ '%s: %s' % (k, quote(v)) for k, v in self.get_headers().iteritems() ])
-        raw += '\n'
-        if self._body:
-            raw += self._body
-        return raw
+        return self._raw + self._body + '\n'
 
     def get_unquoted_raw_event(self):
         '''
         Gets raw Event (unquoted).
         '''
-        raw = ''
-        raw += '\n'.join([ '%s: %s' % (k, v) for k, v in self.get_headers().iteritems() ])
-        raw += '\n'
-        if self._body:
-            raw += self._body
-        return raw
+        return self._uraw + self._body + '\n'
 
     def __str__(self):
-        return '<Event [headers=%s, response=%s]>' \
-               % (str(self.get_headers()), str(self.get_body()))
-
+        return '<%s headers=%s, body=%s>' \
+               % (self.__class__.__name__, 
+                  str(self.get_unquoted_raw_headers().replace('\n', '\\n')), 
+                  str(self.get_body()).replace('\n', '\\n'))
 
 
 class ApiResponse(Event):
@@ -247,8 +254,7 @@ class ApiResponse(Event):
         '''
         Makes an ApiResponse instance from Event instance.
         '''
-        cls = ApiResponse()
-        cls.set_headers(event.get_headers())
+        cls = ApiResponse(event.get_raw_headers())
         cls.set_body(event.get_body())
         return cls
 
@@ -266,11 +272,6 @@ class ApiResponse(Event):
         '''
         return self._body and self._body[:3] == '+OK'
 
-    def __str__(self):
-        return '<ApiResponse [headers=%s, response=%s]>' \
-               % (str(self.get_headers()), str(self.get_response()))
-
-
 
 class BgapiResponse(Event):
     def __init__(self, buffer=""):
@@ -282,8 +283,7 @@ class BgapiResponse(Event):
         '''
         Makes a BgapiResponse instance from Event instance.
         '''
-        cls = BgapiResponse()
-        cls.set_headers(event.get_headers())
+        cls = BgapiResponse(event.get_raw_headers())
         cls.set_body(event.get_body())
         return cls
 
@@ -307,11 +307,6 @@ class BgapiResponse(Event):
         '''
         return self.is_reply_text_success()
 
-    def __str__(self):
-        return '<BgapiResponse [headers=%s, response=%s, jobuuid=%s]>' \
-               % (str(self.get_headers()), str(self.get_response()), self.get_job_uuid())
-
-
 
 class CommandResponse(Event):
     def __init__(self, buffer=""):
@@ -322,8 +317,7 @@ class CommandResponse(Event):
         '''
         Makes a CommandResponse instance from Event instance.
         '''
-        cls = CommandResponse()
-        cls.set_headers(event.get_headers())
+        cls = CommandResponse(event.get_raw_headers())
         cls.set_body(event.get_body())
         return cls
 
@@ -341,8 +335,5 @@ class CommandResponse(Event):
         '''
         return self.is_reply_text_success()
 
-    def __str__(self):
-        return '<CommandResponse [headers=%s, response=%s]>' \
-               % (str(self.get_headers()), str(self.get_response()))
 
 

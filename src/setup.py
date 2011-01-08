@@ -13,7 +13,7 @@ setup_args = {
       'maintainer_email':__maintainer_email__,
       'platforms':['linux'],
       'long_description':'Framework to create telephony applications using FreeSWITCH',
-      'packages':['telephonie', 'telephonie.core', 'telephonie.utils', 'telephonie.lib'],
+      'packages':['telephonie', 'telephonie.core', 'telephonie.utils'],
       'scripts':['scripts/telephonied'],
       'keywords':"telecom voip telephony freeswitch ivr",
       'license':__licence__,
