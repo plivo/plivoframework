@@ -276,7 +276,6 @@ class ApiResponse(Event):
 class BgapiResponse(Event):
     def __init__(self, buffer=""):
         Event.__init__(self, buffer)
-        self._background_job = None
 
     @classmethod
     def cast(self, event):
