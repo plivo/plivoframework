@@ -10,7 +10,7 @@ from UserDict import DictMixin
 
 class OrderedDict(dict, DictMixin):
     '''
-    ordered dict from http://code.activestate.com/recipes/576693/
+    ordered dict from http://code.activestate.com/recipes/576693/ (with __repr__ modified).
     '''
     def __init__(self, *args, **kwds):
         if len(args) > 1:
@@ -112,18 +112,14 @@ class Event(object):
     '''Event class'''
     def __init__(self, buffer=""):
         self._headers = OrderedDict()
-        self._body = ''
-        self._raw = ''
-        self._uraw = ''
+        self._raw_body = ''
+        self._raw_headers = ''
+        self._u_raw_headers = ''
         if buffer:
-            self._raw = buffer
             # Sets event headers from buffer.
             for line in buffer.splitlines():
                 try:
                     var, val = line.rstrip().split(': ', 1)
-                    var = var.strip()
-                    val = unquote(val.strip())
-                    self._uraw += "%s: %s\n" % (var, val)
                     self.set_header(var, val)
                 except ValueError: 
                     pass
@@ -200,43 +196,48 @@ class Event(object):
         '''
         Sets a specific header.
         '''
+        key = key.strip()
+        value = value.strip()
+        u_value = unquote(value)
+        self._raw_headers += "%s: %s\n" % (key, value)
+        self._u_raw_headers += "%s: %s\n" % (key, u_value)
         self._headers[key] = value
 
     def get_body(self):
         '''
-        Gets Event body.
+        Gets raw Event body.
         '''
-        return self._body
+        return self._raw_body
 
     def set_body(self, data):
         '''
-        Sets Event body.
+        Sets raw Event body.
         '''
-        self._body = data
+        self._raw_body = data
 
     def get_raw_headers(self):
         '''
         Gets raw headers (quoted).
         '''
-        return self._raw
+        return self._raw_headers
 
     def get_unquoted_raw_headers(self):
         '''
         Gets raw headers (unquoted).
         '''
-        return self._uraw
+        return self._u_raw_headers
 
     def get_raw_event(self):
         '''
         Gets raw Event (quoted).
         '''
-        return self._raw + self._body + '\n'
+        return self._raw_headers + self._raw_body + '\n'
 
     def get_unquoted_raw_event(self):
         '''
         Gets raw Event (unquoted).
         '''
-        return self._uraw + self._body + '\n'
+        return self._u_raw_headers + self._raw_body + '\n'
 
     def __str__(self):
         return '<%s headers=%s, body=%s>' \
@@ -270,7 +271,7 @@ class ApiResponse(Event):
         
         Otherwise returns False.
         '''
-        return self._body and self._body[:3] == '+OK'
+        return self._raw_body and self._raw_body[:3] == '+OK'
 
 
 class BgapiResponse(Event):
