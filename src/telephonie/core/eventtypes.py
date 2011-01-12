@@ -201,7 +201,7 @@ class Event(object):
         u_value = unquote(value)
         self._raw_headers += "%s: %s\n" % (key, value)
         self._u_raw_headers += "%s: %s\n" % (key, u_value)
-        self._headers[key] = value
+        self._headers[key] = u_value
 
     def get_body(self):
         '''
