@@ -38,6 +38,8 @@ class Client(object):
             self.add_filter(f)
 
     def add_filter(self, refilter):
+        if not refilter:
+            return
         f = ClientFilter(refilter)
         if not f.get_regexp() is None:
             self.client_filters.add(f)
@@ -76,6 +78,10 @@ class Client(object):
         try:
             event = self.queue.get(timeout=1)
             json_event = json.dumps(event.get_headers())
+            if not self.client_filters:
+                self.ws.send(json_event)
+                self.last_event = datetime.datetime.now()
+                return
             for f in self.client_filters:
                 if f.event_match(event.get_unquoted_raw_event()):
                     self.ws.send(json_event)
