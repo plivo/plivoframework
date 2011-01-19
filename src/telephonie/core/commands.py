@@ -71,15 +71,6 @@ class Commands(object):
         """
         return self._protocol_send('sendevent', args)
 
-    def verbose_events(self, uuid="", lock=True, loops=1):
-        """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_verbose_events
-
-        >>> verbose_events()
-
-        For Inbound connection, uuid argument is mandatory.
-        """
-        return self._protocol_sendmsg("verbose_events", "", uuid, lock, loops)
-
     def auth(self, args):
         """Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#auth
         
@@ -87,7 +78,7 @@ class Commands(object):
         """
         return self._protocol_send("auth", args)
 
-    def myevents(self, uuid="", lock=True, loops=1):
+    def myevents(self, uuid=""):
         """For Inbound connection, please refer to http://wiki.freeswitch.org/wiki/Event_Socket#Special_Case_-_.27myevents.27
 
         For Outbound connection, please refer to http://wiki.freeswitch.org/wiki/Event_Socket_Outbound#Events
@@ -98,7 +89,16 @@ class Commands(object):
         """
         return self._protocol_send("myevents", uuid)
 
-    def answer(self, uuid="", lock=True, loops=1):
+    def verbose_events(self, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_verbose_events
+
+        >>> verbose_events()
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("verbose_events", "", uuid, lock
+
+    def answer(self, uuid="", lock=True):
         """
         Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_answer
 
@@ -106,9 +106,9 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("answer", "", uuid, lock, loops)
+        return self._protocol_sendmsg("answer", "", uuid, lock)
 
-    def bridge(self, args, uuid="", lock=True, loops=1):
+    def bridge(self, args, uuid="", lock=True):
         """
         Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bridge
 
@@ -116,9 +116,9 @@ class Commands(object):
         
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("bridge", args, uuid, lock, loops)
+        return self._protocol_sendmsg("bridge", args, uuid, lock)
 
-    def hangup(self, cause="", uuid="", lock=True, loops=1):
+    def hangup(self, cause="", uuid="", lock=True):
         """Hangup call.
 
         Hangup `cause` list : http://wiki.freeswitch.org/wiki/Hangup_Causes (Enumeration column)
@@ -127,9 +127,9 @@ class Commands(object):
         
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("hangup", cause, uuid, lock, loops)
+        return self._protocol_sendmsg("hangup", cause, uuid, lock)
 
-    def ring_ready(self, uuid="", lock=True, loops=1):
+    def ring_ready(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_ring_ready
 
         >>> ring_ready()
@@ -138,34 +138,34 @@ class Commands(object):
         """
         return self._protocol_sendmsg("ring_ready", "", uuid)
 
-    def record_session(self, filename, uuid="", lock=True, loops=1):
+    def record_session(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_record_session
         
         >>> record_session("/tmp/dump.gsm")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("record_session", filename, uuid, lock, loops)
+        return self._protocol_sendmsg("record_session", filename, uuid, lock)
 
-    def bind_meta_app(self, args, uuid="", lock=True, loops=1):
+    def bind_meta_app(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bind_meta_app
         
         >>> bind_meta_app("2 ab s record_session::/tmp/dump.gsm")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("bind_meta_app", args, uuid, lock, loops)
+        return self._protocol_sendmsg("bind_meta_app", args, uuid, lock)
 
-    def wait_for_silence(self, args, uuid="", lock=True, loops=1):
+    def wait_for_silence(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_wait_for_silence
         
         >>> wait_for_silence("200 15 10 5000")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("wait_for_silence", args, uuid, lock, loops)
+        return self._protocol_sendmsg("wait_for_silence", args, uuid, lock)
 
-    def sleep(self, milliseconds, uuid="", lock=True, loops=1):
+    def sleep(self, milliseconds, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_sleep
         
         >>> sleep(5000)
@@ -173,9 +173,9 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("sleep", milliseconds, uuid, lock, loops)
+        return self._protocol_sendmsg("sleep", milliseconds, uuid, lock)
 
-    def vmd(self, args, uuid="", lock=True, loops=1):
+    def vmd(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_vmd
         
         >>> vmd("start")
@@ -183,72 +183,72 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("vmd", args, uuid, lock, loops)
+        return self._protocol_sendmsg("vmd", args, uuid, lock)
 
-    def set(self, args, uuid="", lock=True, loops=1):
+    def set(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_set
         
         >>> set("ringback=${us-ring}")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("set", args, uuid, lock, loops)
+        return self._protocol_sendmsg("set", args, uuid, lock)
 
-    def set_global(self, args, uuid="", lock=True, loops=1):
+    def set_global(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_set_global
         
         >>> set_global("global_var=value")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("set_global", args, uuid, lock, loops)
+        return self._protocol_sendmsg("set_global", args, uuid, lock)
 
-    def unset(self, args, uuid="", lock=True, loops=1):
+    def unset(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_unset
         
         >>> unset("ringback")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("unset", args, uuid, lock, loops)
+        return self._protocol_sendmsg("unset", args, uuid, lock)
 
-    def start_dtmf(self, uuid="", lock=True, loops=1):
+    def start_dtmf(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_start_dtmf
 
         >>> start_dtmf()
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("start_dtmf", "", uuid, lock, loops)
+        return self._protocol_sendmsg("start_dtmf", "", uuid, lock)
 
-    def stop_dtmf(self, uuid="", lock=True, loops=1):
+    def stop_dtmf(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_stop_dtmf
 
         >>> stop_dtmf()
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("stop_dtmf", "", uuid, lock, loops)
+        return self._protocol_sendmsg("stop_dtmf", "", uuid, lock)
 
-    def start_dtmf_generate(self, uuid="", lock=True, loops=1):
+    def start_dtmf_generate(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_start_dtmf_generate
 
         >>> start_dtmf_generate()
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("start_dtmf_generate", "true", uuid, lock, loops)
+        return self._protocol_sendmsg("start_dtmf_generate", "true", uuid, lock)
 
-    def stop_dtmf_generate(self, uuid="", lock=True, loops=1):
+    def stop_dtmf_generate(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_stop_dtmf_generate
 
         >>> stop_dtmf_generate()
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("stop_dtmf_generate", "", uuid, lock, loops)
+        return self._protocol_sendmsg("stop_dtmf_generate", "", uuid, lock)
 
-    def queue_dtmf(self, args, uuid="", lock=True, loops=1):
+    def queue_dtmf(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_queue_dtmf
 
         Enqueue each received dtmf, that'll be sent once the call is bridged.
@@ -257,34 +257,34 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("queue_dtmf", args, uuid, lock, loops)
+        return self._protocol_sendmsg("queue_dtmf", args, uuid, lock)
 
-    def flush_dtmf(self, uuid="", lock=True, loops=1):
+    def flush_dtmf(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_flush_dtmf
 
         >>> flush_dtmf()
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("flush_dtmf", "", uuid, lock, loops)
+        return self._protocol_sendmsg("flush_dtmf", "", uuid, lock)
 
-    def play_fsv(self, filename, uuid="", lock=True, loops=1):
+    def play_fsv(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_fsv
         
         >>> play_fsv("/tmp/video.fsv")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("play_fsv", filename, uuid, lock, loops)
+        return self._protocol_sendmsg("play_fsv", filename, uuid, lock)
 
-    def record_fsv(self, filename, uuid="", lock=True, loops=1):
+    def record_fsv(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_fsv
         
         >>> record_fsv("/tmp/video.fsv")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("record_fsv", filename, uuid, lock, loops)
+        return self._protocol_sendmsg("record_fsv", filename, uuid, lock)
 
     def playback(self, filename, terminators=None, uuid="", lock=True, loops=1):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_playback
@@ -302,30 +302,30 @@ class Commands(object):
         self.set("playback_terminators=%s" % terminators or "none", uuid)
         return self._protocol_sendmsg("playback", filename, uuid, lock, loops)
 
-    def transfer(self, args, uuid="", lock=True, loops=1):
+    def transfer(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_transfer
 
         >>> transfer("3222 XML default")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("transfer", args, uuid, lock, loops)
+        return self._protocol_sendmsg("transfer", args, uuid, lock)
 
-    def att_xfer(self, url, uuid="", lock=True, loops=1):
+    def att_xfer(self, url, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_att_xfer
         
         >>> att_xfer("user/1001")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("att_xfer", url, uuid, lock, loops)
+        return self._protocol_sendmsg("att_xfer", url, uuid, lock)
 
-    def endless_playback(self, filename, uuid="", lock=True, loops=1):
+    def endless_playback(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_endless_playback
         
         >>> endless_playback("/tmp/dump.gsm")
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("endless_playback", filename, uuid, lock, loops)
+        return self._protocol_sendmsg("endless_playback", filename, uuid, lock)
 
