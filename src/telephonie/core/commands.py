@@ -96,7 +96,7 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("verbose_events", "", uuid, lock
+        return self._protocol_sendmsg("verbose_events", "", uuid, lock)
 
     def answer(self, uuid="", lock=True):
         """
