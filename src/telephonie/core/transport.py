@@ -4,6 +4,7 @@ Transport classes
 """
 
 import gevent.socket as socket
+from telephonie.core.errors import ConnectError
 
 
 class Transport(object):
@@ -32,6 +33,7 @@ class InboundTransport(Transport):
         self.host = host
         self.port = port
         self.timeout = connect_timeout
+        self.sockfd = None
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,6 +41,13 @@ class InboundTransport(Transport):
         self.sock.connect((self.host, self.port))
         self.sock.settimeout(None)
         self.sockfd = self.sock.makefile()
+
+    def write(self, data):
+        if not self.sockfd:
+            raise ConnectError('not connected')
+        self.sockfd.write(data)
+        self.sockfd.flush()
+        
 
 
 class OutboundTransport(Transport):

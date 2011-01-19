@@ -267,18 +267,20 @@ class EventSocket(Commands):
             cmd = cmd.encode("utf-8")
         self.transport.write(cmd + EOL*2)
         
-    def _sendmsg(self, name, arg=None, uuid="", lock=False):
+    def _sendmsg(self, name, arg=None, uuid="", lock=False, loops=1):
         if isinstance(name, types.UnicodeType):
             name = name.encode("utf-8")
         if isinstance(arg, types.UnicodeType):
             arg = arg.encode("utf-8")
-        msg = ""
-        msg += "sendmsg %s\ncall-command: execute\n" % uuid
+        msg = "sendmsg %s\ncall-command: execute\n" % uuid
         msg += "execute-app-name: %s\n" % name
-        if arg:
-            msg += "execute-app-arg: %s\n" % arg
         if lock is True:
             msg += "event-lock: true\n"
+        if loops > 1:
+            msg += "loops: %d\n" % loops
+        if arg:
+            arglen = len(arg)
+            msg += "content-type: text/plain\ncontent-length: %d\n\n%s\n" % (arglen, arg)
         self.transport.write(msg + EOL)
         
     def _protocol_send(self, command, args=""):
@@ -296,8 +298,8 @@ class EventSocket(Commands):
             event = CommandResponse.cast(event)
         return event
     
-    def _protocol_sendmsg(self, name, args=None, uuid="", lock=False):
-        self._sendmsg(name, args, uuid, lock)
+    def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
+        self._sendmsg(name, args, uuid, lock, loops)
         event = self.queue.get()
         # Always casts Event to CommandResponse
         return CommandResponse.cast(event)
