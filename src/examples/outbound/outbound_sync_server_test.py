@@ -16,13 +16,13 @@ class SyncOutboundEventSocket(OutboundEventSocket):
 
     def _protocol_send(self, command, args=""):
         self.log.info("[%s] args='%s'" % (command, args))
-        response = super(SyncOutboundEventSocket, self)._protocolSend(command, args)
+        response = super(SyncOutboundEventSocket, self)._protocol_send(command, args)
         self.log.info(str(response))
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False):
         self.log.info("[%s] args=%s uuid='%s' lock=%s" % (name, str(args), uuid, str(lock)))
-        response = super(SyncOutboundEventSocket, self)._protocolSendmsg(name, args, uuid, lock)
+        response = super(SyncOutboundEventSocket, self)._protocol_sendmsg(name, args, uuid, lock)
         self.log.info(str(response))
         return response
 
