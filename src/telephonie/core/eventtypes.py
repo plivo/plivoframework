@@ -263,7 +263,7 @@ class ApiResponse(Event):
         '''
         Gets response for api command.
         '''
-        return self.get_body()
+        return self.get_body().strip()
 
     def is_success(self):
         '''
