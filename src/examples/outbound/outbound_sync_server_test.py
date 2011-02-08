@@ -21,7 +21,7 @@ class SyncOutboundEventSocket(OutboundEventSocket):
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
-        self.log.info("[%s] args=%s, uuid='%s', lock=%s, loops=%d" \ 
+        self.log.info("[%s] args=%s, uuid='%s', lock=%s, loops=%d" \
                       % (name, str(args), uuid, str(lock), loops))
         response = super(SyncOutboundEventSocket, self)._protocol_sendmsg(name, args, uuid, lock, loops)
         self.log.info(str(response))
