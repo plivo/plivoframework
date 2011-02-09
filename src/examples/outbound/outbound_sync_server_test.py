@@ -32,7 +32,7 @@ class SyncOutboundEventSocket(OutboundEventSocket):
             self.log.info("Playback done (%s)" % str(event['Application-Response']))
 
     def on_channel_answer(self, event):
-        self._action_queue.put(event)
+        self.log.info("Channel answered")
 
     def on_channel_hangup(self, event):
         self.log.warn("Channel hangup")
@@ -45,12 +45,6 @@ class SyncOutboundEventSocket(OutboundEventSocket):
 
         # answer channel
         self.answer()
-        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer
-        # wait until channel answers
-        self.log.info("Wait answer")
-        event = self._action_queue.get()
-        self.log.info("Channel answered")
-
         # play file
         self.playback("/usr/local/freeswitch/sounds/en/us/callie/ivr/8000/ivr-hello.wav", terminators="*")
         # finally hangup
