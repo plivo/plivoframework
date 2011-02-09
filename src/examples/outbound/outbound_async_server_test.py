@@ -29,30 +29,38 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
         return response
 
     def on_channel_execute_complete(self, event):
-        if event['Application'] == 'playback':
+        if event.getHeader('Application') == 'playback':
             self._action_queue.put(event)
 
     def on_channel_answer(self, event):
+<<<<<<< HEAD
         self.log.info("Channel answered")
-
-    def on_channel_hangup(self, event):
-        self.log.warn("Channel hangup")
+=======
+        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer 
+        self._action_queue.put(event)
+>>>>>>> parent of 3e39384... fix outbound sync/async server examples
 
     def run(self):
         self.log.info("Channel Unique ID => %s" % self.get_channel_unique_id())
 
         # only catch events for this channel
         self.myevents()
-
         # answer channel
         self.answer()
+<<<<<<< HEAD
+=======
+        self.log.info("Wait answer")
+        event = self._action_queue.get(timeout=20)
+        self.log.info("Channel answered")
+
+>>>>>>> parent of 3e39384... fix outbound sync/async server examples
         # play file
         self.playback("/usr/local/freeswitch/sounds/en/us/callie/ivr/8000/ivr-hello.wav", terminators="*")
         # wait until playback is done
         self.log.info("Waiting end of playback ...")
         event = self._action_queue.get()
         # log playback execute response
-        self.log.info("Playback done (%s)" % str(event['Application-Response']))
+        self.log.info("Playback done (%s)" % str(event.getHeader('Application-Response')))
         # finally hangup
         self.hangup()
 
@@ -65,12 +73,8 @@ class AsyncOutboundServer(OutboundServer):
 
     def do_handle(self, socket, address):
         self.log.info("New request from %s" % str(address))
-        try:
-            self._handle_class(socket, address, self.log, filter=self._filter)
-        except Exception, e:
-            self.log.warn("error: %s" % str(e))
-        finally:
-            self.log.info("End request from %s" % str(address))
+        self._handle_class(socket, address, self.log, filter=self._filter)
+        self.log.info("End request from %s" % str(address))
 
 
 
