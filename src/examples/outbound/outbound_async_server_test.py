@@ -33,12 +33,7 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
             self._action_queue.put(event)
 
     def on_channel_answer(self, event):
-<<<<<<< HEAD
-        self.log.info("Channel answered")
-=======
-        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer 
         self._action_queue.put(event)
->>>>>>> parent of 3e39384... fix outbound sync/async server examples
 
     def run(self):
         self.log.info("Channel Unique ID => %s" % self.get_channel_unique_id())
@@ -47,13 +42,11 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
         self.myevents()
         # answer channel
         self.answer()
-<<<<<<< HEAD
-=======
         self.log.info("Wait answer")
-        event = self._action_queue.get(timeout=20)
+        event = self._action_queue.get()
+        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer 
         self.log.info("Channel answered")
 
->>>>>>> parent of 3e39384... fix outbound sync/async server examples
         # play file
         self.playback("/usr/local/freeswitch/sounds/en/us/callie/ivr/8000/ivr-hello.wav", terminators="*")
         # wait until playback is done
