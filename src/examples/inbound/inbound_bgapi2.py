@@ -2,20 +2,20 @@
 from telephonie.core.inboundsocket import InboundEventSocket
 from telephonie.core.errors import ConnectError
 from telephonie.utils.logger import StdoutLogger
-import gevent.queue
+import gevent.event
 
 
 class MyEventSocket(InboundEventSocket):
     def __init__(self, host, port, password, filter, log=None):
         InboundEventSocket.__init__(self, host, port, password, filter)
         self.log = log
-        self.jobqueue = gevent.queue.Queue()
+        self.jobqueue = gevent.event.AsyncResult()
 
     def on_background_job(self, ev):
         '''
         Recieves callbacks for BACKGROUND_JOB event.
         '''
-        self.jobqueue.put(ev)
+        self.jobqueue.set(ev)
 
     def wait_background_job(self):
         '''

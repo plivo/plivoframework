@@ -3,6 +3,7 @@
 Event Socket class
 """
 
+from __future__ import with_statement
 import types
 import string
 import gevent
@@ -10,6 +11,7 @@ import gevent.socket as socket
 import gevent.queue as queue
 import gevent.pool
 from gevent import GreenletExit
+from gevent.coros import RLock
 from telephonie.core.commands import Commands
 from telephonie.core.eventtypes import Event
 from telephonie.core.eventtypes import (CommandResponse, ApiResponse, BgapiResponse)
@@ -26,18 +28,20 @@ class EventSocket(Commands):
     def __init__(self, filter="ALL", pool_size=500):
         # Callbacks for reading events and sending responses.
         self._response_callbacks = {'api/response':self._api_response,
-                                   'command/reply':self._command_reply,
-                                   'text/event-plain':self._event_plain,
-                                   'auth/request':self._auth_request,
-                                   'text/disconnect-notice':self._disconnect_notice
-                                  }
+                                    'command/reply':self._command_reply,
+                                    'text/event-plain':self._event_plain,
+                                    'auth/request':self._auth_request,
+                                    'text/disconnect-notice':self._disconnect_notice
+                                   }
         # Default event filter.
         self._filter = filter
         # Synchronized Gevent based Queue for response events.
-        self.queue = queue.Queue()
+        self._response_queue = queue.Queue(1)
+        # Lock to force eventsocket commands to be sequential.
+        self._lock = RLock()
         # Sets connected to False.
         self.connected = False
-        # Creates pool for spawning if poolSize > 0
+        # Creates pool for spawning if pool_size > 0
         if pool_size > 0:
             self.pool = gevent.pool.Pool(pool_size)
         else:
@@ -154,8 +158,8 @@ class EventSocket(Commands):
         '''
         Receives auth/request callback.
         '''
-        # Pushes Event to response events syncronized queue and returns Event.
-        self.queue.put(event)
+        # Pushes Event to response events queue and returns Event.
+        self._response_queue.put(event)
         return event
 
     def _api_response(self, event):
@@ -168,7 +172,7 @@ class EventSocket(Commands):
         if raw:
             event.set_body(raw)
         # Pushes Event to response events queue and returns Event.
-        self.queue.put(event)
+        self._response_queue.put(event)
         return event
 
     def _command_reply(self, event):
@@ -176,7 +180,7 @@ class EventSocket(Commands):
         Receives command/reply callback.
         '''
         # Pushes Event to response events queue and returns Event.
-        self.queue.put(event)
+        self._response_queue.put(event)
         return event
 
     def _event_plain(self, event):
@@ -284,8 +288,9 @@ class EventSocket(Commands):
         self.transport.write(msg + EOL)
         
     def _protocol_send(self, command, args=""):
-        self._send("%s %s" % (command, args))
-        event = self.queue.get()
+        with self._lock:
+            self._send("%s %s" % (command, args))
+            event = self._response_queue.get()
         # Casts Event to appropriate event type :
         # Casts to ApiResponse, if event is api
         if command == 'api':
@@ -299,8 +304,9 @@ class EventSocket(Commands):
         return event
     
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
-        self._sendmsg(name, args, uuid, lock, loops)
-        event = self.queue.get()
+        with self._lock:
+            self._sendmsg(name, args, uuid, lock, loops)
+            event = self._response_queue.get()
         # Always casts Event to CommandResponse
         return CommandResponse.cast(event)
 
