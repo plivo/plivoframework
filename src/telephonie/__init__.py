@@ -7,7 +7,7 @@ Primary Authors - Michael Ricordeau (tamiel) and Miglu (miglu)
 Telephonie is inspired by and uses code from - https://github.com/fiorix/eventsocket
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 __name__ = "telephonie"
 

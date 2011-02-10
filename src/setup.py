@@ -31,7 +31,7 @@ setup_args = {
         "Intended Audience :: Developers",
         "Intended Audience :: Telecommunications Industry",
         "License :: OSI Approved :: Mozilla Public License 1.1 (MPL 1.1)",
-        "Development Status :: 2 - Pre-Alpha"]
+        "Development Status :: 4 - Beta"]
 }
 
 
