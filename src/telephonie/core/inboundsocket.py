@@ -30,7 +30,7 @@ class InboundEventSocket(EventSocket):
             # When auth/request is received, 
             # _authRequest method in BaseEventSocket will push this event to queue
             # so we will just wait this event here.
-            return self.queue.get()
+            return self._response_queue.get()
         except Timeout:
             raise ConnectError("Timeout waiting auth/request") 
         finally:
