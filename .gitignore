@@ -1,2 +1,4 @@
 *.pyc
 *.egg
+src/dist*
+src/build*
