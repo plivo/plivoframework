@@ -2,7 +2,7 @@
 
 > Open source framework to create telephony applications using [FreeSWITCH](http://www.freeswitch.org)
 
->**Authors:** Michael Ricordeau (tamiel) and Miglu (miglu)  
+>**Authors:** Michael Ricordeau (tamiel) and Venky (bevenky)  
 >**Contact:** <telephonie@miglu.com>    
 
 
@@ -24,7 +24,7 @@ aims to export all the functionality of the FreeSWITCH to higher level applicati
 
 ## License
 
-(c) 2010 Miglu Communications <telephonie@miglu.com>
+(c) 2011 Miglu Communications <telephonie@miglu.com>
 
 Telephonie was inspired by and uses code from [eventsocket](https://github.com/fiorix/eventsocket), which is distributed
 under the Mozilla Public License Version 1.1
