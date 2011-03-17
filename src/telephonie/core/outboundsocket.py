@@ -21,7 +21,7 @@ class OutboundEventSocket(EventSocket):
         EventSocket.__init__(self, filter, pool_size)
         self.transport = OutboundTransport(socket, address, connect_timeout)
         self._uuid = None
-        self._client = None
+        self._channel = None
         # Connects.
         self.connect()
         # Runs the main funtion .
@@ -64,7 +64,7 @@ class OutboundEventSocket(EventSocket):
         self.connected = True
 
     def get_channel(self):
-        return self.client
+        return self._channel
 
     def get_channel_unique_id(self):
         return self._uuid
