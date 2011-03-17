@@ -43,12 +43,6 @@ class OutboundEventSocket(EventSocket):
             if not connect_response.is_success():
                 self.disconnect()
                 raise ConnectError("Error while connecting")
-            # Sets event filter or raises ConnectError
-            if self._filter:
-                filter_response = self.eventplain(self._filter)
-                if not filter_response.is_success():
-                    self.disconnect()
-                    raise ConnectError("Event filter failure")
         except Timeout:
             self.disconnect()
             raise ConnectError("Timeout connecting") 
@@ -59,6 +53,9 @@ class OutboundEventSocket(EventSocket):
         self._channel = connect_response
         self._uuid = connect_response.get_header("Channel-Unique-ID")
 
+        # Set connected flag to True
+        self.connected = True
+
         # Sets event filter or raises ConnectError
         if self._filter:
             filter_response = self.eventplain(self._filter)
@@ -66,8 +63,6 @@ class OutboundEventSocket(EventSocket):
                 self.disconnect()
                 raise ConnectError("Event filter failure")
 
-        # Set connected flag to True
-        self.connected = True
 
     def get_channel(self):
         return self._channel

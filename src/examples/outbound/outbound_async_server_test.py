@@ -29,7 +29,7 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
         return response
 
     def on_channel_execute_complete(self, event):
-        if event.getHeader('Application') == 'playback':
+        if event.get_header('Application') == 'playback':
             self._action_queue.put(event)
 
     def on_channel_answer(self, event):
@@ -53,7 +53,7 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
         self.log.info("Waiting end of playback ...")
         event = self._action_queue.get()
         # log playback execute response
-        self.log.info("Playback done (%s)" % str(event.getHeader('Application-Response')))
+        self.log.info("Playback done (%s)" % str(event.get_header('Application-Response')))
         # finally hangup
         self.hangup()
 

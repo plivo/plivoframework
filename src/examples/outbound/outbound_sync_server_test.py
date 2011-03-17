@@ -28,8 +28,8 @@ class SyncOutboundEventSocket(OutboundEventSocket):
         return response
 
     def on_channel_execute_complete(self, event):
-        if event.getHeader('Application') == 'playback':
-            self.log.info("Playback done (%s)" % str(event.getHeader('Application-Response')))
+        if event.get_header('Application') == 'playback':
+            self.log.info("Playback done (%s)" % str(event.get_header('Application-Response')))
 
     def on_channel_answer(self, event):
         self._action_queue.put(event)
