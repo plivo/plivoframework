@@ -51,7 +51,7 @@ class OutboundEventSocket(EventSocket):
 
         # Sets channel and channel unique id from this event
         self._channel = connect_response
-        self._uuid = connect_response.get_header("Channel-Unique-ID")
+        self._uuid = connect_response.get_header("Unique-ID")
 
         # Set connected flag to True
         self.connected = True
@@ -62,7 +62,6 @@ class OutboundEventSocket(EventSocket):
             if not filter_response.is_success():
                 self.disconnect()
                 raise ConnectError("Event filter failure")
-
 
     def get_channel(self):
         return self._channel

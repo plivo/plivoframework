@@ -299,7 +299,8 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        self.set("playback_terminators=%s" % terminators or "none", uuid)
+        if terminators:
+            self.set("playback_terminators=%s" % terminators, uuid)
         return self._protocol_sendmsg("playback", filename, uuid, lock, loops)
 
     def transfer(self, args, uuid="", lock=True):
