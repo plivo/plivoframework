@@ -2,7 +2,6 @@
 from telephonie.core.inboundsocket import InboundEventSocket
 from telephonie.core.errors import ConnectError
 from telephonie.utils.logger import StdoutLogger
-import gevent.queue
 import gevent.event
 
 
@@ -23,11 +22,10 @@ CONTACTS = (
 
 
 class MyEventSocket(InboundEventSocket):
-    def __init__(self, host, port, password, filter, log=None):
+    def __init__(self, host, port, password, filter="ALL", log=None):
         InboundEventSocket.__init__(self, host, port, password, filter)
         self.log = log
         self.jobs = {}
-        self.jobqueue = gevent.queue.Queue(1)
 
     def track_job(self, job_uuid):
         self.jobs[job_uuid] = gevent.event.AsyncResult()
@@ -47,19 +45,19 @@ class MyEventSocket(InboundEventSocket):
         job_arg = ev['Job-Command-Arg']
         self.log.debug("%s %s, args %s => %s" % (job_uuid, job_cmd, job_arg, ev.get_body()))
         try:
-            async_result = self.jobs[job_uuid] 
+            async_result = self.jobs[job_uuid]
             async_result.set(ev)
         except KeyError:
             # job is not tracked
             return
 
-    def wait_job(self, job_uuid):
+    def wait_for_job(self, job_uuid):
         '''
         Waits until BACKGROUND_JOB event was caught and returns Event.
         '''
         try:
-            async_result = self.jobs[job_uuid] 
-            return async_result.get()
+            async_result = self.jobs[job_uuid]
+            return async_result.wait()
         except KeyError:
             # job is not tracked
             return None
@@ -78,7 +76,7 @@ def spawn_originate(inbound_event_listener, contact, log):
     inbound_event_listener.track_job(job_uuid)
     log.info("bgapi %s => Job-UUID %s" % (fs_bg_api_string, job_uuid))
     log.info("waiting job %s ..." % job_uuid)
-    ev = inbound_event_listener.wait_job(job_uuid)
+    ev = inbound_event_listener.wait_for_job(job_uuid)
 
     log.info("bgapi %s => %s" % (fs_bg_api_string, str(ev.get_body())))
 
@@ -100,7 +98,6 @@ if __name__ == '__main__':
             pool.spawn(spawn_originate, inbound_event_listener, contact, log)
         pool.join()
         log.debug("all originate commands done")
-    except (SystemExit, KeyboardInterrupt): 
+    except (SystemExit, KeyboardInterrupt):
         pass
     log.info("exit")
-
