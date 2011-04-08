@@ -24,6 +24,7 @@ setup_args = {
       'long_description':'Framework to create telephony applications using FreeSWITCH',
       'packages':find_packages('src'),
       'package_dir':{'': 'src'},
+      'include_package_data':True,
       'scripts':['src/scripts/telephonied'],
       'keywords':"telecom voip telephony freeswitch ivr",
       'license':licence,
