@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+try:
+    from setuptools import find_packages
+except:
+    from distutils.core import find_packages
 
 from telephonie import (__version__, __author__, __author_email__, __maintainer__, __maintainer_email__, __licence__)
 
@@ -13,8 +17,9 @@ setup_args = {
       'maintainer_email':__maintainer_email__,
       'platforms':['linux'],
       'long_description':'Framework to create telephony applications using FreeSWITCH',
-      'packages':['telephonie', 'telephonie.core', 'telephonie.utils'],
-      'scripts':['scripts/telephonied'],
+      'packages':find_packages('src'),
+      'package_dir':{'': 'src'},
+      'scripts':['src/scripts/telephonied'],
       'keywords':"telecom voip telephony freeswitch ivr",
       'license':__licence__,
       'zip_safe':False,
