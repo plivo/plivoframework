@@ -4,24 +4,29 @@ try:
 except:
     from distutils.core import find_packages
 
-from telephonie import (__version__, __author__, __author_email__, __maintainer__, __maintainer_email__, __licence__)
+version = open('VERSION.txt').read().strip()
+author = "Telephonie Team"
+author_email = "telephonie@miglu.com"
+maintainer = "Telephonie Team"
+maintainer_email = "telephonie@miglu.com"
+licence = "MPL 1.1"
 
 setup_args = {
       'name':'telephonie',
-      'version':__version__,
+      'version':version,
       'description':'Telephonie framework',
       'url':'http://github.com/miglu/Telephonie',
-      'author':__author__,
-      'author_email':__author_email__,
-      'maintainer':__maintainer__,
-      'maintainer_email':__maintainer_email__,
+      'author':author,
+      'author_email':author_email,
+      'maintainer':maintainer,
+      'maintainer_email':maintainer_email,
       'platforms':['linux'],
       'long_description':'Framework to create telephony applications using FreeSWITCH',
       'packages':find_packages('src'),
       'package_dir':{'': 'src'},
       'scripts':['src/scripts/telephonied'],
       'keywords':"telecom voip telephony freeswitch ivr",
-      'license':__licence__,
+      'license':licence,
       'zip_safe':False,
       'classifiers':[
         "Programming Language :: Python",
