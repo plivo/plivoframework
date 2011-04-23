@@ -376,22 +376,6 @@ class Commands(object):
         args = "%s %s %s %s" %(filename, time_limit_secs, silence_thresh, silence_hits)
         self._protocol_sendmsg("record", args=args, uuid=uuid, lock=True)
 
-    def start_dtmf(self):
-        """
-        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_start_dtmf
-
-        Can only be used for outbound connection
-        """
-        self.execute("start_dtmf")
-
-    def stop_dtmf(self):
-        """
-        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_stop_dtmf
-
-        Can only be used for outbound connection
-        """
-        self.execute("stop_dtmf")
-
     def play_and_get_digits(self, min_digits=1, max_digits=1, max_tries=1, timeout=5000, \
                             terminators='', sound_files=[], invalid_file = "", var_name='pagd_input', \
                             valid_digits='0123456789*#', digit_timeout=None, play_beep=False, pause=500):
@@ -438,7 +422,6 @@ class Commands(object):
                                                     invalid_file, var_name, regexp,
                                                     digit_timeout)
         self.execute('play_and_get_digits', args)
-
 
     def preanswer(self):
         """
