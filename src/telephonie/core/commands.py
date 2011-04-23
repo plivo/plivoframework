@@ -438,3 +438,12 @@ class Commands(object):
                                                     invalid_file, var_name, regexp,
                                                     digit_timeout)
         self.execute('play_and_get_digits', args)
+
+
+    def preanswer(self):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_pre_answer
+
+        Can only be used for outbound connection
+        """
+        self.execute("pre_answer")
