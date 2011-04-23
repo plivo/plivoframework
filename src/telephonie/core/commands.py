@@ -32,6 +32,40 @@ class Commands(object):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#event"
         return self._protocol_send("event", args)
 
+    def execute(self, command, args=''):
+        return self._protocol_sendmsg(command, args, uuid='', lock=True)
+
+    def get_var(self, var, uuid=""):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Mod_commands#uuid_getvar
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        if not uuid:
+            uuid = self.get_channel_unique_id()
+        api_response = self.api("uuid_getvar %s %s" % (uuid, var))
+        result = api_response.get_body().strip()
+        if result == '_undef_':
+            result = None
+        return result
+
+    def set_var(self, var, value, uuid=""):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Mod_commands#uuid_setvar
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        if not value:
+            value = ''
+        if not uuid:
+            uuid = self.unique_id
+        api_response = self.api("uuid_setvar %s %s %s" % (uuid, var, str(value)))
+        result = api_response.get_body()
+        if not result:
+            result = ''
+        result = result.strip()
+        return result
+
     def filter(self, args):
         """Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#filter
 
@@ -73,7 +107,7 @@ class Commands(object):
 
     def auth(self, args):
         """Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#auth
-        
+
         This method is only used for Inbound connections.
         """
         return self._protocol_send("auth", args)
@@ -113,7 +147,7 @@ class Commands(object):
         Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bridge
 
         >>> bridge("{ignore_early_media=true}sofia/gateway/myGW/177808")
-        
+
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("bridge", args, uuid, lock)
@@ -124,7 +158,7 @@ class Commands(object):
         Hangup `cause` list : http://wiki.freeswitch.org/wiki/Hangup_Causes (Enumeration column)
 
         >>> hangup()
-        
+
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("hangup", cause, uuid, lock)
@@ -140,7 +174,7 @@ class Commands(object):
 
     def record_session(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_record_session
-        
+
         >>> record_session("/tmp/dump.gsm")
 
         For Inbound connection, uuid argument is mandatory.
@@ -149,7 +183,7 @@ class Commands(object):
 
     def bind_meta_app(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bind_meta_app
-        
+
         >>> bind_meta_app("2 ab s record_session::/tmp/dump.gsm")
 
         For Inbound connection, uuid argument is mandatory.
@@ -158,7 +192,7 @@ class Commands(object):
 
     def wait_for_silence(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_wait_for_silence
-        
+
         >>> wait_for_silence("200 15 10 5000")
 
         For Inbound connection, uuid argument is mandatory.
@@ -167,7 +201,7 @@ class Commands(object):
 
     def sleep(self, milliseconds, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_sleep
-        
+
         >>> sleep(5000)
         >>> sleep("5000")
 
@@ -177,7 +211,7 @@ class Commands(object):
 
     def vmd(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_vmd
-        
+
         >>> vmd("start")
         >>> vmd("stop")
 
@@ -187,7 +221,7 @@ class Commands(object):
 
     def set(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_set
-        
+
         >>> set("ringback=${us-ring}")
 
         For Inbound connection, uuid argument is mandatory.
@@ -196,7 +230,7 @@ class Commands(object):
 
     def set_global(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_set_global
-        
+
         >>> set_global("global_var=value")
 
         For Inbound connection, uuid argument is mandatory.
@@ -205,7 +239,7 @@ class Commands(object):
 
     def unset(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_unset
-        
+
         >>> unset("ringback")
 
         For Inbound connection, uuid argument is mandatory.
@@ -270,7 +304,7 @@ class Commands(object):
 
     def play_fsv(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_fsv
-        
+
         >>> play_fsv("/tmp/video.fsv")
 
         For Inbound connection, uuid argument is mandatory.
@@ -279,7 +313,7 @@ class Commands(object):
 
     def record_fsv(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_fsv
-        
+
         >>> record_fsv("/tmp/video.fsv")
 
         For Inbound connection, uuid argument is mandatory.
@@ -288,13 +322,13 @@ class Commands(object):
 
     def playback(self, filename, terminators=None, uuid="", lock=True, loops=1):
         """Please refer to http://wiki.freeswitch.org/wiki/Mod_playback
-        
+
         The optional argument `terminators` may contain a string with
         the characters that will terminate the playback.
-        
+
         >>> playback("/tmp/dump.gsm", terminators="#8")
-        
-        In this case, the audio playback is automatically terminated 
+
+        In this case, the audio playback is automatically terminated
         by pressing either '#' or '8'.
 
         For Inbound connection, uuid argument is mandatory.
@@ -315,7 +349,7 @@ class Commands(object):
 
     def att_xfer(self, url, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_att_xfer
-        
+
         >>> att_xfer("user/1001")
 
         For Inbound connection, uuid argument is mandatory.
@@ -324,10 +358,83 @@ class Commands(object):
 
     def endless_playback(self, filename, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_endless_playback
-        
+
         >>> endless_playback("/tmp/dump.gsm")
 
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("endless_playback", filename, uuid, lock)
 
+    def record(self, filename, time_limit_secs="", silence_thresh="", \
+                silence_hits="", terminators=None, uuid="", lock=True, loops=1):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_record
+
+        """
+        if terminators:
+            self.set("playback_terminators=%s" % terminators)
+        args = "%s %s %s %s" %(filename, time_limit_secs, silence_thresh, silence_hits)
+        self._protocol_sendmsg("record", args=args, uuid=uuid, lock=True)
+
+    def start_dtmf(self):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_start_dtmf
+
+        Can only be used for outbound connection
+        """
+        self.execute("start_dtmf")
+
+    def stop_dtmf(self):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_stop_dtmf
+
+        Can only be used for outbound connection
+        """
+        self.execute("stop_dtmf")
+
+    def play_and_get_digits(self, min_digits=1, max_digits=1, max_tries=1, timeout=5000, \
+                            terminators='', sound_files=[], invalid_file = "", var_name='pagd_input', \
+                            valid_digits='0123456789*#', digit_timeout=None, play_beep=False, pause=500):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_play_and_get_digits
+        """
+
+        if not sound_files:
+            if play_beep:
+                play_str = 'tone_stream://%(300,200,700)'
+            else:
+                play_str = 'silence_stream://200'
+        elif len(sound_files) == 1:
+            play_str = sound_files[0]
+            if play_beep:
+                beep = 'tone_stream://%(300,200,700)'
+                self.set("playback_delimiter=!")
+                self.set("playback_sleep_val=%s" % pause)
+                play_str = "file_string://%s!%s" % (play_str, beep)
+        else:
+            self.set("playback_delimiter=!")
+            self.set("playback_sleep_val=%s" % pause)
+            play_str = "file_string://%s" % sound_files[0]
+            for i in range(1,len(sound_files)):
+                play_str = "%s!%s" % (play_str, sound_files[i])
+            if play_beep:
+                beep = 'tone_stream://%(300,200,700)'
+                play_str = "file_string://%s!%s" % (play_str, beep)
+
+        if not invalid_file:
+            invalid_file='silence_stream://150'
+        if digit_timeout is None:
+            digit_timeout = timeout
+        reg = []
+        for d in valid_digits:
+            if d == '*':
+                d = '\*'
+            reg.append(d)
+        regexp = '|'.join(reg)
+        regexp = '(%s)+' % regexp
+
+        args = "%d %d %d %d '%s' %s %s %s %s %d" % (min_digits, max_digits, max_tries, \
+                                                    timeout, terminators, play_str,
+                                                    invalid_file, var_name, regexp,
+                                                    digit_timeout)
+        self.execute('play_and_get_digits', args)

@@ -14,7 +14,7 @@ from telephonie.core.errors import ConnectError
 class OutboundEventSocket(EventSocket):
     '''
     FreeSWITCH Outbound Event Socket.
-    
+
     A new instance of this class is created for every call/ session from FreeSWITCH.
     '''
     def __init__(self, socket, address, filter="ALL", pool_size=500, connect_timeout=5):
@@ -45,7 +45,7 @@ class OutboundEventSocket(EventSocket):
                 raise ConnectError("Error while connecting")
         except Timeout:
             self.disconnect()
-            raise ConnectError("Timeout connecting") 
+            raise ConnectError("Timeout connecting")
         finally:
             timer.cancel()
 
@@ -96,4 +96,3 @@ class OutboundServer(StreamServer):
 if __name__ == '__main__':
     outboundserver = OutboundServer(('127.0.0.1', 8084), OutboundEventSocket)
     outboundserver.serve_forever()
-
