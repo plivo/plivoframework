@@ -3,7 +3,7 @@
 > Rapid Communication Application Development Framework
 
 >**Authors:** Michael Ricordeau (tamiel) and Venky (bevenky)
->**Contact:** <contact@plivo.org>
+>**Contact:** contact@plivo.org
 
 
 ##About
@@ -14,8 +14,7 @@ in a simple and extensible manner, using the languages you know.
 
 Plivo is completly free for any use.
 
-Currently, it supports only FreeSWITCH, but in future, will support other mediums like xmpp,
-Asterisk etc.
+Currently, it supports FreeSWITCH. Future support is planned for XMPP, Asterisk etc.
 
 
 ## Documentation
