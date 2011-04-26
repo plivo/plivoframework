@@ -2,9 +2,8 @@
 """
 Event Socket class
 """
-import sys
-if sys.version_info < (2, 6):
-    from __future__ import with_statement
+
+from __future__ import with_statement
 import types
 import string
 import gevent
