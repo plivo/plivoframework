@@ -4,7 +4,7 @@ Transport classes
 """
 
 import gevent.socket as socket
-from telephonie.core.errors import ConnectError
+from plivo.core.errors import ConnectError
 
 
 class Transport(object):

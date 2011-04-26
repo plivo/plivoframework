@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from telephonie.core.inboundsocket import InboundEventSocket
-from telephonie.core.errors import ConnectError
-from telephonie.utils.logger import StdoutLogger
+from plivo.core.freeswitch.inboundsocket import InboundEventSocket
+from plivo.core.errors import ConnectError
+from plivo.utils.logger import StdoutLogger
 
 if __name__ == '__main__':
     log = StdoutLogger()
@@ -13,7 +13,8 @@ if __name__ == '__main__':
             log.error("connect failed: %s" % str(e))
             raise SystemExit('exit')
 
-        api_response = inbound_event_listener.api("FALSECOMMAND")
+        fs_api_string = "originate user/1000 &playback(/usr/local/freeswitch/sounds/en/us/callie/base256/8000/liberty.wav)"
+        api_response = inbound_event_listener.api(fs_api_string)
         log.info(str(api_response))
         if not api_response.is_success():
             log.error("api failed with response %s" % api_response.get_response())

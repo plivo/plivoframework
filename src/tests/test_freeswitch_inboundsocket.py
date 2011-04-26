@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from unittest import TestCase
 
-from telephonie.core.inboundsocket import InboundEventSocket
-from telephonie.core.eventtypes import Event
-from telephonie.core.errors import ConnectError
+from plivo.core.freeswitch.inboundsocket import InboundEventSocket
+from plivo.core.freeswitch.eventtypes import Event
+from plivo.core.errors import ConnectError
 import gevent
 from gevent import socket
 from gevent import Timeout

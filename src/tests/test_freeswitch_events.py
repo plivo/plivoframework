@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from unittest import TestCase
 
-from telephonie.core.eventtypes import Event
+from plivo.core.freeswitch.eventtypes import Event
 
 
 class TestEvent(TestCase):

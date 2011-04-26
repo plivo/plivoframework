@@ -2,8 +2,9 @@
 """
 Event Socket class
 """
-
-from __future__ import with_statement
+import sys
+if sys.version_info < (2, 6):
+    from __future__ import with_statement
 import types
 import string
 import gevent
@@ -12,10 +13,9 @@ import gevent.queue as queue
 import gevent.pool
 from gevent import GreenletExit
 from gevent.coros import RLock
-from telephonie.core.commands import Commands
-from telephonie.core.eventtypes import Event
-from telephonie.core.eventtypes import (CommandResponse, ApiResponse, BgapiResponse)
-from telephonie.core.errors import (LimitExceededError, ConnectError)
+from plivo.core.freeswitch.commands import Commands
+from plivo.core.freeswitch.eventtypes import Event, CommandResponse, ApiResponse, BgapiResponse
+from plivo.core.errors import (LimitExceededError, ConnectError)
 
 
 EOL = "\n"

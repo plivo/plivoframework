@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import traceback
-from telephonie.core.inboundsocket import InboundEventSocket
-from telephonie.utils.logger import StdoutLogger
+from plivo.core.freeswitch.inboundsocket import InboundEventSocket
+from plivo.utils.logger import StdoutLogger
 
 if __name__ == '__main__':
     log = StdoutLogger()

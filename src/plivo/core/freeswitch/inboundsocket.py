@@ -5,9 +5,9 @@ Inbound Event Socket class
 
 import gevent
 from gevent.timeout import Timeout
-from telephonie.core.eventsocket import EventSocket
-from telephonie.core.transport import InboundTransport
-from telephonie.core.errors import ConnectError
+from plivo.core.freeswitch.eventsocket import EventSocket
+from plivo.core.transport import InboundTransport
+from plivo.core.errors import ConnectError
 
 
 class InboundEventSocket(EventSocket):

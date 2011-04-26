@@ -5,9 +5,9 @@ Outbound Event Socket class
 
 from gevent.server import StreamServer
 from gevent.timeout import Timeout
-from telephonie.core.eventsocket import EventSocket
-from telephonie.core.transport import OutboundTransport
-from telephonie.core.errors import ConnectError
+from plivo.core.freeswitch.eventsocket import EventSocket
+from plivo.core.transport import OutboundTransport
+from plivo.core.errors import ConnectError
 
 
 

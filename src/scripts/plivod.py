@@ -2,5 +2,5 @@
 """
 Daemonizer for python scripts.
 """
-import telephonie.utils.daemonize as daemonize
+import plivo.utils.daemonize as daemonize
 daemonize.main()

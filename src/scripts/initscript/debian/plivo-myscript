@@ -1,40 +1,40 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          telephonie service
+# Provides:          plivo service
 # Required-Start:    $remote_fs
 # Required-Stop:     $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Telephonie initscript
-# Description:       This file provides a template for creating telephonie init scripts.
+# Short-Description: Plivo initscript
+# Description:       This file provides a template for creating plivo init scripts.
 ### END INIT INFO
 
 # Author: Michael Ricordeau <michael.ricordeau@gmail.com>
 
 
 #######################################
-# Telephonie args
+# Plivo args
 #######################################
 # python script to run in daemon mode
 SCRIPT=/fullpath/to/python/script
 # script args
 SCRIPTARGS=""
 # user to set
-USER=telephonie
+USER=plivo
 # group to set
-GROUP=telephonie
+GROUP=plivo
 # pidfile
-PIDFILE=/var/run/telephonie/telephonie-myscript.pid
+PIDFILE=/var/run/plivo/plivo-myscript.pid
 
 #######################################
 
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="Telephonie service $(basename $SCRIPT .py)"
-NAME=telephonied
+DESC="Plivo service $(basename $SCRIPT .py)"
+NAME=plivod
 DAEMON=/usr/bin/$NAME
-INITSCRIPT="telephonie-$(basename $SCRIPT .py)"
+INITSCRIPT="plivo-$(basename $SCRIPT .py)"
 SCRIPTNAME="/etc/init.d/$INITSCRIPT"
 DAEMON_ARGS="-u $USER -g $GROUP -p $PIDFILE -s $SCRIPT -a \"$SCRIPTARGS\""
 

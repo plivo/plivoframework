@@ -1,3 +1,3 @@
-import telephonie.tests
+import plivo.tests
 
-telephonie.tests.run_test()
+plivo.tests.run_test()

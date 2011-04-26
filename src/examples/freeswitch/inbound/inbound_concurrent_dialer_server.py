@@ -1,6 +1,6 @@
-from telephonie.core.inboundsocket import InboundEventSocket
-from telephonie.core.errors import ConnectError
-from telephonie.utils.logger import StdoutLogger
+from plivo.core.freeswitch.inboundsocket import InboundEventSocket
+from plivo.core.errors import ConnectError
+from plivo.utils.logger import StdoutLogger
 
 import gevent
 from gevent import wsgi
