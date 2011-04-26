@@ -6,7 +6,7 @@ Outbound Event Socket class
 from gevent.server import StreamServer
 from gevent.timeout import Timeout
 from plivo.core.freeswitch.eventsocket import EventSocket
-from plivo.core.transport import OutboundTransport
+from plivo.core.freeswitch.transport import OutboundTransport
 from plivo.core.errors import ConnectError
 
 

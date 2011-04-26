@@ -14,7 +14,7 @@ from gevent import GreenletExit
 from gevent.coros import RLock
 from plivo.core.freeswitch.commands import Commands
 from plivo.core.freeswitch.eventtypes import Event, CommandResponse, ApiResponse, BgapiResponse
-from plivo.core.errors import (LimitExceededError, ConnectError)
+from plivo.core.errors import LimitExceededError, ConnectError
 
 
 EOL = "\n"

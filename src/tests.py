@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-__all__ = ['test_freeswitch_events', 'test_freeswitch_inboundsocket']
 
 def make_test():
     return unittest.TextTestRunner()
 
 def make_suite():
     return unittest.TestLoader().loadTestsFromNames([
-        'tests.test_freeswitch_events',
-        'tests.test_freeswitch_inboundsocket',
+        'tests.freeswitch.test_events',
+        'tests.freeswitch.test_inboundsocket',
     ])
 
 def run_test():

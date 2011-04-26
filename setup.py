@@ -4,7 +4,6 @@ try:
 except:
     from distutils.core import find_packages
 
-version = open('VERSION.txt').read().strip()
 author = "Plivo Team"
 author_email = "contact@plivo.org"
 maintainer = "Plivo Team"
@@ -13,7 +12,7 @@ licence = "MPL 1.1"
 
 setup_args = {
       'name':'plivo',
-      'version':version,
+      'version':'0.4.0',
       'description':'Plivo framework',
       'url':'http://github.com/miglu/Plivo',
       'author':author,
