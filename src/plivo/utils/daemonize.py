@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Daemonize application.
@@ -115,32 +117,32 @@ def daemon_script(script, user, group, path='/', pidfile=None, script_args=(), o
 def main():
     parser = optparse.OptionParser()
     parser.add_option("-s", "--script", action="store", type="string",
-                      dest="script", help="python script SCRIPT to run (argument is mandatory)", 
+                      dest="script", help="python script SCRIPT to run (argument is mandatory)",
                       metavar="SCRIPT")
     parser.add_option("-p", "--pidfile", action="store", type="string",
                       dest="pidfile", help="write pid to PIDFILE (argument is mandatory)",
                       metavar="PIDFILE")
     parser.add_option("-u", "--user", action="store", type="string",
-                      dest="user", help="set uid to USER (argument is mandatory)", 
+                      dest="user", help="set uid to USER (argument is mandatory)",
                       metavar="USER")
     parser.add_option("-g", "--group", action="store", type="string",
-                      dest="group", help="set gid to GROUP (argument is mandatory)", 
+                      dest="group", help="set gid to GROUP (argument is mandatory)",
                       metavar="GROUP")
     parser.add_option("-G", "--groups", action="append", type="string", default=[],
-                      dest="groups", help="set other groups gid to OTHERGROUP (can be added multiple times)", 
+                      dest="groups", help="set other groups gid to OTHERGROUP (can be added multiple times)",
                       metavar="OTHERGROUP")
     parser.add_option("-P", "--pybin", action="store", type="string", default=None,
-                      dest="pybin", help="set python binary PYBIN to run script", 
+                      dest="pybin", help="set python binary PYBIN to run script",
                       metavar="PYBIN")
     parser.add_option("-a", "--scriptarg", action="append", type="string", default=[],
-                      dest="scriptargs", help="add ARG to python script (can be added multiple times)", 
+                      dest="scriptargs", help="add ARG to python script (can be added multiple times)",
                       metavar="ARG")
     (options, args) = parser.parse_args()
 
     script = options.script
     user = options.user
     group = options.group
-    pidfile = options.pidfile 
+    pidfile = options.pidfile
     ogroups = options.groups
     pybin = options.pybin
     scriptargs = options.scriptargs
@@ -149,11 +151,10 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    daemon_script(script, user, group, pidfile=pidfile, 
-                  script_args=scriptargs, other_groups=ogroups, 
+    daemon_script(script, user, group, pidfile=pidfile,
+                  script_args=scriptargs, other_groups=ogroups,
                   python_bin=pybin)
 
 
 if __name__ == '__main__':
     main()
-

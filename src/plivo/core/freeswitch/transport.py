@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Freeswitch Transport classes
@@ -27,7 +29,7 @@ class InboundTransport(Transport):
             raise ConnectError('not connected')
         self.sockfd.write(data)
         self.sockfd.flush()
-        
+
 
 
 class OutboundTransport(Transport):
@@ -36,4 +38,3 @@ class OutboundTransport(Transport):
         self.sockfd = socket.makefile()
         self.address = address
         self.timeout = connect_timeout
-

@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Log classes : stdout, syslog and file loggers
@@ -38,7 +40,7 @@ class StdoutLogger(object):
     def set_debug(self):
         self.loglevel = LOG_DEBUG
         self._logger.setLevel(self.loglevel)
-        
+
     def set_info(self):
         self.loglevel = LOG_INFO
         self._logger.setLevel(self.loglevel)
@@ -159,4 +161,3 @@ class FileLogger(StdoutLogger):
         h.setFormatter(fmt)
         self._logger = RootLogger(loglevel)
         self._logger.addHandler(h)
-

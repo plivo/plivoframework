@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 import traceback
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
@@ -34,5 +36,3 @@ if __name__ == '__main__':
     log.info('#'*60 + '\n')
 
     log.info('exit')
-        
-

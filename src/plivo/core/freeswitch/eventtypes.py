@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Event Types classes
@@ -20,7 +22,7 @@ class Event(object):
                 try:
                     var, val = line.rstrip().split(': ', 1)
                     self.set_header(var, val)
-                except ValueError: 
+                except ValueError:
                     pass
 
     def __getitem__(self, key):
@@ -49,12 +51,12 @@ class Event(object):
 
         Returns None if header not found.
         '''
-        return self.get_header('Reply-Text') 
+        return self.get_header('Reply-Text')
 
     def is_reply_text_success(self):
         '''
         Returns True if ReplyText header begins with +OK.
-        
+
         Returns False otherwise.
         '''
         reply = self.get_reply_text()
@@ -140,8 +142,8 @@ class Event(object):
 
     def __str__(self):
         return '<%s headers=%s, body=%s>' \
-               % (self.__class__.__name__, 
-                  str(self.get_unquoted_raw_headers().replace('\n', '\\n')), 
+               % (self.__class__.__name__,
+                  str(self.get_unquoted_raw_headers().replace('\n', '\\n')),
                   str(self.get_body()).replace('\n', '\\n'))
 
 
@@ -167,7 +169,7 @@ class ApiResponse(Event):
     def is_success(self):
         '''
         Returns True if api command is a success.
-        
+
         Otherwise returns False.
         '''
         return self._raw_body and self._raw_body[:3] == '+OK'
@@ -201,7 +203,7 @@ class BgapiResponse(Event):
     def is_success(self):
         '''
         Returns True if bgapi command is a success.
-        
+
         Otherwise returns False.
         '''
         return self.is_reply_text_success()
@@ -229,10 +231,7 @@ class CommandResponse(Event):
     def is_success(self):
         '''
         Returns True if command is a success.
-        
+
         Otherwise returns False.
         '''
         return self.is_reply_text_success()
-
-
-

@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Outbound server example in sync mode full .
@@ -68,4 +70,3 @@ class SyncOutboundServer(OutboundServer):
 if __name__ == '__main__':
     outboundserver = SyncOutboundServer(('127.0.0.1', 8084), SyncOutboundEventSocket)
     outboundserver.serve_forever()
-

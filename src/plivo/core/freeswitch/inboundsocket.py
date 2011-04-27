@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Inbound Event Socket class
@@ -27,12 +29,12 @@ class InboundEventSocket(EventSocket):
         timer = Timeout(self.transport.get_connect_timeout())
         timer.start()
         try:
-            # When auth/request is received, 
+            # When auth/request is received,
             # _authRequest method in BaseEventSocket will push this event to queue
             # so we will just wait this event here.
             return self._response_queue.get()
         except Timeout:
-            raise ConnectError("Timeout waiting auth/request") 
+            raise ConnectError("Timeout waiting auth/request")
         finally:
             timer.cancel()
 
@@ -76,7 +78,5 @@ class InboundEventSocket(EventSocket):
         """
         Starts waiting for events in endless loop.
         """
-        while self.is_connected(): 
+        while self.is_connected():
             gevent.sleep(0.1)
-
-

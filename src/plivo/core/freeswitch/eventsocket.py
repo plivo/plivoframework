@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Event Socket class
@@ -77,7 +79,7 @@ class EventSocket(Commands):
         '''
         if self._handler_thread:
             self._handler_thread.kill()
-        
+
     def handle_events(self):
         '''
         Gets and Dispatches events in an endless loop using gevent spawn.
@@ -96,7 +98,7 @@ class EventSocket(Commands):
             except GreenletExit, e:
                 self.connected = False
                 return
-        
+
     def read_event(self):
         '''
         Reads one Event from socket until EOL.
@@ -188,11 +190,11 @@ class EventSocket(Commands):
         '''
         # Gets raw data for this event
         raw = self.read_raw(event)
-        # If raw was found drops current event 
+        # If raw was found drops current event
         # and replaces with Event created from raw
         if raw:
             event = Event(raw)
-            # Gets raw response from Event Content-Length header 
+            # Gets raw response from Event Content-Length header
             # and raw buffer
             raw_response = self.read_raw_response(event, raw)
             # If rawresponse was found, this is our Event body
@@ -218,7 +220,7 @@ class EventSocket(Commands):
     def dispatch_event(self, event):
         '''
         Dispatches one event with callback.
-        
+
         E.g. Receives Background_Job event and calls on_background_job function.
         '''
         method = 'on_' + event.get_header('Event-Name').lower()
@@ -228,27 +230,27 @@ class EventSocket(Commands):
             callback = self.unbound_event(event)
         # Calls callback.
         # On exception calls callback_failure method.
-        try: 
+        try:
             callback(event)
-        except: 
+        except:
             self.callback_failure(event)
-    
+
     def unbound_event(self, event):
         '''
         Catches all unbound events from FreeSWITCH.
-        
+
         Can be implemented by the subclass.
         '''
         pass
-    
+
     def callback_failure(self, event):
         '''
         Called when callback to an event fails.
-        
+
         Can be implemented by the subclass.
         '''
         pass
-    
+
     def disconnect(self):
         '''
         Disconnects from eventsocket and stops handling events.
@@ -269,7 +271,7 @@ class EventSocket(Commands):
         if isinstance(cmd, types.UnicodeType):
             cmd = cmd.encode("utf-8")
         self.transport.write(cmd + EOL*2)
-        
+
     def _sendmsg(self, name, arg=None, uuid="", lock=False, loops=1):
         if isinstance(name, types.UnicodeType):
             name = name.encode("utf-8")
@@ -285,7 +287,7 @@ class EventSocket(Commands):
             arglen = len(arg)
             msg += "content-type: text/plain\ncontent-length: %d\n\n%s\n" % (arglen, arg)
         self.transport.write(msg + EOL)
-        
+
     def _protocol_send(self, command, args=""):
         with self._lock:
             self._send("%s %s" % (command, args))
@@ -294,18 +296,17 @@ class EventSocket(Commands):
         # Casts to ApiResponse, if event is api
         if command == 'api':
             event = ApiResponse.cast(event)
-        # Casts to BgapiResponse, if event is bgapi 
+        # Casts to BgapiResponse, if event is bgapi
         elif command == "bgapi":
             event = BgapiResponse.cast(event)
         # Casts to CommandResponse by default
         else:
             event = CommandResponse.cast(event)
         return event
-    
+
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
         with self._lock:
             self._sendmsg(name, args, uuid, lock, loops)
             event = self._response_queue.get()
         # Always casts Event to CommandResponse
         return CommandResponse.cast(event)
-

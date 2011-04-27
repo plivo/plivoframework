@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 import gevent
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
@@ -6,7 +8,7 @@ from plivo.utils.logger import StdoutLogger
 
 
 class MyInboundEventSocket(InboundEventSocket):
-    '''Inbound eventsocket connector that automatically reconnects 
+    '''Inbound eventsocket connector that automatically reconnects
     when the freeswitch eventsocket module closed the connection
     '''
     def __init__(self, host, port, password, filter="ALL", pool_size=500, connect_timeout=5):
@@ -23,14 +25,13 @@ class MyInboundEventSocket(InboundEventSocket):
                 self.serve_forever()
             except ConnectError, e:
                 self.log.error("ConnectError: %s" % str(e))
-            except (SystemExit, KeyboardInterrupt): 
+            except (SystemExit, KeyboardInterrupt):
                 break
             self.log.error("Inbound socket closed, try to reconnect ...")
             gevent.sleep(1.0)
         self.log.info("Inbound socket terminated")
-        
+
 
 if __name__ == '__main__':
     c = MyInboundEventSocket('127.0.0.1', 8021, 'ClueCon')
-    c.start()    
-
+    c.start()

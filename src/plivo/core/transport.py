@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Transport class
@@ -26,4 +28,3 @@ class Transport(object):
 
     def get_connect_timeout(self):
         return self.timeout
-

@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 """
 Outbound server example in async mode full .
@@ -44,7 +46,7 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
         self.answer()
         self.log.info("Wait answer")
         event = self._action_queue.get()
-        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer 
+        gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer
         self.log.info("Channel answered")
 
         # play file
@@ -74,4 +76,3 @@ class AsyncOutboundServer(OutboundServer):
 if __name__ == '__main__':
     outboundserver = AsyncOutboundServer(('127.0.0.1', 8084), AsyncOutboundEventSocket)
     outboundserver.serve_forever()
-

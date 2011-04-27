@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 from unittest import TestCase
 
@@ -217,7 +219,7 @@ class TestInboundCase(TestCase):
             self.server_proc.kill()
         except:
             pass
-        
+
     def test_login_failure(self):
         isock = InboundEventSocket('127.0.0.1', 23333, 'ClueCon')
         self.assertRaises(ConnectError, isock.connect)
@@ -249,4 +251,3 @@ class TestInboundCase(TestCase):
             self.assertEquals(ev.get_header('Event-Name'), 'HEARTBEAT')
         for ev in isock.re_schedule_events:
             self.assertEquals(ev.get_header('Event-Name'), 'RE_SCHEDULE')
-

@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.core.errors import ConnectError
 from plivo.utils.logger import StdoutLogger

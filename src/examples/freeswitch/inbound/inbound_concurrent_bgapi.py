@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.core.errors import ConnectError

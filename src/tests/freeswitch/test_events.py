@@ -1,3 +1,5 @@
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 # -*- coding: utf-8 -*-
 from unittest import TestCase
 
@@ -31,8 +33,8 @@ Task-Runtime: 1294076056
 
     def test_command_reply(self):
         ev = Event(self.EVENT_COMMAND_REPLY)
-        self.assertEquals(ev.get_content_type(), "command/reply") 
-        self.assertEquals(ev.get_reply_text(), "+OK accepted") 
+        self.assertEquals(ev.get_content_type(), "command/reply")
+        self.assertEquals(ev.get_reply_text(), "+OK accepted")
         self.assertTrue(ev.is_reply_text_success())
 
     def test_auth_request(self):
@@ -46,4 +48,3 @@ Task-Runtime: 1294076056
         ev2 = Event(self.EVENT_PLAIN)
         self.assertEquals(ev2.get_header("Event-Name"), "RE_SCHEDULE")
         self.assertEquals(len(self.EVENT_PLAIN), ev1.get_content_length())
-
