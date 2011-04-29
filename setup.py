@@ -11,7 +11,7 @@ licence = "MPL 1.1"
 
 setup_args = {
       'name':'plivo',
-      'version':'0.4.0',
+      'version':'0.1.0',
       'description':'Plivo - Rapid Communication Application Development Framework',
       'url':'http://github.com/miglu/Plivo',
       'author':author,
@@ -40,7 +40,7 @@ setup_args = {
         "Intended Audience :: Developers",
         "Intended Audience :: Telecommunications Industry",
         "License :: OSI Approved :: Mozilla Public License 1.1 (MPL 1.1)",
-        "Development Status :: 4 - Beta"]
+        "Development Status :: 1 - Beta"]
 }
 
 
