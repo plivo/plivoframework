@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 import re
 from datetime import date
 
-from restexceptions import *
+from rest_exceptions import *
 from helpers import is_valid_url
 
 

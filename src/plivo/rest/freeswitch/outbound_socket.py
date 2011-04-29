@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 from gevent import monkey; monkey.patch_all()
 import gevent.queue
 import gevent
@@ -9,7 +10,7 @@ import urllib, urllib2
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 
 import verbs
-from restexceptions import *
+from rest_exceptions import *
 
 
 class XMLOutboundEventSocket(OutboundEventSocket):
