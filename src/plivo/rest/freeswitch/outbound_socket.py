@@ -121,11 +121,11 @@ class XMLOutboundEventSocket(OutboundEventSocket):
         try:
             doc = etree.fromstring(xmlStr)
         except Exception:
-            raise exceptions.RESTSyntaxException("Invalid RESTXML Response Syntax")
+            raise RESTSyntaxException("Invalid RESTXML Response Syntax")
 
         # 2. Make sure the document has a <Response> root else raise format exception
         if doc.tag != "Response":
-            raise exceptions.RESTFormatException("No Response Tag Present")
+            raise RESTFormatException("No Response Tag Present")
 
         # 3. Make sure we recognize all the Verbs in the xml
         if len(doc):
@@ -136,7 +136,7 @@ class XMLOutboundEventSocket(OutboundEventSocket):
                 else:
                     self.lexed_xml_response.append(element)
                 if invalid_verbs:
-                    raise exceptions.UnrecognizedVerbException("Unrecognized verbs: %s" % invalid_verbs)
+                    raise UnrecognizedVerbException("Unrecognized verbs: %s" % invalid_verbs)
 
     def parse_xml(self):
         # Check all Verb names
