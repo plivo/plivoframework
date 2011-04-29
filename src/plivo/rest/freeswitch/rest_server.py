@@ -4,7 +4,7 @@ from gevent import monkey; monkey.patch_all()
 from gevent.wsgi import WSGIServer
 
 from plivo.utils.logger import StdoutLogger
-from plivo.core.freeswitch.errors import ConnectError
+from plivo.core.errors import ConnectError
 
 from inbound_socket import RESTInboundSocket
 from rest_api import rest_server, set_instances
