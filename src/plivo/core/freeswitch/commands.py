@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+# Initial code for this file derived from eventsocket project - (https://github.com/fiorix/eventsocket),
+# which is distributed under the Mozilla Public License Version 1.1
 
 """
 FreeSWITCH Commands class

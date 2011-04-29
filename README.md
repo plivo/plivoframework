@@ -27,6 +27,3 @@ Currently, it supports FreeSWITCH. Future support is planned for XMPP, Asterisk 
 Copyright (c) 2011 Plivo Team <contact@plivo.org>
 
 Plivo is distributed under the terms of the Mozilla Public License Version 1.1, see `LICENSE`.
-
-Plivo uses code from [eventsocket](https://github.com/fiorix/eventsocket), which is distributed
-under the Mozilla Public License Version 1.1
