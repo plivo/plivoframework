@@ -3,6 +3,7 @@
 > Rapid Communication Application Development Framework
 
 >**Authors:** Michael Ricordeau (tamiel) and Venky (bevenky)
+
 >**Contact:** contact@plivo.org
 
 
@@ -12,14 +13,12 @@ Plivo is a rapid communication application development framework you can use to 
 a wide variety of complex applications(IVRs, Billing System, Voicemail, Click to Call etc)
 in a simple and extensible manner, using the languages you know.
 
-Plivo is completly free for any use.
-
 Currently, it supports FreeSWITCH. Future support is planned for XMPP, Asterisk etc.
 
 
 ## Documentation
 
-* [Plivo Documentation](http://www.plivo.org/documentation/)
+* [Plivo Documentation](http://www.plivo.org/documentation.html)
 
 
 ## License
