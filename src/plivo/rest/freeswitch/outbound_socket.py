@@ -13,7 +13,7 @@ import verbs
 from rest_exceptions import *
 
 
-class XMLOutboundEventSocket(OutboundEventSocket):
+class PlivoOutboundEventSocket(OutboundEventSocket):
     def __init__(self, socket, address, log, default_answer_url, filter=None):
         self.log = log
         self.xml_response = ""
@@ -37,14 +37,14 @@ class XMLOutboundEventSocket(OutboundEventSocket):
 
     def _protocol_send(self, command, args=""):
         self.log.info("[%s] args='%s'" % (command, args))
-        response = super(XMLOutboundEventSocket, self)._protocol_send(command, args)
+        response = super(PlivoOutboundEventSocket, self)._protocol_send(command, args)
         self.log.info(str(response))
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
         self.log.info("[%s] args=%s, uuid='%s', lock=%s, loops=%d" \
                       % (name, str(args), uuid, str(lock), loops))
-        response = super(XMLOutboundEventSocket, self)._protocol_sendmsg(name, args, uuid, lock, loops)
+        response = super(PlivoOutboundEventSocket, self)._protocol_sendmsg(name, args, uuid, lock, loops)
         self.log.info(str(response))
         return response
 

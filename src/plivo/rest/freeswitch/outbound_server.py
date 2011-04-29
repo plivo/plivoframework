@@ -2,19 +2,25 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 from gevent import monkey; monkey.patch_all()
+import os
 
 from plivo.core.freeswitch.outboundsocket import OutboundServer
 from plivo.utils.logger import StdoutLogger
 
-from outbound_socket import XMLOutboundEventSocket
-import settings
+from outbound_socket import PlivoOutboundEventSocket
+import helpers
 
-class AsyncOutboundServer(OutboundServer):
-    def __init__(self, address, handle_class, filter=None):
-        self.log = StdoutLogger()
-        self.log.info("Starting Outbound Server %s ..." % str(address))
-        self.default_answer_url = getattr(settings, 'DEFAULT_ANSWER_URL', 'http://127.0.0.1:5000/answered/')
-        OutboundServer.__init__(self, address, handle_class, filter)
+
+class PlivoOutboundServer(OutboundServer):
+    def __init__(self, handle_class, configfile, filter=None, log = StdoutLogger()):
+        self.config = helpers.get_config(configfile)
+        self.log = log
+        fs_outbound_address = helpers.get_conf_value(self.config, 'freeswitch', 'FS_OUTBOUND_ADDRESS')
+        fs_host, fs_port = fs_outbound_address.split(':')
+        fs_port = int(fs_port)
+        self.log.info("Starting Outbound Server %s ..." % str(fs_outbound_address))
+        self.default_answer_url = helpers.get_conf_value(self.config, 'freeswitch', 'DEFAULT_ANSWER_URL')
+        OutboundServer.__init__(self, (fs_host,fs_port) , handle_class, filter)
 
     def do_handle(self, socket, address):
         self.log.info("New request from %s" % str(address))
@@ -22,8 +28,5 @@ class AsyncOutboundServer(OutboundServer):
 
 
 if __name__ == '__main__':
-    fs_outbound_address = getattr(settings, 'FS_OUTBOUND_ADDRESS', '127.0.0.1:8084')
-    fs_host, fs_port = fs_outbound_address.split(':')
-    fs_port = int(fs_port)
-    outboundserver = AsyncOutboundServer((fs_host, fs_port), XMLOutboundEventSocket)
+    outboundserver = PlivoOutboundServer(PlivoOutboundEventSocket, configfile='./plivo_rest.conf')
     outboundserver.serve_forever()
