@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-# -*- coding: utf-8 -*-
 import traceback
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.utils.logger import StdoutLogger

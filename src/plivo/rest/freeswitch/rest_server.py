@@ -1,7 +1,5 @@
-# Copyright (c) 2011 Plivo Team. See LICENSE for details.
-
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
 from gevent import monkey; monkey.patch_all()
 from gevent.wsgi import WSGIServer
 
