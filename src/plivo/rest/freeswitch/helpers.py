@@ -3,10 +3,24 @@
 
 import re
 import urlparse
-
+import ConfigParser
 
 def get_http_header(file_url):
     return ""
+
+
+def get_config(filename):
+    config = ConfigParser.SafeConfigParser()
+    config.read(filename)
+    return config
+
+
+def get_conf_value(config, section, key):
+    try:
+        value =  config.get(section, key)
+        return str(value)
+    except ConfigParser.NoSectionError:
+        return ""
 
 
 def is_valid_url(value):
@@ -14,6 +28,7 @@ def is_valid_url(value):
       r'^(?:http|ftp)s?://' # http:// or https://
       r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' #domain...
       r'localhost|' #localhost...
+      r'http://127.0.0.1|' # 127.0.0.1...
       r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
       r'(?::\d+)?' # optional port
       r'(?:/?|[/?]\S+)$', re.IGNORECASE)
