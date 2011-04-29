@@ -138,7 +138,7 @@ class RESTInboundSocket(InboundEventSocket):
                 originate_str = "%s,originate_timeout=%s" % (originate_str, gw_timeout_list[0])
 
             answer_url = request_params[7]
-            outbound_str = "'socket:%s async full' inline" % (self.fs_out_address)
+            outbound_str = "'socket:%s async full' inline" % (self.fs_outbound_address)
             dial_str = "%s}%s%s %s" %(originate_str, gw_list[0], to, outbound_str)
             bg_api_response = self.bgapi(dial_str)
             job_uuid = bg_api_response.get_job_uuid()
