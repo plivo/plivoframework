@@ -6,11 +6,9 @@ import gevent.queue
 import gevent
 import xml.etree.cElementTree as etree
 import urllib, urllib2
-
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
-
-import verbs
-from rest_exceptions import *
+from plivo.rest.freeswitch import verbs
+from plivo.rest.freeswitch.rest_exceptions import *
 
 
 class PlivoOutboundEventSocket(OutboundEventSocket):

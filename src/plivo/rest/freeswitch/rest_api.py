@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details
 
-from flask import request
-
 import re
 import uuid
-
-from helpers import is_valid_url, get_conf_value
+from flask import request
+from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value
 
 
 class PlivoRestApi(object):
