@@ -21,6 +21,10 @@ def opt():
                       action="store_true", dest="daemon", default=False,
                       help="run as daemon")
 
+    parser.add_option("-p", "--pidfile", action="store", type="string",
+                      dest="pidfile", help="set pid file PIDFILE", metavar="PIDFILE",
+                      default="/tmp/plivo_outbound.pid")
+
     (options, args) = parser.parse_args()
     return (parser, options, args)
 
@@ -29,6 +33,7 @@ def opt():
 if __name__ == '__main__':
     parser, options, args = opt()
     configfile = options.filename
+    pidfile = options.pidfile
     if options.foreground:
         daemon = False
     elif options.daemon:
@@ -36,10 +41,6 @@ if __name__ == '__main__':
     else:
         parser.print_help()
         sys.exit(0)
-#    try:
-    rest_server = PlivoOutboundServer(configfile, daemon=daemon)
+    rest_server = PlivoOutboundServer(configfile, daemon=daemon, pidfile=pidfile)
     rest_server.start()
-#    except Exception, e:
-#        print "ERROR %s" % str(e)
-#        sys.exit(1)
     sys.exit(0)

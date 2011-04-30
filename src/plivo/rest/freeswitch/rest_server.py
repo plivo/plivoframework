@@ -7,6 +7,8 @@ from gevent.wsgi import WSGIServer
 import os
 import sys
 import signal
+import pwd
+import grp
 from flask import Flask
 import plivo.utils.daemonize
 from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
@@ -19,9 +21,10 @@ from plivo.rest.freeswitch import urls, helpers
 class PlivoRestServer(PlivoRestApi):
     name = "PlivoRestServer"
 
-    def __init__(self, configfile, daemon=False):
+    def __init__(self, configfile, daemon=False, pidfile='/tmp/plivo_rest.pid'):
         self._daemon = daemon
         self._run = False
+        self._pidfile = pidfile
         # load config
         self._config = helpers.get_config(configfile)
         # create flask app
@@ -82,14 +85,12 @@ class PlivoRestServer(PlivoRestApi):
             uid = os.getuid()
             gid = os.getgid()
             user = pwd.getpwuid(uid)[0]
-            group = grp.getgrgit(gid)[0]
-        # get pidfile
-        pidfile = helpers.get_conf_value(self._config, 'rest_server', 'REST_SERVER_PIDFILE')
+            group = grp.getgrgid(gid)[0]
         # daemonize now
         plivo.utils.daemonize.daemon(user,
                                      group,
                                      path='/',
-                                     pidfile=pidfile,
+                                     pidfile=self._pidfile,
                                      other_groups=()
                                     )
 
