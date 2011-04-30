@@ -6,6 +6,8 @@ import gevent
 import os
 import sys
 import signal
+import pwd
+import grp
 import plivo.utils.daemonize
 from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 from plivo.core.freeswitch.outboundsocket import OutboundServer
@@ -14,9 +16,10 @@ from plivo.rest.freeswitch import helpers
 
 
 class PlivoOutboundServer(OutboundServer):
-    def __init__(self, configfile, daemon=False, filter=None):
+    def __init__(self, configfile, daemon=False, pidfile='/tmp/plivo_outbound.pid', filter=None):
         self._daemon = daemon
         self._run = False
+        self._pidfile = pidfile
         # load config
         self._config = helpers.get_config(configfile)
         # create logger
@@ -63,14 +66,12 @@ class PlivoOutboundServer(OutboundServer):
             uid = os.getuid()
             gid = os.getgid()
             user = pwd.getpwuid(uid)[0]
-            group = grp.getgrgit(gid)[0]
-        # get pidfile
-        pidfile = helpers.get_conf_value(self._config, 'freeswitch', 'FS_OUTBOUND_PIDFILE')
+            group = grp.getgrgid(gid)[0]
         # daemonize now
         plivo.utils.daemonize.daemon(user,
                                      group,
                                      path='/',
-                                     pidfile=pidfile,
+                                     pidfile=self._pidfile,
                                      other_groups=()
                                     )
 
