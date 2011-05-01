@@ -1,0 +1,108 @@
+#!/bin/bash
+
+#####################################################
+PREFIX=__PREFIX__
+EXEC_PREFIX=$PREFIX/bin
+PID_PREFIX=$PREFIX/pid
+CONFIG_DIR=$PREFIX/config
+REST_SERVER=$EXEC_PREFIX/plivo_rest_server
+OUTBOUND_SERVER=$EXEC_PREFIX/plivo_outbound_server
+#####################################################
+
+
+do_help()
+{
+	echo "$(basename $0) (start|stop|restart|status)"
+	exit 1;
+}
+
+
+do_start()
+{
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$REST_NAME already running"
+	else
+		$REST_SERVER -d -c $CONFIG_FILE -p $rest_pidfile
+	fi
+	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$OUTBOUND_NAME already running"
+	else
+		$OUTBOUND_SERVER -d -c $CONFIG_FILE -p $outbound_pidfile
+	fi
+}
+
+
+do_stop()
+{
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -TERM $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$REST_NAME stopped"
+		rm -f $rest_pidfile
+	else
+		echo "$REST_NAME stopping failed"
+	fi
+	kill -TERM $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$OUTBOUND_NAME stopped"
+		rm -f $outbound_pidfile
+	else
+		echo "$OUTBOUND_NAME stopping failed"
+	fi
+}
+
+
+do_status()
+{
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
+		&& echo "$REST_NAME running" || echo "$REST_NAME not running"
+	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
+		&& echo "$OUTBOUND_NAME running" || echo "$OUTBOUND_NAME not running"
+}
+
+
+
+# main #
+
+[ -x $REST_SERVER ] || do_help
+[ -x $OUTBOUND_SERVER ] || do_help
+
+mkdir -p $PID_PREFIX 2>/dev/null
+
+
+for CONFIG_FILE in $(ls $CONFIG_DIR/*.conf 2>/dev/null)
+do
+	NAME=$(basename $CONFIG_FILE .conf)
+	REST_NAME="Plivo Rest ($NAME)"
+	OUTBOUND_NAME="Plivo Outbound ($NAME)"
+
+	case $1 in
+	start)
+		do_start
+	;;
+
+	stop)
+		do_stop
+	;;
+
+	restart)
+		do_start
+		sleep 1
+		do_stop
+	;;
+
+	status)
+		do_status
+	;;
+	*)
+		do_help
+	;;
+	esac
+done

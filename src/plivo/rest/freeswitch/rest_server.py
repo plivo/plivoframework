@@ -95,8 +95,8 @@ class PlivoRestServer(PlivoRestApi):
                                     )
 
     def sig_term(self, *args):
-        self.stop()
         self.log.warn("Shutdown ...")
+        self.stop()
         sys.exit(0)
 
     def stop(self):

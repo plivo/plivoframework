@@ -20,12 +20,12 @@ setup_args = {
       'maintainer_email':maintainer_email,
       'platforms':['linux'],
       'long_description':'Framework to create communication applications rapidly in any language',
-      'packages':find_packages('src'),
       'package_dir':{'': 'src'},
+      'packages':find_packages('src'),
       'include_package_data':True,
-      'scripts':['src/scripts/plivod', 
-                 'src/scripts/plivo_rest_server',
-                 'src/scripts/plivo_outbound_server'],
+      'scripts':['src/scripts/plivo_rest_server',
+                 'src/scripts/plivo_outbound_server',
+                 'src/scripts/plivo'],
       'keywords':"telecom voip telephony freeswitch ivr rest",
       'license':licence,
       'zip_safe':False,
@@ -46,6 +46,29 @@ setup_args = {
 }
 
 
+
+def post_install():
+    import sys
+    import os
+    import shutil
+    prefix = sys.prefix
+    # set plivo script
+    f = open(prefix + '/bin/plivo', 'r')
+    buff = f.read()
+    f.close()
+    new_buff = buff.replace('__PREFIX__', prefix)
+    f = open(prefix + '/bin/plivo', 'w')
+    f.write(new_buff)
+    f.close()
+    # create config directory
+    try:
+        os.mkdir(prefix + '/config')
+    except:
+        pass
+    # copy default config file to config directory
+    shutil.copy2('src/config/plivo_rest.conf', prefix + '/config/')
+
+
 try:
     from setuptools import setup
     setup_args['install_requires'] = ['gevent', 'flask']
@@ -54,3 +77,5 @@ except ImportError:
     setup_args['requires'] = ['gevent', 'flask']
 
 setup(**setup_args)
+post_install()
+
