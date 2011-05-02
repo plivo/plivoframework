@@ -18,8 +18,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.xml_response = ""
         self.default_response = '''<?xml version="1.0" encoding="UTF-8" ?>
             <Response>
-                <Play loop="2">/usr/local/freeswitch/sounds/en/us/callie/ivr/8000/ivr-hello.wav
-                </Play>
+                <Preanswer>
+                    <Play loop="2">/usr/local/freeswitch/sounds/en/us/callie/ivr/8000/ivr-hello.wav
+                    </Play>
+                </Preanswer>
                 <Hangup/>
             </Response>
         '''
@@ -107,6 +109,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.parse_xml()
             self.execute_xml()
         except Exception, e:
+            self.log.error(str(e))
+            [self.log.error(line) for line in traceback.format_exc().splitlines()]
             # if error occurs during xml parsing
             # run default response and log exception
             # Play a default message
@@ -115,8 +119,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.lex_xml()
             self.parse_xml()
             self.execute_xml()
-            self.log.error(str(e))
-            [self.log.error(line) for line in traceback.format_exc().splitlines()]
              
 
     def fetch_xml(self):

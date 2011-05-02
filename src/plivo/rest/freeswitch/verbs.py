@@ -501,7 +501,7 @@ class Preanswer(Verb):
     def run(self, outbound_socket):
         for child_instance in self.children:
             if hasattr(child_instance, "run"):
-                child_instance.run()
+                child_instance.run(outbound_socket)
         outbound_socket.log.info("Preanswer Completed")
 
 
