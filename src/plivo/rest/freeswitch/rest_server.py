@@ -134,7 +134,7 @@ class PlivoRestServer(PlivoRestApi):
         # kill http server
         self.http_proc.kill()
         # finish here
-        self.log.info("REST Server Exited")
+        self.log.info("RESTServer Exited")
 
 
 if __name__ == '__main__':
