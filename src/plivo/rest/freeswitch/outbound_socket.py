@@ -6,6 +6,7 @@ import gevent.queue
 import gevent
 import xml.etree.cElementTree as etree
 import urllib, urllib2
+import traceback
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import verbs
 from plivo.rest.freeswitch.rest_exceptions import *
@@ -100,9 +101,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if not self.xml_response:
             # Play a default message
             self.xml_response = self.default_response
-        self.lex_xml()
-        self.parse_xml()
-        self.execute_xml()
+        try:
+            self.lex_xml()
+            self.parse_xml()
+            self.execute_xml()
+        except Exception, e:
+            # if error occurs during xml parsing
+            # run default response and log exception
+            # Play a default message
+            self.xml_response = self.default_response
+            self.lex_xml()
+            self.parse_xml()
+            self.execute_xml()
+            self.log.error(str(e))
+            [self.log.error(line) for line in traceback.format_exc().splitlines()]
+             
 
     def fetch_xml(self):
         encoded_params = urllib.urlencode(self.params)

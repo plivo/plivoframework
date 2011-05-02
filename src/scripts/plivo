@@ -33,6 +33,13 @@ do_start()
 	else
 		$OUTBOUND_SERVER -d -c $CONFIG_FILE -p $outbound_pidfile
 	fi
+	sleep 1s
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
+		&& echo "$REST_NAME started" || echo "$REST_NAME start failed"
+	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
+		&& echo "$OUTBOUND_NAME started" || echo "$OUTBOUND_NAME start failed"
 }
 
 
@@ -93,9 +100,9 @@ do
 	;;
 
 	restart)
-		do_start
-		sleep 1
 		do_stop
+		sleep 0.5s
+		do_start
 	;;
 
 	status)
