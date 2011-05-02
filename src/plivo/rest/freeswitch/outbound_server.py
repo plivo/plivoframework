@@ -25,10 +25,9 @@ class PlivoOutboundServer(OutboundServer):
         # create logger
         self.create_logger()
         # create outbound server
-        fs_outbound_address = helpers.get_conf_value(self._config, 'freeswitch', 'FS_OUTBOUND_ADDRESS')
-        fs_host, fs_port = fs_outbound_address.split(':', 1)
+        self.fs_outbound_address = helpers.get_conf_value(self._config, 'freeswitch', 'FS_OUTBOUND_ADDRESS')
+        fs_host, fs_port = self.fs_outbound_address.split(':', 1)
         fs_port = int(fs_port)
-        self.log.info("Starting Outbound Server %s ..." % str(fs_outbound_address))
         self.default_answer_url = helpers.get_conf_value(self._config, 'freeswitch', 'DEFAULT_ANSWER_URL')
         OutboundServer.__init__(self, (fs_host,fs_port), PlivoOutboundEventSocket, filter)
 
@@ -85,6 +84,7 @@ class PlivoOutboundServer(OutboundServer):
         self.kill()
 
     def start(self):
+        self.log.info("Starting OutboundServer ...")
         # catch SIG_TERM
         gevent.signal(signal.SIGTERM, self.sig_term)
         # run
@@ -92,6 +92,7 @@ class PlivoOutboundServer(OutboundServer):
         if self._daemon:
             self.do_daemon()
         super(PlivoOutboundServer, self).start()
+        self.log.info("OutboundServer started at '%s'" % str(self.fs_outbound_address))
         try:
             while self._run:
                 gevent.sleep(1.0)

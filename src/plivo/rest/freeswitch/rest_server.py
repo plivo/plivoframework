@@ -104,6 +104,7 @@ class PlivoRestServer(PlivoRestApi):
         self._rest_inbound_socket.exit()
 
     def start(self):
+        self.log.info("RESTServer starting ...")
         # catch SIG_TERM
         gevent.signal(signal.SIGTERM, self.sig_term)
         # run
@@ -113,6 +114,7 @@ class PlivoRestServer(PlivoRestApi):
         retry_seconds = 10.0
         # start http server
         self.http_proc = gevent.spawn(self.http_server.serve_forever)
+        self.log.info("RESTServer started at: 'http://%s'" % self.http_address)
         # start inbound socket
         try:
             while self._run:
@@ -120,14 +122,13 @@ class PlivoRestServer(PlivoRestApi):
                     self.log.info("Trying to connect to FreeSWITCH at: %s" % self.fs_inbound_address)
                     self._rest_inbound_socket.connect()
                     self.log.info("Connected to FreeSWITCH")
-                    self.log.info("REST Server started at: 'http://%s'\n" % self.http_address)
+                    self._rest_inbound_socket.serve_forever()
                 except ConnectError, e:
                     if self._run is False:
                         break
                     self.log.error("Connect failed: %s" % str(e))
                 self.log.error("Reconnecting in %s seconds" % retry_seconds)
                 gevent.sleep(retry_seconds)
-                retry_seconds += 20.0
         except (SystemExit, KeyboardInterrupt):
             pass
         # kill http server
