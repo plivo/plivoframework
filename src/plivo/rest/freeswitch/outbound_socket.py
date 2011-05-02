@@ -99,6 +99,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def process_call(self):
         self.fetch_xml()
         if not self.xml_response:
+            self.log.warn("no xml response, executing default response")
             # Play a default message
             self.xml_response = self.default_response
         try:
@@ -109,6 +110,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # if error occurs during xml parsing
             # run default response and log exception
             # Play a default message
+            self.log.warn("xml error, executing default response")
             self.xml_response = self.default_response
             self.lex_xml()
             self.parse_xml()
