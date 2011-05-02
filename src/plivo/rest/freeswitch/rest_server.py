@@ -111,7 +111,8 @@ class PlivoRestServer(PlivoRestApi):
         self._run = True
         if self._daemon:
             self.do_daemon()
-        retry_seconds = 10.0
+        # connection counter
+        retries = 1
         # start http server
         self.http_proc = gevent.spawn(self.http_server.serve_forever)
         self.log.info("RESTServer started at: 'http://%s'" % self.http_address)
@@ -127,8 +128,13 @@ class PlivoRestServer(PlivoRestApi):
                     if self._run is False:
                         break
                     self.log.error("Connect failed: %s" % str(e))
-                self.log.error("Reconnecting in %s seconds" % retry_seconds)
-                gevent.sleep(retry_seconds)
+                # sleep after connection failure
+                sleep_for = retries*10
+                self.log.error("Reconnecting in %d seconds" % sleep_for)
+                gevent.sleep(sleep_for)
+                # don't sleep more than 120 secs
+                if retries < 12:
+                    retries += 1
         except (SystemExit, KeyboardInterrupt):
             pass
         # kill http server
