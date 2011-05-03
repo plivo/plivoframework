@@ -1,18 +1,21 @@
 #!/bin/bash
 
 #####################################################
-PREFIX=__PREFIX__
+PREFIX=@PREFIX@
 EXEC_PREFIX=$PREFIX/bin
-PID_PREFIX=$PREFIX/pid
-CONFIG_DIR=$PREFIX/config
-REST_SERVER=$EXEC_PREFIX/plivo_rest_server
-OUTBOUND_SERVER=$EXEC_PREFIX/plivo_outbound_server
+PID_PREFIX=$PREFIX/tmp
+CONFIG_DIR=$PREFIX/etc/plivo
+REST_SERVER=$EXEC_PREFIX/plivo-rest
+OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound
 #####################################################
 
 
 do_help()
 {
-	echo "$(basename $0) (start|stop|restart|status)"
+	echo
+	echo "$(basename $0) (start|stop|restart|status|list) [CONFIGNAME]"
+	echo "	[CONFIGNAME] plivo instance to manage (optional)"
+	echo
 	exit 1;
 }
 
@@ -84,11 +87,29 @@ do_status()
 mkdir -p $PID_PREFIX 2>/dev/null
 
 
-for CONFIG_FILE in $(ls $CONFIG_DIR/*.conf 2>/dev/null)
+CONFIG_NAME=$2
+
+
+if [ $CONFIG_NAME ]; then
+	CONFIG_LIST=$CONFIG_DIR/$CONFIG_NAME.conf
+	if [ ! -f $CONFIG_DIR/$CONFIG_NAME.conf ]; then
+		echo "ERROR Plivo - No config file found for $CONFIG_NAME"
+		exit 1
+	fi
+else
+	CONFIG_LIST=$(ls $CONFIG_DIR/*.conf 2>/dev/null)
+	if [ -z $CONFIG_LIST ]; then
+		echo "ERROR Plivo - No config file found in $CONFIG_DIR"
+		exit 1
+	fi
+fi
+
+
+for CONFIG_FILE in $CONFIG_LIST
 do
 	NAME=$(basename $CONFIG_FILE .conf)
-	REST_NAME="Plivo Rest ($NAME)"
-	OUTBOUND_NAME="Plivo Outbound ($NAME)"
+	REST_NAME="Plivo-Rest [$NAME]"
+	OUTBOUND_NAME="Plivo-Outbound [$NAME]"
 
 	case $1 in
 	start)
@@ -107,6 +128,14 @@ do
 
 	status)
 		do_status
+	;;
+	list)
+		echo "Plivo config list:"
+		for CONFIG_FILE in $(ls $CONFIG_DIR/*.conf 2>/dev/null); do
+			NAME=$(basename $CONFIG_FILE .conf)
+			echo " - $NAME"
+		done
+		echo
 	;;
 	*)
 		do_help

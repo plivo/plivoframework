@@ -2,7 +2,7 @@
 ~~~ TODO List ~~~
 
     - (Michael)
-        - Create REST Daemon for Plivo REST
+        - Create REST Daemon for Plivo REST (Done)
         - Add Authentication based on IP and auth keys specified in config file
         - Create Init Scripts (Debian/CentOS) for REST
         - Download and cache a play file locally

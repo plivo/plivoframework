@@ -1,7 +1,11 @@
-try:
-    from setuptools import find_packages
-except:
-    from distutils.core import find_packages
+from setuptools import find_packages
+import sys
+
+if sys.prefix == '/usr':
+    etc_prefix = '/etc'
+else:
+    etc_prefix = sys.prefix + '/etc'
+
 
 author = "Plivo Team"
 author_email = "contact@plivo.org"
@@ -23,9 +27,12 @@ setup_args = {
       'package_dir':{'': 'src'},
       'packages':find_packages('src'),
       'include_package_data':True,
-      'scripts':['src/scripts/plivo_rest_server',
-                 'src/scripts/plivo_outbound_server',
+      'scripts':['src/scripts/plivo-rest',
+                 'src/scripts/plivo-outbound',
+                 'src/scripts/plivo-setup.py',
                  'src/scripts/plivo'],
+      'data_files':[(etc_prefix+'/plivo/', ['src/config/default.conf']),
+                   ],
       'keywords':"telecom voip telephony freeswitch ivr rest",
       'license':licence,
       'zip_safe':False,
@@ -46,29 +53,6 @@ setup_args = {
 }
 
 
-
-def post_install():
-    import sys
-    import os
-    import shutil
-    prefix = sys.prefix
-    # set plivo script
-    f = open(prefix + '/bin/plivo', 'r')
-    buff = f.read()
-    f.close()
-    new_buff = buff.replace('__PREFIX__', prefix)
-    f = open(prefix + '/bin/plivo', 'w')
-    f.write(new_buff)
-    f.close()
-    # create config directory
-    try:
-        os.mkdir(prefix + '/config')
-    except:
-        pass
-    # copy default config file to config directory
-    shutil.copy2('src/config/plivo_rest.conf', prefix + '/config/')
-
-
 try:
     from setuptools import setup
     setup_args['install_requires'] = ['gevent', 'flask']
@@ -77,5 +61,4 @@ except ImportError:
     setup_args['requires'] = ['gevent', 'flask']
 
 setup(**setup_args)
-post_install()
 
