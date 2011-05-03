@@ -2,8 +2,6 @@
 
 def setup():
     import sys
-    import os
-    import shutil
     prefix = sys.prefix
     # set plivo script
     f = open(prefix + '/bin/plivo', 'r')

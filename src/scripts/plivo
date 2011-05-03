@@ -4,7 +4,11 @@
 PREFIX=@PREFIX@
 EXEC_PREFIX=$PREFIX/bin
 PID_PREFIX=$PREFIX/tmp
-CONFIG_DIR=$PREFIX/etc/plivo
+if [ "$PREFIX" = "/usr" ]; then
+	CONFIG_DIR=/etc/plivo
+else
+	CONFIG_DIR=$PREFIX/etc/plivo
+fi
 REST_SERVER=$EXEC_PREFIX/plivo-rest
 OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound
 #####################################################
