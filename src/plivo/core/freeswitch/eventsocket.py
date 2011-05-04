@@ -229,23 +229,11 @@ class EventSocket(Commands):
         if not callback:
             callback = self.unbound_event
         # Calls callback.
-        # On exception calls callback_failure method.
-        try:
-            callback(event)
-        except:
-            self.callback_failure(event)
+        callback(event)
 
     def unbound_event(self, event):
         '''
         Catches all unbound events from FreeSWITCH.
-
-        Can be implemented by the subclass.
-        '''
-        pass
-
-    def callback_failure(self, event):
-        '''
-        Called when callback to an event fails.
 
         Can be implemented by the subclass.
         '''
