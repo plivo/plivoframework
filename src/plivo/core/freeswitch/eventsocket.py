@@ -232,7 +232,7 @@ class EventSocket(Commands):
         try:
             callback(event)
         except:
-            callback_failure(event)
+            self.callback_failure(event)
 
     def callback_failure(self, event):
         '''
