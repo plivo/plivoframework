@@ -229,7 +229,18 @@ class EventSocket(Commands):
         if not callback:
             callback = self.unbound_event
         # Calls callback.
-        callback(event)
+        try:
+            callback(event)
+        except:
+            callback_failure(event)
+
+    def callback_failure(self, event):
+        '''
+        Called when callback to an event fails.
+
+        Can be implemented by the subclass.
+        '''
+        pass
 
     def unbound_event(self, event):
         '''
