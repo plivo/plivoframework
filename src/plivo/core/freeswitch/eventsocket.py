@@ -227,7 +227,7 @@ class EventSocket(Commands):
         callback = getattr(self, method, None)
         # When no callbacks found, call unbound_event.
         if not callback:
-            callback = self.unbound_event(event)
+            callback = self.unbound_event
         # Calls callback.
         # On exception calls callback_failure method.
         try:
