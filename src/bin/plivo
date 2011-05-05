@@ -2,6 +2,12 @@
 
 #####################################################
 PREFIX=@PREFIX@
+
+if [ "$PREFIX" = "@PREFIX@" ]; then
+	echo "ERROR: run bin/plivo-postinstall to setup Plivo !"
+        exit 1
+fi
+
 if [ "$PREFIX" = "/usr" ]; then
 	CONFIG_DIR=/etc/plivo
 	PID_PREFIX=/tmp
@@ -9,6 +15,7 @@ else
 	CONFIG_DIR=$PREFIX/etc/plivo
 	PID_PREFIX=$PREFIX/tmp
 fi
+
 EXEC_PREFIX=$PREFIX/bin
 REST_SERVER=$EXEC_PREFIX/plivo-rest
 OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound

@@ -29,7 +29,7 @@ setup_args = {
       'include_package_data':True,
       'scripts':['src/bin/plivo-rest',
                  'src/bin/plivo-outbound',
-                 'src/bin/plivo-postinstall.py',
+                 'src/bin/plivo-postinstall',
                  'src/bin/plivo'],
       'data_files':[(etc_prefix+'/plivo/', ['src/config/default.conf']),
                    ],
