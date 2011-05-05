@@ -1,4 +1,4 @@
-include TODO
 include README.md
-include LICENCE
-include src/config/*.conf
+include LICENSE
+recursive-include src/config *.conf
+recursive-include src/bin plivo-*

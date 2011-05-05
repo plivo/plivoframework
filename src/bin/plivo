@@ -1,14 +1,15 @@
 #!/bin/bash
 
 #####################################################
-PREFIX=@PREFIX@
-EXEC_PREFIX=$PREFIX/bin
-PID_PREFIX=$PREFIX/tmp
+PREFIX=/usr
 if [ "$PREFIX" = "/usr" ]; then
 	CONFIG_DIR=/etc/plivo
+	PID_PREFIX=/tmp
 else
 	CONFIG_DIR=$PREFIX/etc/plivo
+	PID_PREFIX=$PREFIX/tmp
 fi
+EXEC_PREFIX=$PREFIX/bin
 REST_SERVER=$EXEC_PREFIX/plivo-rest
 OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound
 #####################################################

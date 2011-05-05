@@ -11,7 +11,7 @@ author = "Plivo Team"
 author_email = "contact@plivo.org"
 maintainer = "Plivo Team"
 maintainer_email = "contact@plivo.org"
-licence = "MPL 1.1"
+license = "MPL 1.1"
 
 setup_args = {
       'name':'plivo',
@@ -27,14 +27,13 @@ setup_args = {
       'package_dir':{'': 'src'},
       'packages':find_packages('src'),
       'include_package_data':True,
-      'scripts':['src/scripts/plivo-rest',
-                 'src/scripts/plivo-outbound',
-                 'src/scripts/plivo-setup.py',
-                 'src/scripts/plivo'],
+      'scripts':['src/bin/plivo-rest',
+                 'src/bin/plivo-outbound',
+                 'src/bin/plivo'],
       'data_files':[(etc_prefix+'/plivo/', ['src/config/default.conf']),
                    ],
       'keywords':"telecom voip telephony freeswitch ivr rest",
-      'license':licence,
+      'license':license,
       'zip_safe':False,
       'classifiers':[
         "Programming Language :: Python",
@@ -60,5 +59,12 @@ except ImportError:
     from distutils.core import setup
     setup_args['requires'] = ['gevent', 'flask']
 
+
+data = open('src/bin/plivo', 'r').read()
+f = open('src/bin/plivo', 'w')
+f.write(data.replace('@PREFIX@', sys.prefix))
+f.close()
+
 setup(**setup_args)
+
 

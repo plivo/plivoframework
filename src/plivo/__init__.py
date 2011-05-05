@@ -9,4 +9,4 @@ Primary Authors - Michael Ricordeau (tamiel) and Venky (bevenky)
 
 __name__ = "plivo"
 
-__all__ = ['core', 'utils']
+__all__ = ['core', 'utils', 'rest']
