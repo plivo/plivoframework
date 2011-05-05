@@ -7,7 +7,7 @@ def postinstall():
     f = open(prefix + '/bin/plivo', 'r')
     buff = f.read()
     f.close()
-    new_buff = buff.replace('@PREFIX@', prefix)
+    new_buff = buff.replace('PREFIX=@PREFIX@', 'PREFIX='+prefix)
     f = open(prefix + '/bin/plivo', 'w')
     f.write(new_buff)
     f.close()
