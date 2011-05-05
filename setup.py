@@ -29,6 +29,7 @@ setup_args = {
       'include_package_data':True,
       'scripts':['src/bin/plivo-rest',
                  'src/bin/plivo-outbound',
+                 'src/bin/plivo-postinstall.py',
                  'src/bin/plivo'],
       'data_files':[(etc_prefix+'/plivo/', ['src/config/default.conf']),
                    ],
@@ -59,12 +60,7 @@ except ImportError:
     from distutils.core import setup
     setup_args['requires'] = ['gevent', 'flask']
 
-
-data = open('src/bin/plivo', 'r').read()
-f = open('src/bin/plivo', 'w')
-f.write(data.replace('@PREFIX@', sys.prefix))
-f.close()
-
+# setup
 setup(**setup_args)
 
 
