@@ -17,6 +17,8 @@ else
 fi
 
 EXEC_PREFIX=$PREFIX/bin
+VENV_ON=$PREFIX/bin/activate
+VENV_OFF=$PREFIX/bin/deactivate
 REST_SERVER=$EXEC_PREFIX/plivo-rest
 OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound
 #####################################################
@@ -34,6 +36,8 @@ do_help()
 
 do_start()
 {
+	$VENV_OFF &>/dev/null
+	source $VENV_ACTIVATE
 	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
 	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
 	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
@@ -55,6 +59,7 @@ do_start()
 		&& echo "$REST_NAME started" || echo "$REST_NAME start failed"
 	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
 		&& echo "$OUTBOUND_NAME started" || echo "$OUTBOUND_NAME start failed"
+	$VENV_OFF &>/dev/null
 }
 
 
