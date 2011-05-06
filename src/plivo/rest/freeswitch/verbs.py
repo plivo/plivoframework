@@ -158,7 +158,6 @@ class Dial(Verb):
         self.confirm_sound = ""
         self.confirm_key = ""
         self.dial_music = ""
-        self.gateway = ""
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
@@ -174,7 +173,6 @@ class Dial(Verb):
         self.confirm_key = self.extract_attribute_value("confirmKey")
         self.dial_music = self.extract_attribute_value("dialMusic")
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") == 'true'
-        self.gateway = self.extract_attribute_value("gateway")
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
             raise RESTAttributeException("Invalid method parameter, must be 'GET' or 'POST'")
