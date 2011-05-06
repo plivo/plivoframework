@@ -183,8 +183,8 @@ class Dial(Verb):
     def create_number(self, number_instance):
         #TODO what about send_digits and url ?
         num_gw = []
-        # skip number without gateway
-        if not number_instance.gateways:
+        # skip number object without gateway or number
+        if not number_instance.gateways or not number_instance.number:
             return ''
         count = 0
         for gw in number_instance.gateways:
@@ -214,7 +214,7 @@ class Dial(Verb):
             else:
                 options = ''
             num_str = "%s%s/%s" % (options, gw, number_instance.number)
-            dial_num = '|'.join([num_str for i in range(gw_retries) ])
+            dial_num = '|'.join([num_str for retry in range(gw_retries) ])
             num_gw.append(dial_num)
             count += 1
         result = ','.join(num_gw)
@@ -230,7 +230,7 @@ class Dial(Verb):
         if self.caller_id:
             caller_id = "effective_caller_id_number=%s" % self.caller_id
             dial_options.append(caller_id)
-        # set numbers to dial
+        # set numbers to dial from Number nouns
         for child in self.children:
             if isinstance(child, Number):
                 dial_num = self.create_number(child)
