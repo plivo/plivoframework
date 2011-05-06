@@ -18,7 +18,7 @@ fi
 
 EXEC_PREFIX=$PREFIX/bin
 VENV_ON=$PREFIX/bin/activate
-VENV_OFF=$PREFIX/bin/deactivate
+VENV_OFF=deactivate
 REST_SERVER=$EXEC_PREFIX/plivo-rest
 OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound
 #####################################################
