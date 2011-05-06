@@ -233,7 +233,6 @@ class Dial(Verb):
         # set numbers to dial
         for child in self.children:
             if isinstance(child, Number):
-                outbound_socket.log.debug(str(child.number))
                 dial_num = self.create_number(child)
                 if not dial_num:
                     continue
