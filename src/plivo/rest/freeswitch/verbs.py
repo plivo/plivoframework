@@ -206,9 +206,9 @@ class Dial(Verb):
                     gw_retries = 1
             except IndexError, ValueError:
                 gw_retries = 1
-            extra_dialstring = number_instance.extra_dial_string
-            if extra_dialstring:
-                num_options.append(extra_dialstring)
+            extra_dial_string = number_instance.extra_dial_string
+            if extra_dial_string:
+                num_options.append(extra_dial_string)
             if num_options:
                 options = '[%s]' % (','.join(num_options))
             else:
@@ -407,7 +407,7 @@ class Number(Verb):
     number: number to dial
     send_digits: key to press after connecting to the number
     url: url to be called to fetch the XML for actions upon call answer
-    gateways: gaetway string separated by comma to dialout the number
+    gateways: gateway string separated by comma to dialout the number
     gatewayCodecs: codecs for each gatway separated by comma
     gatewayTimeouts: timeouts for each gateway separated by comma
     gatewayRetries: number of times to retry each gateway separated by comma
@@ -427,7 +427,8 @@ class Number(Verb):
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         self.number = element.text.strip()
-        self.url = self.extract_attribute_value("length")
+        # don't allow "|" and "," in a number noun to avoid call injection
+        self.number = re.split(',|\|', self.number)[0]
         self.extra_dial_string = self.extract_attribute_value("extraDialString")
         self.url = self.extract_attribute_value("url")
         self.send_digits = self.extract_attribute_value("sendDigits")
