@@ -88,10 +88,12 @@ class Verb(object):
         self.name = str(self.__class__.__name__)
         self.nestables = None
         self.attributes = {}
+        self.text = ''
         self.children = []
 
     def parse_verb(self, element, uri=None):
         self.prepare_attributes(element)
+        self.prepare_text(element)
 
     def run(self, outbound_socket):
         pass
@@ -109,6 +111,13 @@ class Verb(object):
             raise RESTFormatException("%s does not require any attributes!" % self.name)
         self.attributes = dict(verb_dict, **element.attrib)
 
+    def prepare_text(self, element):
+        text = element.text
+        if not text:
+            self.text = ''
+        else:
+            self.text = text.strip()
+
     def fetch_rest_xml(self, outbound_socket, url):
         # Set Answer URL to Redirect URL
         outbound_socket.answer_url = url
@@ -116,7 +125,7 @@ class Verb(object):
         outbound_socket.xml_response = ""
         outbound_socket.parsed_verbs = []
         outbound_socket.lexed_xml_response = []
-        outbound_socket.log.info("Redirecting to %s to fetch RESTXML" %outbound_socket.answer_url)
+        outbound_socket.log.info("Redirecting to %s to fetch RESTXML" % outbound_socket.answer_url)
         outbound_socket.process_call()
 
 
@@ -133,6 +142,9 @@ class Dial(Verb):
     confirmKey: Key to be pressed to bridge the call.
     dialMusic: Play this music to a-leg while doing a dial to bleg
     """
+    DEFAULT_TIMEOUT = 30
+    DEFAULT_TIMELIMIT = 14400
+
     def __init__(self):
         Verb.__init__(self)
         self.nestables = ['Number']
@@ -140,69 +152,106 @@ class Dial(Verb):
         self.action = ""
         self.hangup_on_star = False
         self.caller_id = ''
-        self.time_limit = 0
+        self.time_limit = self.DEFAULT_TIMELIMIT
+        self.timeout = self.DEFAULT_TIMEOUT
         self.dial_str = ""
         self.confirm_sound = ""
         self.confirm_key = ""
         self.dial_music = ""
+        self.gateway = ""
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         self.action = self.extract_attribute_value("action")
         self.caller_id = self.extract_attribute_value("callerId")
         self.time_limit = int(self.extract_attribute_value("timeLimit"))
+        if self.time_limit <= 0:
+            self.time_limit = self.DEFAULT_TIMELIMIT
+        self.timeout = int(self.extract_attribute_value("timeout"))
+        if self.timeout <= 0:
+            self.timeout = self.DEFAULT_TIMEOUT
         self.confirm_sound = self.extract_attribute_value("confirmSound")
         self.confirm_key = self.extract_attribute_value("confirmKey")
         self.dial_music = self.extract_attribute_value("dialMusic")
-        hangup_on_star = self.extract_attribute_value("hangupOnStar")
-        if hangup_on_star == 'true':
-            self.hangup_on_star = True
+        self.hangup_on_star = self.extract_attribute_value("hangupOnStar") == 'true'
+        self.gateway = self.extract_attribute_value("gateway")
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
             raise RESTAttributeException("Invalid method parameter, must be 'GET' or 'POST'")
         self.method = method
 
-    # create a concatenated gw string for a number
-    def create_numberstring(self, number, gateways, gateway_codecs, gateway_timeouts, \
-                            gateway_retries, extra_dial_string):
-        number_str = ""
-        base_str = "[%s" % (extra_dial_string)
-        for i in range(0,len(gateways)):
-            if base_str == "[":
-                param_str = "%sabsolute_codec_string=%s,leg_timeout=%s]" \
-                            %(base_str, gateway_codecs[i], gateway_timeouts[i])
+    def create_number(self, number_instance):
+        #TODO what about send_digits and url ?
+        num_gw = []
+        # skip number without gateway
+        if not number_instance.gateways:
+            return ''
+        count = 0
+        for gw in number_instance.gateways:
+            num_options = []
+            try:
+                gw_codec = number_instance.gateway_codecs[count]
+                num_options.append('absolute_codec_string=%s' % gw_codec)
+            except IndexError:
+                pass
+            try:
+                gw_timeout = int(number_instance.gateway_timeouts[count])
+                if gw_timeout > 0:
+                    num_options.append('leg_timeout=%d' % gw_timeout)
+            except IndexError, ValueError:
+                pass
+            try:
+                gw_retries = int(number_instance.gateway_retries[count])
+                if gw_retries <= 0:
+                    gw_retries = 1
+            except IndexError, ValueError:
+                gw_retries = 1
+            extra_dialstring = number_instance.extra_dial_string
+            if extra_dialstring:
+                num_options.append(extra_dialstring)
+            if num_options:
+                options = '[%s]' % (','.join(num_options))
             else:
-                param_str = "%s,absolute_codec_string=%s,leg_timeout=%s]" \
-                            %(base_str, gateway_codecs[i], gateway_timeouts[i])
-            # add the same gateway retry number of times
-            for j in range(0, int(gateway_retries[i])):
-                if not number_str:
-                    number_str =  "%s%s%s" %(param_str, gateways[i], number)
-                else:
-                    number_str =  "%s|%s%s%s" %(number_str, param_str, gateways[i], number)
-        return number_str
+                options = ''
+            num_str = "%s%s/%s" % (options, gw, number_instance.number)
+            dial_num = '|'.join([num_str for i in range(gw_retries) ])
+            num_gw.append(dial_num)
+            count += 1
+        result = ','.join(num_gw)
+        return result
 
     def run(self, outbound_socket):
-        for child_instance in self.children:
-            if isinstance(child_instance, Number):
-                number_str = self.create_numberstring(child_instance.number , child_instance.gateways, \
-                            child_instance.gateway_codecs, child_instance.gateway_timeouts, \
-                            child_instance.gateway_retries, child_instance.extra_dial_string)
-                if not self.dial_str:
-                    self.dial_str = number_str
-                else:
-                    self.dial_str = "%s,%s" % (self.dial_str, number_str)
-
+        dial_options = []
+        numbers = []
+        # set timeout
+        outbound_socket.set("call_timeout=%d" % self.timeout)
+        outbound_socket.set("answer_timeout=%d" % self.timeout)
+        # set callerid
+        if self.caller_id:
+            caller_id = "effective_caller_id_number=%s" % self.caller_id
+            dial_options.append(caller_id)
+        # set numbers to dial
+        for child in self.children:
+            if isinstance(child, Number):
+                outbound_socket.log.debug(str(child.number))
+                dial_num = self.create_number(child)
+                if not dial_num:
+                    continue
+                numbers.append(dial_num)
+        # create dialstring
+        self.dial_str = '{'
+        self.dial_str += ','.join(dial_options)
+        self.dial_str += '}'
+        self.dial_str += ','.join(numbers)
+        # don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
-        #outbound_socket.set("call_timeout=20")
-        caller_id = "effective_caller_id_number=%s" %self.caller_id
-        outbound_socket.set(caller_id)
+        # set time limit
         if self.time_limit:
-            hangup_str = "execute_on_answer=sched_hangup +%s alloted_timeout" %self.time_limit
+            hangup_str = "execute_on_answer=sched_hangup +%s alloted_timeout" % self.time_limit
             outbound_socket.set(hangup_str)
         if self.hangup_on_star:
             outbound_socket.set("bridge_terminate_key=*")
-        # Play Dial music or bride the early media accordingly
+        # Play Dial music or bridge the early media accordingly
         if self.dial_music:
             outbound_socket.set("campon=true")
             music_str = "campon_hold_music=%s" %self.dial_music
@@ -220,15 +269,19 @@ class Dial(Verb):
             outbound_socket.set("group_confirm_cancel_timeout=1")
             outbound_socket.set(confirm_music_str)
             outbound_socket.set(confirm_key_str)
-        outbound_socket.log.info("Dial Started")
+        # start dial
+        outbound_socket.log.debug("Dial Started")
         outbound_socket.bridge(self.dial_str)
         event = outbound_socket._action_queue.get()
-        hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
-        outbound_socket.log.info("Dial Finished with reason: %s" %hangup_cause)
-        if hangup_cause == 'NORMAL_CLEARING':
-            if self.action and is_valid_url(self.action):
-                 # Call Parent Class Function
-                self.fetch_rest_xml(outbound_socket, self.action)
+        bridge_result = event['variable_originate_disposition']
+        if bridge_result == "SUCCESS":
+            hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
+        else:
+            hangup_cause = bridge_result
+        outbound_socket.log.info("Dial Finished with reason: %s" % hangup_cause)
+        if self.action and is_valid_url(self.action):
+             # Call Parent Class Function
+            self.fetch_rest_xml(outbound_socket, self.action)
 
 
 class Gather(Verb):

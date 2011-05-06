@@ -68,6 +68,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             event.get_header('Application') == 'bridge':
             self._action_queue.put(event)
 
+    def on_channel_hangup(self, event):
+        self.exit()
+        self.log.warn('Channel %s has hung up' % self.get_channel_unique_id())
+
     def run(self):
         # Only catch events for this channel
         self.myevents()
