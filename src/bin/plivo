@@ -37,7 +37,7 @@ do_help()
 do_start()
 {
 	$VENV_OFF &>/dev/null
-	source $VENV_ACTIVATE
+	source $VENV_ON
 	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
 	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
 	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
