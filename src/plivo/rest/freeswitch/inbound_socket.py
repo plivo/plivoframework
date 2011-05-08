@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-from gevent import monkey; monkey.patch_all()
-from plivo.core.freeswitch.inboundsocket import InboundEventSocket
-from gevent import pool
+from gevent import monkey
+monkey.patch_all()
 
 import urllib
 import urllib2
+
+from gevent import pool
+
+from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -42,15 +45,16 @@ class RESTInboundSocket(InboundEventSocket):
         if job_cmd == "originate":
             status, info = ev.get_body().split()
             request_uuid = self.bk_jobs.pop(job_uuid, None)
-            # Handle Special case of failiure of originate - USER_NOT_REGISTERED
+            # Handle failiure case of originate - USER_NOT_REGISTERED
             # This case does not raise a on_channel_hangup event.
             # All other failiures will be captured by on_channel_hangup
             if status != '+OK':
                 if info == 'USER_NOT_REGISTERED' and request_uuid:
-                    #TODO: Need to check if there are some other edge cases like above
+                    #TODO: Need to check if there are some other edge cases
                     request_params = self.call_request[request_uuid]
                     hangup_url = request_params[8]
-                    self.log.debug("Request: %s cannot be comleted as %s \n\n " % (request_uuid, info))
+                    self.log.debug("Request: %s cannot be comleted as %s \n\n"
+                                                    % (request_uuid, info))
                     params = {'request_uuid': request_uuid, 'reason': info}
                     self.post_to_url(hangup_url, params)
 
@@ -64,7 +68,8 @@ class RESTInboundSocket(InboundEventSocket):
         request_params = self.call_request[request_uuid]
         hangup_url = request_params[8]
         if reason == 'NORMAL_CLEARING':
-            self.hangup_complete(request_uuid, call_uuid, reason, ev, hangup_url)
+            self.hangup_complete(request_uuid, call_uuid, reason, ev,
+                                                                hangup_url)
         else:
             try:
                 call_rang = self.calls_ring_complete[call_uuid]
@@ -75,10 +80,12 @@ class RESTInboundSocket(InboundEventSocket):
                 self.log.debug("Originate Failed - Retrying")
                 self.spawn_originate(request_uuid)
             else:
-                self.hangup_complete(request_uuid, call_uuid, reason, ev, hangup_url)
+                self.hangup_complete(request_uuid, call_uuid, reason, ev,
+                                                                hangup_url)
 
     def on_channel_state(self, ev):
-        if ev['Answer-State'] == 'ringing' and ev['Call-Direction'] == 'outbound':
+        if ev['Answer-State'] == 'ringing' and \
+            ev['Call-Direction'] == 'outbound':
             call_uuid = ev['Unique-ID']
             to = ev['Caller-Destination-Number']
             caller_id = ev['Caller-Caller-ID-Number']
@@ -89,22 +96,27 @@ class RESTInboundSocket(InboundEventSocket):
             if not call_state:
                 if to:
                     self.calls_ring_complete[call_uuid] = True
-                    keystring = "%s-%s" %(to, caller_id)
+                    keystring = "%s-%s" % (to, caller_id)
                     request_uuid = self.ring_map.pop(keystring, None)
                     if request_uuid:
                         request_params = self.call_request[request_uuid]
                         ring_url = request_params[9]
-                        self.log.info("Call Ringing for: %s  with request id %s \n\n " % (to, request_uuid))
+                        self.log.info( \
+                        "Call Ringing for: %s  with request id %s \n\n "
+                                                        % (to, request_uuid))
                         params = {'to': to, 'request_uuid': request_uuid}
                         self.post_to_url(ring_url, params)
 
     def hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
-        self.log.debug("Call: %s  Hungup with reason %s with request uuid %s\n\n " % (call_uuid, reason, request_uuid))
+        self.log.debug("Call: %s hungup, Reason %s, Request uuid %s\n\n "
+                                        % (call_uuid, reason, request_uuid))
         del self.call_request[request_uuid]
-        del self.calls_ring_complete[call_uuid] # Check if call cleans up if no user
+        # Check if call cleans up if no user
+        del self.calls_ring_complete[call_uuid]
         self.log.debug("Call Cleaned up")
         if hangup_url:
-            params = {'request_uuid': request_uuid, 'call_uuid': call_uuid, 'reason': reason}
+            params = {'request_uuid': request_uuid, 'call_uuid': call_uuid,
+                                                            'reason': reason}
             self.post_to_url(hangup_url, params)
 
     def post_to_url(self, url, params):
@@ -112,9 +124,11 @@ class RESTInboundSocket(InboundEventSocket):
         request = urllib2.Request(url, encoded_params)
         try:
             result = urllib2.urlopen(request).read()
-            self.log.info("Posted to %s with %s --Result: %s" %(url, params, result))
+            self.log.info("Posted to %s with %s --Result: %s"
+                                                    % (url, params, result))
         except Exception, e:
-            self.log.error("Post to %s with %s --Error: %s" %(url, params, e))
+            self.log.error("Post to %s with %s --Error: %s"
+                                                        % (url, params, e))
             #TODO: Need a retry mechanism or a fallback url to try
             # Need to build a pool and retry later the failing post_url
             # URL can be temporary unavailable
@@ -133,20 +147,25 @@ class RESTInboundSocket(InboundEventSocket):
 
         if gw_list:
             if gw_codec_list:
-                originate_str = "%s,absolute_codec_string=%s" % (originate_str, gw_codec_list[0])
+                originate_str = "%s,absolute_codec_string=%s" \
+                                        % (originate_str, gw_codec_list[0])
             if gw_timeout_list:
-                originate_str = "%s,originate_timeout=%s" % (originate_str, gw_timeout_list[0])
+                originate_str = "%s,originate_timeout=%s" \
+                                        % (originate_str, gw_timeout_list[0])
 
             answer_url = request_params[7]
-            outbound_str = "'socket:%s async full' inline" % (self.fs_outbound_address)
-            dial_str = "%s}%s%s %s" %(originate_str, gw_list[0], to, outbound_str)
+            outbound_str = "'socket:%s async full' inline" \
+                                                % (self.fs_outbound_address)
+            dial_str = "%s}%s%s %s" \
+                            % (originate_str, gw_list[0], to, outbound_str)
             bg_api_response = self.bgapi(dial_str)
             job_uuid = bg_api_response.get_job_uuid()
             self.bk_jobs[job_uuid] = request_uuid
             if not job_uuid:
-                self.log.error("bgapi(%s) -- Job UUID not recieved \n\n" % dial_str)
+                self.log.error("bgapi(%s) -- Job UUID not recieved \n\n"
+                                                                % dial_str)
 
-            # Update call requests param lists by reducing one from the list each
+            # Reduce one from the call request param lists each time
             if gw_retry_list:
                 gw_tries_done += 1
                 if gw_tries_done > int(gw_retry_list[0]):
@@ -162,4 +181,5 @@ class RESTInboundSocket(InboundEventSocket):
     def bulk_originate(self, request_uuid_list):
         if request_uuid_list:
             job_pool = pool.Pool(len(request_uuid_list))
-            [job_pool.spawn(self.spawn_originate, request_uuid) for request_uuid in request_uuid_list]
+            [job_pool.spawn(self.spawn_originate, request_uuid)
+                                        for request_uuid in request_uuid_list]

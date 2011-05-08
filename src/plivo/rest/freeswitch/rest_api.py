@@ -3,7 +3,9 @@
 
 import re
 import uuid
+
 from flask import request
+
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value
 
 
@@ -19,18 +21,20 @@ class PlivoRestApi(object):
         message = """
         Plivo REST<br>
         <br>
-        Plivo is an Open Source Communication Framework that enables to create Voice applications using REST Apis <br>
+        Plivo is an Open Source Communication Framework that enables to
+        create Voice applications using REST Apis <br>
         <br>
         For Documentation check http://www.plivo.org/documentation/ <br>
         ~~~~~~~~~~~~~~~<br>
         <br>
         <br>
         """
-        #TODO: Convert markup to HTML
         return message
 
-    def prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs, \
-                    gw_timeouts, gw_retries, answer_url, hangup_url, ring_url):
+    def prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
+                        gw_timeouts, gw_retries, answer_url, hangup_url,
+                        ring_url):
+
         gw_retry_list = []
         gw_codec_list = []
         gw_timeout_list = []
@@ -38,30 +42,37 @@ class PlivoRestApi(object):
         gw_list = gw.split(',')
         # split gw codecs by , but only outside the ''
         if gw_codecs:
-            gw_codec_list = re.split(''',(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''', gw_codecs)
+            gw_codec_list = re.split(''',(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''',
+                                                                    gw_codecs)
         if gw_timeouts:
             gw_timeout_list = gw_timeouts.split(',')
         if gw_retries:
             gw_retry_list = gw_retries.split(',')
 
         request_uuid = str(uuid.uuid1())
-        originate_str = "originate {request_uuid=%s,answer_url=%s,origination_caller_id_number=%s" % (request_uuid, answer_url, caller_id)
+        args_list = []
+        args_list.append("request_uuid=%s" % request_uuid)
+        args_list.append("answer_url=%s" % answer_url)
+        args_list.append("origination_caller_id_number=%s" % caller_id)
+        args_str = ','.join(args_list)
+        originate_str = ''.join(["originate {", args_str])
         if extra_dial_string:
             originate_str = "%s,%s" % (originate_str, extra_dial_string)
 
         gw_try_number = 0
-        request_params = [originate_str, to, gw_try_number, gw_list, gw_codec_list, \
-                            gw_timeout_list, gw_retry_list, answer_url, hangup_url, ring_url]
+        request_params = [originate_str, to, gw_try_number, gw_list,
+                          gw_codec_list, gw_timeout_list, gw_retry_list,
+                          answer_url, hangup_url, ring_url]
         self._rest_inbound_socket.call_request[request_uuid] = request_params
-        keystring = "%s-%s" %(to, caller_id)
+        keystring = "%s-%s" % (to, caller_id)
         self._rest_inbound_socket.ring_map[keystring] = request_uuid
 
         return request_uuid
 
     def calls(self):
         msg = None
-        caller_id =  request.form['From']
-        to =  request.form['To']
+        caller_id = request.form['From']
+        to = request.form['To']
         gw = request.form['Gateways']
         answer_url = request.form['AnswerUrl']
 
@@ -82,8 +93,9 @@ class PlivoRestApi(object):
                 gw_timeouts = request.form['GatewayTimeouts']
                 gw_retries = request.form['GatewayRetries']
 
-                request_uuid = self.prepare_request(caller_id, to, extra_dial_string, gw, gw_codecs, \
-                            gw_timeouts, gw_retries, answer_url, hangup_url, ring_url)
+                request_uuid = self.prepare_request(caller_id, to,
+                            extra_dial_string, gw, gw_codecs, gw_timeouts,
+                            gw_retries, answer_url, hangup_url, ring_url)
 
                 self._rest_inbound_socket.spawn_originate(request_uuid)
                 msg = "Request Executed %s" % request_uuid
@@ -92,8 +104,8 @@ class PlivoRestApi(object):
 
     def bulk_calls(self):
         msg = None
-        caller_id =  request.form['From']
-        to_str =  request.form['To']
+        caller_id = request.form['From']
+        to_str = request.form['To']
         gw_str = request.form['Gateways']
         answer_url = request.form['AnswerUrl']
 
@@ -125,24 +137,26 @@ class PlivoRestApi(object):
                 gw_retries_str_list = gw_retries_str.split(delimeter)
 
                 if len(to_str_list) != len(gw_str_list):
-                    msg = "Gateway length does not match number of users to call"
+                    msg = "Gateway length does not match with number length"
                 else:
                     for to in to_str_list:
                         try:
                             gw_codecs = gw_codecs_str_list[i]
-                        except Exception:
+                        except IndexError:
                             gw_codecs = ""
                         try:
                             gw_timeouts = gw_timeouts_str_list[i]
-                        except Exception:
+                        except IndexError:
                             gw_timeouts = ""
                         try:
                             gw_retries = gw_retries_str_list[i]
-                        except Exception:
+                        except IndexError:
                             gw_retries = ""
 
-                        request_uuid = self.prepare_request(caller_id, to, extra_dial_string, gw_str_list[i], \
-                                            gw_codecs, gw_timeouts, gw_retries, answer_url, hangup_url, ring_url)
+                        request_uuid = self.prepare_request(caller_id, to,
+                                    extra_dial_string, gw_str_list[i],
+                                    gw_codecs, gw_timeouts, gw_retries,
+                                    answer_url, hangup_url, ring_url)
 
                         i += 1
                         request_uuid_list.append(request_uuid)

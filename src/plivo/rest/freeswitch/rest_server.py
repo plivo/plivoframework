@@ -1,27 +1,32 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details
 
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
+
+import grp
+import os
+import pwd
+import signal
+import sys
+
+from flask import Flask
 import gevent
 from gevent.wsgi import WSGIServer
-import os
-import sys
-import signal
-import pwd
-import grp
-from flask import Flask
-import plivo.utils.daemonize
-from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
+
 from plivo.core.errors import ConnectError
 from plivo.rest.freeswitch.rest_api import PlivoRestApi
 from plivo.rest.freeswitch.inbound_socket import RESTInboundSocket
 from plivo.rest.freeswitch import urls, helpers
+import plivo.utils.daemonize
+from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 
 
 class PlivoRestServer(PlivoRestApi):
     name = "PlivoRestServer"
 
-    def __init__(self, configfile, daemon=False, pidfile='/tmp/plivo_rest.pid'):
+    def __init__(self, configfile, daemon=False,
+                                            pidfile='/tmp/plivo_rest.pid'):
         self._daemon = daemon
         self._run = False
         self._pidfile = pidfile
@@ -29,16 +34,22 @@ class PlivoRestServer(PlivoRestApi):
         self._config = helpers.get_config(configfile)
         # create flask app
         self.app = Flask(self.name)
-        self.app.secret_key = helpers.get_conf_value(self._config, 'rest_server', 'SECRET_KEY')
+        self.app.secret_key = helpers.get_conf_value(self._config,
+                                                'rest_server', 'SECRET_KEY')
         # create logger
         self.create_logger()
         # create rest server
-        self.fs_inbound_address = helpers.get_conf_value(self._config, 'freeswitch', 'FS_INBOUND_ADDRESS')
+        self.fs_inbound_address = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'FS_INBOUND_ADDRESS')
         fs_host, fs_port = self.fs_inbound_address.split(':', 1)
         fs_port = int(fs_port)
-        fs_password = helpers.get_conf_value(self._config, 'freeswitch', 'FS_PASSWORD')
-        self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port, fs_password, filter='ALL', log=self.log)
-        fs_out_address = helpers.get_conf_value(self._config, 'freeswitch', 'FS_OUTBOUND_ADDRESS')
+        fs_password = helpers.get_conf_value(self._config,
+                                                'freeswitch', 'FS_PASSWORD')
+        self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port,
+                                                    fs_password, filter='ALL',
+                                                    log=self.log)
+        fs_out_address = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'FS_OUTBOUND_ADDRESS')
         self._rest_inbound_socket.fs_outbound_address = fs_out_address
         # expose api functions to flask app
         for path, func_desc in urls.URLS.iteritems():
@@ -46,10 +57,12 @@ class PlivoRestServer(PlivoRestApi):
             fn = getattr(self, func.__name__)
             self.app.add_url_rule(path, func.__name__, fn, methods=methods)
         # create wsgi server
-        self.http_address = helpers.get_conf_value(self._config, 'rest_server', 'HTTP_ADDRESS')
+        self.http_address = helpers.get_conf_value(self._config,
+                                            'rest_server', 'HTTP_ADDRESS')
         http_host, http_port = self.http_address.split(':', 1)
         http_port = int(http_port)
-        self.http_server = WSGIServer((http_host, http_port), self.app, log=self.log)
+        self.http_server = WSGIServer((http_host, http_port),
+                                                    self.app, log=self.log)
 
     def create_logger(self):
         if self._daemon is False:
@@ -57,17 +70,24 @@ class PlivoRestServer(PlivoRestApi):
             self.log.set_debug()
             self.app.debug = True
         else:
-            logtype = helpers.get_conf_value(self._config, 'rest_server', 'LOG_TYPE')
+            logtype = helpers.get_conf_value(self._config,
+                                                'rest_server', 'LOG_TYPE')
             if logtype == 'file':
-                logfile = helpers.get_conf_value(self._config, 'rest_server', 'LOG_FILE')
+                logfile = helpers.get_conf_value(self._config,
+                                                'rest_server', 'LOG_FILE')
                 self.log = FileLogger(logfile)
             elif logtype == 'syslog':
-                syslogaddress = helpers.get_conf_value(self._config, 'rest_server', 'SYSLOG_ADDRESS')
-                syslogfacility = helpers.get_conf_value(self._config, 'rest_server', 'SYSLOG_FACILITY')
+                syslogaddress = helpers.get_conf_value(self._config,
+                                            'rest_server', 'SYSLOG_ADDRESS')
+                syslogfacility = helpers.get_conf_value(self._config,
+                                            'rest_server', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
             else:
                 self.log = StdoutLogger()
-            if helpers.get_conf_value(self._config, 'rest_server', 'DEBUG') == 'true':
+
+            debug_mode = helpers.get_conf_value(self._config,
+                                                    'rest_server', 'DEBUG')
+            if  debug_mode == 'true':
                 self.log.set_debug()
                 self.app.debug = True
             else:
@@ -76,10 +96,12 @@ class PlivoRestServer(PlivoRestApi):
         self.app._logger = self.log
 
     def do_daemon(self):
-        # get user/group from config 
+        # get user/group from config
         try:
-            user = helpers.get_conf_value(self._config, 'rest_server', 'REST_SERVER_USER')
-            group = helpers.get_conf_value(self._config, 'rest_server', 'REST_SERVER_GROUP')
+            user = helpers.get_conf_value(self._config,
+                                        'rest_server', 'REST_SERVER_USER')
+            group = helpers.get_conf_value(self._config,
+                                        'rest_server', 'REST_SERVER_GROUP')
         # default is to get currents user/group
         except:
             uid = os.getuid()
@@ -120,7 +142,8 @@ class PlivoRestServer(PlivoRestApi):
         try:
             while self._run:
                 try:
-                    self.log.info("Trying to connect to FreeSWITCH at: %s" % self.fs_inbound_address)
+                    self.log.info("Trying to connect to FreeSWITCH at: %s"
+                                                    % self.fs_inbound_address)
                     self._rest_inbound_socket.connect()
                     self.log.info("Connected to FreeSWITCH")
                     self._rest_inbound_socket.serve_forever()
@@ -129,7 +152,7 @@ class PlivoRestServer(PlivoRestApi):
                         break
                     self.log.error("Connect failed: %s" % str(e))
                 # sleep after connection failure
-                sleep_for = retries*10
+                sleep_for = retries * 10
                 self.log.error("Reconnecting in %d seconds" % sleep_for)
                 gevent.sleep(sleep_for)
                 # don't sleep more than 120 secs

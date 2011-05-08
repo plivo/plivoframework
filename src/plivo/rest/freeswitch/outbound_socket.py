@@ -1,15 +1,26 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-from gevent import monkey; monkey.patch_all()
-import gevent.queue
-import gevent
-import xml.etree.cElementTree as etree
-import urllib, urllib2
+from gevent import monkey
+monkey.patch_all()
+
 import traceback
+import urllib
+import urllib2
+
+try:
+    import xml.etree.cElementTree as etree
+except ImportError:
+    from xml.etree.elementtree import ElementTree as etree
+
+import gevent
+import gevent.queue
+
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import verbs
-from plivo.rest.freeswitch.rest_exceptions import *
+from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
+                                    RESTSyntaxException, \
+                                    UnrecognizedVerbException
 
 
 class PlivoOutboundEventSocket(OutboundEventSocket):
@@ -18,18 +29,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.xml_response = ""
         self.default_response = '''<?xml version="1.0" encoding="UTF-8" ?>
             <Response>
-                <Preanswer>
-                    <Play loop="2">/usr/local/freeswitch/sounds/en/us/callie/ivr/8000/ivr-hello.wav
-                    </Play>
-                </Preanswer>
-                <Hangup/>
+                <Reject/>
             </Response>
         '''
         self.parsed_verbs = []
         self.lexed_xml_response = []
         self.answer_url = ""
         self.direction = ""
-        self.params  = None
+        self.params = None
         self._action_queue = gevent.queue.Queue()
         self.default_answer_url = default_answer_url
         self.answered = False
@@ -38,19 +45,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def _protocol_send(self, command, args=""):
         self.log.info("[%s] args='%s'" % (command, args))
-        response = super(PlivoOutboundEventSocket, self)._protocol_send(command, args)
+        response = super(PlivoOutboundEventSocket, self)._protocol_send(
+                                                                command, args)
         self.log.info(str(response))
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
         self.log.info("[%s] args=%s, uuid='%s', lock=%s, loops=%d" \
                       % (name, str(args), uuid, str(lock), loops))
-        response = super(PlivoOutboundEventSocket, self)._protocol_sendmsg(name, args, uuid, lock, loops)
+        response = super(PlivoOutboundEventSocket, self)._protocol_sendmsg(
+                                                name, args, uuid, lock, loops)
         self.log.info(str(response))
         return response
 
-    # Commands like `playback` and `record` will return +OK from the server, "immediately".
-    # However, the only way to know that the audio file being played has finished,
+    # Commands like `playback`, `record` etc. return +OK "immediately".
+    # However, the only way to know if the audio file played has finished,
     # is by handling CHANNEL_EXECUTE_COMPLETE events.
     #
     # Such events are received by the on_channel_execute_complete method
@@ -114,7 +123,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.execute_xml()
         except Exception, e:
             self.log.error(str(e))
-            [self.log.error(line) for line in traceback.format_exc().splitlines()]
+            [self.log.error(line) for line in \
+                                        traceback.format_exc().splitlines()]
             # if error occurs during xml parsing
             # run default response and log exception
             # Play a default message
@@ -123,16 +133,17 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.lex_xml()
             self.parse_xml()
             self.execute_xml()
-             
 
     def fetch_xml(self):
         encoded_params = urllib.urlencode(self.params)
         request = urllib2.Request(self.answer_url, encoded_params)
         try:
             self.xml_response = urllib2.urlopen(request).read()
-            self.log.info("Posted to %s with %s" %(self.answer_url, self.params))
+            self.log.info("Posted to %s with %s" % (self.answer_url,
+                                                                self.params))
         except Exception, e:
-            self.log.error("Post to %s with %s --Error: %s" %(self.answer_url, self.params, e))
+            self.log.error("Post to %s with %s --Error: %s" \
+                                        % (self.answer_url, self.params, e))
 
     def lex_xml(self):
         # 1. Parse XML into a doctring
@@ -142,7 +153,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         except Exception:
             raise RESTSyntaxException("Invalid RESTXML Response Syntax")
 
-        # 2. Make sure the document has a <Response> root else raise format exception
+        # 2. Make sure the document has a <Response> root
         if doc.tag != "Response":
             raise RESTFormatException("No Response Tag Present")
 
@@ -155,7 +166,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 else:
                     self.lexed_xml_response.append(element)
                 if invalid_verbs:
-                    raise UnrecognizedVerbException("Unrecognized verbs: %s" % invalid_verbs)
+                    raise UnrecognizedVerbException("Unrecognized verbs: %s"
+                                                            % invalid_verbs)
 
     def parse_xml(self):
         # Check all Verb names
@@ -164,16 +176,18 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             verb_instance = verb()
             verb_instance.parse_verb(element, self.answer_url)
             self.parsed_verbs.append(verb_instance)
-            # Validate, Parse and store the nested childrens inside this main verb
+            # Validate, Parse and store the nested childrens inside main verb
             self.validate_verb(element, verb_instance)
 
     def validate_verb(self, element, verb_instance):
         children = element.getchildren()
         if children and not verb_instance.nestables:
-            raise RESTFormatException("%s is not nestable verb. It cannot have any children!" % verb_instance.name)
+            raise RESTFormatException("%s cannot have any children!"
+                                                        % verb_instance.name)
         for child in children:
             if child.tag not in verb_instance.nestables:
-                raise RESTFormatException("%s is not nestable inside %s" % (child, verb_instance.name))
+                raise RESTFormatException("%s is not nestable inside %s"
+                                                % (child, verb_instance.name))
             else:
                 self.parse_children(child, verb_instance)
 
@@ -190,9 +204,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 verb.prepare()
             # Check If inbound call
             if self.direction == 'inbound':
-                # Dont answer the call if the verb is a reject, pause or preanswer
+                # Dont answer the call if verb is a reject, pause or preanswer
                 # Only execute the verbs
-                if self.answered == False and verb.name not in self.no_answer_verbs:
+                if self.answered == False and \
+                    verb.name not in self.no_answer_verbs:
                     self.answer()
                     self.answered = True
             verb.run(self)

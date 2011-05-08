@@ -1,22 +1,27 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-from gevent import monkey; monkey.patch_all()
-import gevent
-import os
-import sys
-import signal
-import pwd
+from gevent import monkey
+monkey.patch_all()
+
 import grp
-import plivo.utils.daemonize
-from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
+import os
+import pwd
+import signal
+import sys
+
+import gevent
+
 from plivo.core.freeswitch.outboundsocket import OutboundServer
 from plivo.rest.freeswitch.outbound_socket import PlivoOutboundEventSocket
 from plivo.rest.freeswitch import helpers
+import plivo.utils.daemonize
+from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 
 
 class PlivoOutboundServer(OutboundServer):
-    def __init__(self, configfile, daemon=False, pidfile='/tmp/plivo_outbound.pid', filter=None):
+    def __init__(self, configfile, daemon=False,
+                            pidfile='/tmp/plivo_outbound.pid', filter=None):
         self._daemon = daemon
         self._run = False
         self._pidfile = pidfile
@@ -25,41 +30,53 @@ class PlivoOutboundServer(OutboundServer):
         # create logger
         self.create_logger()
         # create outbound server
-        self.fs_outbound_address = helpers.get_conf_value(self._config, 'freeswitch', 'FS_OUTBOUND_ADDRESS')
+        self.fs_outbound_address = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'FS_OUTBOUND_ADDRESS')
         fs_host, fs_port = self.fs_outbound_address.split(':', 1)
         fs_port = int(fs_port)
-        self.default_answer_url = helpers.get_conf_value(self._config, 'freeswitch', 'DEFAULT_ANSWER_URL')
-        OutboundServer.__init__(self, (fs_host,fs_port), PlivoOutboundEventSocket, filter)
+        self.default_answer_url = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'DEFAULT_ANSWER_URL')
+        OutboundServer.__init__(self, (fs_host, fs_port),
+                                            PlivoOutboundEventSocket, filter)
 
     def do_handle(self, socket, address):
         self.log.info("New request from %s" % str(address))
-        self._handle_class(socket, address, self.log, self.default_answer_url, filter=self._filter)
+        self._handle_class(socket, address, self.log, self.default_answer_url,
+                                                        filter=self._filter)
 
     def create_logger(self):
         if self._daemon is False:
             self.log = StdoutLogger()
             self.log.set_debug()
         else:
-            logtype = helpers.get_conf_value(self._config, 'freeswitch', 'LOG_TYPE')
+            logtype = helpers.get_conf_value(self._config,
+                                                    'freeswitch', 'LOG_TYPE')
             if logtype == 'file':
-                logfile = helpers.get_conf_value(self._config, 'freeswitch', 'LOG_FILE')
+                logfile = helpers.get_conf_value(self._config,
+                                                    'freeswitch', 'LOG_FILE')
                 self.log = FileLogger(logfile)
             elif logtype == 'syslog':
-                syslogaddress = helpers.get_conf_value(self._config, 'freeswitch', 'SYSLOG_ADDRESS')
-                syslogfacility = helpers.get_conf_value(self._config, 'freeswitch', 'SYSLOG_FACILITY')
+                syslogaddress = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'SYSLOG_ADDRESS')
+                syslogfacility = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
             else:
                 self.log = StdoutLogger()
-            if helpers.get_conf_value(self._config, 'freeswitch', 'DEBUG') == 'true':
+            debug_mode = helpers.get_conf_value(self._config,
+                                                        'freeswitch', 'DEBUG')
+            if debug_mode == 'true':
                 self.log.set_debug()
             else:
                 self.log.set_info()
 
     def do_daemon(self):
-        # get user/group from config 
+        # get user/group from config
         try:
-            user = helpers.get_conf_value(self._config, 'freeswitch', 'FS_OUTBOUND_USER')
-            group = helpers.get_conf_value(self._config, 'freeswitch', 'FS_OUTBOUND_GROUP')
+            user = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'FS_OUTBOUND_USER')
+            group = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'FS_OUTBOUND_GROUP')
         # default is to get currents user/group
         except:
             uid = os.getuid()
@@ -92,7 +109,8 @@ class PlivoOutboundServer(OutboundServer):
         if self._daemon:
             self.do_daemon()
         super(PlivoOutboundServer, self).start()
-        self.log.info("OutboundServer started at '%s'" % str(self.fs_outbound_address))
+        self.log.info("OutboundServer started at '%s'"
+                                            % str(self.fs_outbound_address))
         try:
             while self._run:
                 gevent.sleep(1.0)
@@ -101,9 +119,7 @@ class PlivoOutboundServer(OutboundServer):
         self.log.info("OutboundServer Exited")
 
 
-        
-
 if __name__ == '__main__':
-    outboundserver = PlivoOutboundServer(configfile='./plivo_rest.conf', daemon=False)
+    outboundserver = PlivoOutboundServer(configfile='./plivo_rest.conf',
+                                                                daemon=False)
     outboundserver.start()
-

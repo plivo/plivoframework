@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-import re
 from datetime import date
+import re
 
-from rest_exceptions import *
 from helpers import is_valid_url
+from rest_exceptions import RESTFormatException, RESTAttributeException
 
 
 RECOGNIZED_SOUND_FORMATS = ["audio/mpeg", "audio/wav", "audio/x-wav"]
@@ -108,7 +108,8 @@ class Verb(object):
     def prepare_attributes(self, element):
         verb_dict = VERB_DEFAULT_PARAMS[self.name]
         if element.attrib and not verb_dict:
-            raise RESTFormatException("%s does not require any attributes!" % self.name)
+            raise RESTFormatException("%s does not require any attributes!"
+                                                                % self.name)
         self.attributes = dict(verb_dict, **element.attrib)
 
     def prepare_text(self, element):
@@ -125,7 +126,8 @@ class Verb(object):
         outbound_socket.xml_response = ""
         outbound_socket.parsed_verbs = []
         outbound_socket.lexed_xml_response = []
-        outbound_socket.log.info("Redirecting to %s to fetch RESTXML" % outbound_socket.answer_url)
+        outbound_socket.log.info("Redirecting to %s to fetch RESTXML"
+                                                % outbound_socket.answer_url)
         outbound_socket.process_call()
 
 
@@ -172,10 +174,11 @@ class Dial(Verb):
         self.confirm_sound = self.extract_attribute_value("confirmSound")
         self.confirm_key = self.extract_attribute_value("confirmKey")
         self.dial_music = self.extract_attribute_value("dialMusic")
-        self.hangup_on_star = self.extract_attribute_value("hangupOnStar") == 'true'
+        self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
+                                                                    == 'true'
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
-            raise RESTAttributeException("Invalid method parameter, must be 'GET' or 'POST'")
+            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
 
     def create_number(self, number_instance):
@@ -212,7 +215,7 @@ class Dial(Verb):
             else:
                 options = ''
             num_str = "%s%s/%s" % (options, gw, number_instance.number)
-            dial_num = '|'.join([num_str for retry in range(gw_retries) ])
+            dial_num = '|'.join([num_str for retry in range(gw_retries)])
             num_gw.append(dial_num)
             count += 1
         result = ','.join(num_gw)
@@ -244,22 +247,23 @@ class Dial(Verb):
         outbound_socket.set("hangup_after_bridge=false")
         # set time limit
         if self.time_limit:
-            hangup_str = "execute_on_answer=sched_hangup +%s alloted_timeout" % self.time_limit
+            hangup_str = "execute_on_answer=sched_hangup +%s alloted_timeout" \
+                                                            % self.time_limit
             outbound_socket.set(hangup_str)
         if self.hangup_on_star:
             outbound_socket.set("bridge_terminate_key=*")
         # Play Dial music or bridge the early media accordingly
         if self.dial_music:
             outbound_socket.set("campon=true")
-            music_str = "campon_hold_music=%s" %self.dial_music
+            music_str = "campon_hold_music=%s" % self.dial_music
             outbound_socket.set(music_str)
         else:
             outbound_socket.set("bridge_early_media=true")
         if self.confirm_sound:
-            confirm_music_str = "group_confirm_file=%s" %self.confirm_sound
+            confirm_music_str = "group_confirm_file=%s" % self.confirm_sound
             # use confirm key if present else just play music
             if self.confirm_key:
-                confirm_key_str = "group_confirm_key=%s" %self.confirm_key
+                confirm_key_str = "group_confirm_key=%s" % self.confirm_key
             else:
                 confirm_key_str = "group_confirm_key=exec"
             # Cancel the leg timeout after the call is answered
@@ -275,7 +279,8 @@ class Dial(Verb):
             hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
         else:
             hangup_cause = bridge_result
-        outbound_socket.log.info("Dial Finished with reason: %s" % hangup_cause)
+        outbound_socket.log.info("Dial Finished with reason: %s"
+                                                            % hangup_cause)
         if self.action and is_valid_url(self.action):
              # Call Parent Class Function
             self.fetch_rest_xml(outbound_socket, self.action)
@@ -290,7 +295,7 @@ class Gather(Verb):
     numDigits: how many digits to gather before returning
     timeout: wait for this many seconds before retry or returning
     finish_on_key: key that triggers the end of caller input
-    pause: number of seconds to pause in between multiple say or play nested within
+    pause: number of seconds to pause in between multiple say or play
     tries: number of tries to execute all says and plays one by one
     playBeep: play a after all plays and says finish
     validDigits: digits which are allowed to be pressed
@@ -318,14 +323,15 @@ class Gather(Verb):
         timeout = int(self.extract_attribute_value("timeout"))
         finish_on_key = self.extract_attribute_value("finishOnKey")
         play_beep = self.extract_attribute_value("playBeep")
-        self.invalid_digits_sound = self.extract_attribute_value("invalidDigitsSound")
+        self.invalid_digits_sound = \
+                            self.extract_attribute_value("invalidDigitsSound")
         self.valid_digits = self.extract_attribute_value("validDigits")
         action = self.extract_attribute_value("action")
         retries = int(self.extract_attribute_value("retries"))
         pause = int(self.extract_attribute_value("pause"))
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
-            raise RESTAttributeException("Invalid method parameter, must be 'GET' or 'POST'")
+            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
 
         if num_digits < 1:
@@ -345,9 +351,9 @@ class Gather(Verb):
         else:
             self.action = uri
         self.num_digits = num_digits
-        self.timeout = (timeout*1000)
+        self.timeout = (timeout * 1000)
         self.finish_on_key = finish_on_key
-        self.pause = (pause*1000)
+        self.pause = (pause * 1000)
         self.retries = retries
 
     def prepare(self):
@@ -368,12 +374,15 @@ class Gather(Verb):
                     self.sound_files.append(sound_file)
             except Exception:
                 pass
-        outbound_socket.log.info("Running Gather %s " %self.sound_files)
-        outbound_socket.log.info("Play beep %s " %self.play_beep)
-        outbound_socket.play_and_get_digits(max_digits=self.num_digits, max_tries=self.retries, \
-                            timeout=self.timeout, terminators=self.finish_on_key, \
-                            sound_files=self.sound_files, invalid_file=self.invalid_digits_sound, \
-                            valid_digits=self.valid_digits, play_beep=self.play_beep, pause=self.pause)
+        outbound_socket.log.info("Running Gather %s " % self.sound_files)
+        outbound_socket.log.info("Play beep %s " % self.play_beep)
+        outbound_socket.play_and_get_digits(max_digits=self.num_digits,
+                            max_tries=self.retries, timeout=self.timeout,
+                            terminators=self.finish_on_key,
+                            sound_files=self.sound_files,
+                            invalid_file=self.invalid_digits_sound,
+                            valid_digits=self.valid_digits,
+                            play_beep=self.play_beep, pause=self.pause)
         event = outbound_socket._action_queue.get()
         digits = outbound_socket.get_var('pagd_input')
         outbound_socket.params.update({'Digits': digits})
@@ -409,7 +418,7 @@ class Number(Verb):
     gatewayCodecs: codecs for each gatway separated by comma
     gatewayTimeouts: timeouts for each gateway separated by comma
     gatewayRetries: number of times to retry each gateway separated by comma
-    extraDialString: extra dialstring which will be added to while dialing out to number
+    extraDialString: extra dialstring to be added while dialing out to number
     """
     def __init__(self):
         Verb.__init__(self)
@@ -427,7 +436,8 @@ class Number(Verb):
         self.number = element.text.strip()
         # don't allow "|" and "," in a number noun to avoid call injection
         self.number = re.split(',|\|', self.number)[0]
-        self.extra_dial_string = self.extract_attribute_value("extraDialString")
+        self.extra_dial_string = \
+                                self.extract_attribute_value("extraDialString")
         self.url = self.extract_attribute_value("url")
         self.send_digits = self.extract_attribute_value("sendDigits")
 
@@ -440,7 +450,9 @@ class Number(Verb):
             self.gateways = gateways.split(',')
         # split gw codecs by , but only outside the ''
         if gateway_codecs:
-            self.gateway_codecs = re.split(''',(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''', gateway_codecs)
+            self.gateway_codecs = \
+                            re.split(''',(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''',
+                                                            gateway_codecs)
         if gateway_timeouts:
             self.gateway_timeouts = gateway_timeouts.split(',')
         if gateway_retries:
@@ -461,12 +473,13 @@ class Pause(Verb):
         Verb.parse_verb(self, element, uri)
         length = int(self.extract_attribute_value("length"))
         if length < 0:
-            raise RESTFormatException("Pause Length must be a positive integer")
+            raise RESTFormatException("Pause must be a positive integer")
         self.length = length
 
     def run(self, outbound_socket):
-        outbound_socket.sleep(str(self.length*1000))
-        outbound_socket.log.info("Pause Executed for %s seconds" % self.length)
+        outbound_socket.sleep(str(self.length * 1000))
+        outbound_socket.log.info("Pause Executed for %s seconds"
+                                                                % self.length)
 
 
 class Play(Verb):
@@ -479,7 +492,7 @@ class Play(Verb):
     """
     def __init__(self):
         Verb.__init__(self)
-        self.audio_directory =  ""
+        self.audio_directory = ""
         self.loop_times = 1
         self.file_url = ""
         self.sound_file_path = ""
@@ -503,12 +516,12 @@ class Play(Verb):
             self.file_url = None
         else:
             self.file_url = audio_path
-            raise RESTFormatException("Currently only local files are supported. URLs not allowed")
+            raise RESTFormatException("Only local files are supported.")
 
     def prepare(self):
-        # TODO: If Sound File Path is None then goto Audio URL then check file type format
-        # Download the file and move to audio directory and set sound file path
-        # Create MD5 hash to identify the text with filename to reuse the file if same text
+        # TODO: If Sound File is Audio URL then Check file type format
+        # Download the file, move to audio directory and set sound file path
+        # Create MD5 hash to identify the with filename for caching
         pass
 
     def run(self, outbound_socket):
@@ -524,7 +537,7 @@ class Play(Verb):
                 event = outbound_socket._action_queue.get()
                 # Log playback execute response
                 outbound_socket.log.info("Playback finished once (%s)" \
-                                        % str(event.get_header('Application-Response')))
+                            % str(event.get_header('Application-Response')))
 
     def is_infinite(self):
         if self.loop_times == 0:
@@ -589,36 +602,37 @@ class Record(Verb):
         self.format = self.extract_attribute_value("format")
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
-            raise RESTAttributeException("Invalid method parameter, must be 'GET' or 'POST'")
+            raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
 
         if max_length < 0:
             raise RESTFormatException("Max Length must be a positive integer")
         self.max_length = max_length
         if timeout < 0:
-            raise RESTFormatException("Silence Timeout must be a positive integer")
+            raise RESTFormatException("Silence Timeout must be positive")
         self.timeout = timeout
         if action and is_valid_url(action):
             self.action = action
         else:
             self.action = uri
         # :TODO Validate Finish on Key
-        self.finish_on_key =  finish_on_key
+        self.finish_on_key = finish_on_key
 
     def run(self, outbound_socket):
-        filename = "%s-%s" %(str(date.today()), outbound_socket.call_uuid)
-        record_file = "%s%s.%s" %(self.file_path, filename, self.format)
+        filename = "%s-%s" % (str(date.today()), outbound_socket.call_uuid)
+        record_file = "%s%s.%s" % (self.file_path, filename, self.format)
         if self.play_beep == 'true':
             beep = 'tone_stream://%(300,200,700)'
             outbound_socket.playback(beep)
             event = outbound_socket._action_queue.get()
             # Log playback execute response
             outbound_socket.log.info("Finished Playing beep (%s)" \
-                                        % str(event.get_header('Application-Response')))
+                            % str(event.get_header('Application-Response')))
         outbound_socket.start_dtmf()
         outbound_socket.log.info("Starting Recording")
-        outbound_socket.record(record_file, self.max_length, self.silence_threshold, \
-                            self.timeout, self.finish_on_key)
+        outbound_socket.record(record_file, self.max_length,
+                            self.silence_threshold, self.timeout,
+                            self.finish_on_key)
         event = outbound_socket._action_queue.get()
         outbound_socket.log.info("Recording Completed")
         outbound_socket.stop_dtmf()
@@ -643,8 +657,9 @@ class RecordSession(Verb):
     def run(self, outbound_socket):
         outbound_socket.set("RECORD_STEREO=true")
         outbound_socket.set("media_bug_answer_req=true")
-        filename = "%s-%s.%s" %(str(date.today()), outbound_socket.call_uuid, self.format)
-        outbound_socket.record_session("%s%s" %(self.file_path, filename))
+        filename = "%s-%s.%s" % (str(date.today()), outbound_socket.call_uuid,
+                                self.format)
+        outbound_socket.record_session("%s%s" % (self.file_path, filename))
         outbound_socket.log.info("Call Recording command issued")
 
 
@@ -657,13 +672,13 @@ class Redirect(Verb):
     def __init__(self):
         Verb.__init__(self)
         self.method = ""
-        self.url  = ""
+        self.url = ""
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
-            raise RESTAttributeException("Invalid method parameter, must be 'GET' or 'POST'")
+            raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
         url = element.text.strip()
         if not url:
@@ -695,11 +710,13 @@ class Reject(Verb):
         elif reason == 'busy':
             self.reason = 'USER_BUSY'
         else:
-            raise RESTAttributeException("Wrong Attribute Value for %s" % self.name)
+            raise RESTAttributeException("Wrong Attribute Value for %s"
+                                                                % self.name)
 
     def run(self, outbound_socket):
         outbound_socket.hangup(self.reason)
-        outbound_socket.log.info("Call Rejection Done with reason: %s" % self.reason)
+        outbound_socket.log.info("Call Rejection Done with reason: %s"
+                                                                % self.reason)
 
 
 # Currently Broken - Needs to be implemented
@@ -734,10 +751,10 @@ class Say(Verb):
         self.text = element.text.strip()
 
     def prepare(self):
-        url = "http://translate.google.com/translate_tts?tl=%s" %self.language
-        url = "url&q=%s" %self.text
+        url = "http://translate.google.com/translate_tts?tl=%s" % self.language
+        url = "url&q=%s" % self.text
         # Download the file and move to audio directory and set sound file path
-        # Create MD5 hash to identify the text with filename to reuse the file if same text
+        # Create MD5 hash to identify the text with filename for caching
         #self.sound_file_path = url
         #self.sound_file_path = "shout://%s" %self.sound_file_path
 
@@ -748,4 +765,4 @@ class Say(Verb):
             #event = outbound_socket._action_queue.get()
             # Log playback execute response
             #outbound_socket.log.info("Speak finished once (%s)" \
-            #                        % str(event.get_header('Application-Response')))
+            #                 % str(event.get_header('Application-Response')))
