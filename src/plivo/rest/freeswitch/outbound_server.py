@@ -72,24 +72,19 @@ class PlivoOutboundServer(OutboundServer):
 
     def do_daemon(self):
         # get user/group from config
-        try:
-            user = helpers.get_conf_value(self._config,
+        user = helpers.get_conf_value(self._config,
                                             'freeswitch', 'FS_OUTBOUND_USER')
-            group = helpers.get_conf_value(self._config,
+        group = helpers.get_conf_value(self._config,
                                             'freeswitch', 'FS_OUTBOUND_GROUP')
         # default is to get currents user/group
-        except:
+        if not user or not group:
             uid = os.getuid()
-            gid = os.getgid()
             user = pwd.getpwuid(uid)[0]
+            gid = os.getgid()
             group = grp.getgrgid(gid)[0]
         # daemonize now
-        plivo.utils.daemonize.daemon(user,
-                                     group,
-                                     path='/',
-                                     pidfile=self._pidfile,
-                                     other_groups=()
-                                    )
+        plivo.utils.daemonize.daemon(user, group, path='/',
+                                    pidfile=self._pidfile, other_groups=())
 
     def sig_term(self, *args):
         self.stop()

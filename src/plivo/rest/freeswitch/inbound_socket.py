@@ -73,7 +73,7 @@ class RESTInboundSocket(InboundEventSocket):
         else:
             try:
                 call_rang = self.calls_ring_complete[call_uuid]
-            except Exception:
+            except LookupError:
                 call_rang = False
             gw_list = request_params[3]
             if gw_list and not call_rang:
@@ -91,7 +91,7 @@ class RESTInboundSocket(InboundEventSocket):
             caller_id = ev['Caller-Caller-ID-Number']
             try:
                 call_state = self.calls_ring_complete[call_uuid]
-            except Exception:
+            except LookupError:
                 call_state = False
             if not call_state:
                 if to:
