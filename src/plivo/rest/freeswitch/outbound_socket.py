@@ -74,7 +74,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if event.get_header('Application') == 'playback' or \
             event.get_header('Application') == 'record' or \
             event.get_header('Application') == 'play_and_get_digits' or \
-            event.get_header('Application') == 'bridge':
+            event.get_header('Application') == 'bridge' or \
+            event.get_header('Application') == 'speak':
             self._action_queue.put(event)
 
     def on_channel_hangup(self, event):

@@ -82,7 +82,7 @@ VERB_DEFAULT_PARAMS = {
 
 class Verb(object):
     """
-    Abstract Verb Class to be inherited by all verbs
+    Abstract Verb Class to be inherited by all Verbs
     """
     def __init__(self):
         self.name = str(self.__class__.__name__)
@@ -188,7 +188,8 @@ class Dial(Verb):
         if not number_instance.gateways or not number_instance.number:
             return ''
         if number_instance.send_digits:
-            option_send_digits = "api_on_answer='uuid_recv_dtmf ${uuid} %s'" % number_instance.send_digits
+            option_send_digits = "api_on_answer='uuid_recv_dtmf ${uuid} %s'" \
+                                                % number_instance.send_digits
         else:
             option_send_digits = ''
         count = 0
@@ -732,9 +733,14 @@ class Say(Verb):
     Say text
 
     text: text to say
-    voice: MAN or WOMAN
+    voice: voice to be used based on engine
     language: language to use
     loop: number of times to say this text
+    engine: voice engine to be used for Say (flite, cepstral, googletts)
+
+    Flite Voices  : slt, rms, awb, kal
+    Cepstral Voices : (Use any voice here supported by cepstral)
+    Google TTS : No Voices, has language as two letter code, English - en
     """
     def __init__(self):
         Verb.__init__(self)
@@ -742,14 +748,20 @@ class Say(Verb):
         self.text = ""
         self.language = ""
         self.sound_file_path = ""
+        self.engine = ""
+        self.voice = ""
+        self.googletts_url = "shout://translate.google.com/translate_tts"
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         loop = int(self.extract_attribute_value("loop"))
-        self.language = self.extract_attribute_value("language")
-
         if loop < 0:
             raise RESTFormatException("Say loop must be a positive integer")
+        self.engine = self.extract_attribute_value("engine")
+        if self.engine == 'googletts':
+            self.language = self.extract_attribute_value("language")
+        else:
+           self.voice = self.extract_attribute_value("voice")
         if loop == 0:
             self.loop_times = 999
         else:
@@ -758,18 +770,24 @@ class Say(Verb):
         self.text = element.text.strip()
 
     def prepare(self):
-        url = "http://translate.google.com/translate_tts?tl=%s" % self.language
-        url = "url&q=%s" % self.text
-        # Download the file and move to audio directory and set sound file path
-        # Create MD5 hash to identify the text with filename for caching
-        #self.sound_file_path = url
-        #self.sound_file_path = "shout://%s" %self.sound_file_path
+        # Add caching logic here in future for google tts
+        pass
 
     def run(self, outbound_socket):
+        if self.engine == 'googletts':
+            lang = "tl=%s" % self.language
+            text = "q=%s" % self.text
+            url = "%s?%s&%s" % (self.googletts_url, lang, text)
+        else:
+            outbound_socket.set("tts_engine=%s" % self.engine)
+            outbound_socket.set("tts_voice=%s" % self.voice)
+
         for i in range(0, self.loop_times):
-            pass
-            #outbound_socket.speak(self.text, )
-            #event = outbound_socket._action_queue.get()
-            # Log playback execute response
-            #outbound_socket.log.info("Speak finished once (%s)" \
-            #                 % str(event.get_header('Application-Response')))
+            if self.engine == 'googletts':
+                outbound_socket.playback(url)
+            else:
+                outbound_socket.speak(self.text)
+            event = outbound_socket._action_queue.get()
+            # Log Speak execute response
+            outbound_socket.log.info("Speak finished once (%s)" \
+                        % str(event.get_header('Application-Response')))
