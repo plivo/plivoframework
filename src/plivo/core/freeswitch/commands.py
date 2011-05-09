@@ -433,3 +433,14 @@ class Commands(object):
         Can only be used for outbound connection
         """
         self.execute("pre_answer")
+
+    def speak(self, text, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/TTS
+
+        >>> "set" data="tts_engine=flite"
+        >>> "set" data="tts_voice=kal"
+        >>> speak(text)
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("speak", text, uuid, lock)
