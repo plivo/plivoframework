@@ -266,11 +266,12 @@ class Dial(Verb):
         else:
             outbound_socket.set("bridge_early_media=true")
         if self.confirm_sound:
-            confirm_music_str = "group_confirm_file=%s" % self.confirm_sound
             # use confirm key if present else just play music
             if self.confirm_key:
+                confirm_music_str = "group_confirm_file=%s" % self.confirm_sound
                 confirm_key_str = "group_confirm_key=%s" % self.confirm_key
             else:
+                confirm_music_str = "group_confirm_file=playback %s" % self.confirm_sound
                 confirm_key_str = "group_confirm_key=exec"
             # Cancel the leg timeout after the call is answered
             outbound_socket.set("group_confirm_cancel_timeout=1")
