@@ -9,6 +9,7 @@ import os
 import pwd
 import signal
 import sys
+import ConfigParser
 
 from flask import Flask
 import gevent
@@ -62,7 +63,7 @@ class PlivoRestServer(PlivoRestApi):
         http_host, http_port = self.http_address.split(':', 1)
         http_port = int(http_port)
         self.http_server = WSGIServer((http_host, http_port),
-                                                    self.app, log=self.log)
+                                       self.app, log=self.log)
 
     def create_logger(self):
         if self._daemon is False:
@@ -98,14 +99,16 @@ class PlivoRestServer(PlivoRestApi):
     def do_daemon(self):
         # get user/group from config
 
-        user = helpers.get_conf_value(self._config,
-                                        'rest_server', 'REST_SERVER_USER')
-        group = helpers.get_conf_value(self._config,
-                                        'rest_server', 'REST_SERVER_GROUP')
-        # default is to get currents user/group
-        if not user or not group:
+        try:
+            user = helpers.get_conf_value(self._config,
+                                            'rest_server', 'REST_SERVER_USER')
+        except ConfigParser.NoOptionError:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
+        try:
+            group = helpers.get_conf_value(self._config,
+                                            'rest_server', 'REST_SERVER_GROUP')
+        except ConfigParser.NoOptionError:
             gid = os.getgid()
             group = grp.getgrgid(gid)[0]
         # daemonize now

@@ -9,6 +9,7 @@ import os
 import pwd
 import signal
 import sys
+import ConfigParser
 
 import gevent
 
@@ -72,14 +73,16 @@ class PlivoOutboundServer(OutboundServer):
 
     def do_daemon(self):
         # get user/group from config
-        user = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'FS_OUTBOUND_USER')
-        group = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'FS_OUTBOUND_GROUP')
-        # default is to get currents user/group
-        if not user or not group:
+        try:
+            user = helpers.get_conf_value(self._config,
+                                                'freeswitch', 'FS_OUTBOUND_USER')
+        except ConfigParser.NoOptionError:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
+        try:
+            group = helpers.get_conf_value(self._config,
+                                                'freeswitch', 'FS_OUTBOUND_GROUP')
+        except ConfigParser.NoOptionError:
             gid = os.getgid()
             group = grp.getgrgid(gid)[0]
         # daemonize now
