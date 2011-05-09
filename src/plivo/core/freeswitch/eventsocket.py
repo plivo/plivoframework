@@ -5,7 +5,6 @@
 Event Socket class
 """
 
-from __future__ import with_statement
 import types
 import string
 import gevent
@@ -288,9 +287,12 @@ class EventSocket(Commands):
         self.transport.write(msg + EOL)
 
     def _protocol_send(self, command, args=""):
-        with self._lock:
+        self._lock.acquire()
+        try:
             self._send("%s %s" % (command, args))
             event = self._response_queue.get()
+        finally:
+            self._lock.release()
         # Casts Event to appropriate event type :
         # Casts to ApiResponse, if event is api
         if command == 'api':
@@ -304,8 +306,11 @@ class EventSocket(Commands):
         return event
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
-        with self._lock:
+        self._lock.acquire()
+        try:
             self._sendmsg(name, args, uuid, lock, loops)
             event = self._response_queue.get()
+        finally:
+            self._lock.release()
         # Always casts Event to CommandResponse
         return CommandResponse.cast(event)
