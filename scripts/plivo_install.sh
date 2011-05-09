@@ -50,7 +50,7 @@ declare -i PY_MINOR_VERSION
 PY_MAJOR_VERSION=$(python -V 2>&1 |sed -e 's/Python[[:space:]]\+\([0-9]\)\..*/\1/')
 PY_MINOR_VERSION=$(python -V 2>&1 |sed -e 's/Python[[:space:]]\+[0-9]\+\.\([0-9]\+\).*/\1/')
 
-if [ $PY_MAJOR_VERSION -lt 2 ] || [ $PY_MINOR_VERSION -lt 4 ]; then
+if [ $PY_MAJOR_VERSION -ne 2 ] || [ $PY_MINOR_VERSION -lt 4 ]; then
     echo ""
     echo "Python version below 2.4. Please Upgrade your python."
     echo ""
