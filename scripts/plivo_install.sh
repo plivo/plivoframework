@@ -45,17 +45,16 @@ echo "Press any key to continue or CTRL-C to exit"
 echo ""
 read INPUT
 
+declare -i PY_MAJOR_VERSION
+declare -i PY_MINOR_VERSION
+PY_MAJOR_VERSION=$(python -V 2>&1 |sed -e 's/Python[[:space:]]\+\([0-9]\)\..*/\1/')
+PY_MINOR_VERSION=$(python -V 2>&1 |sed -e 's/Python[[:space:]]\+[0-9]\+\.\([0-9]\+\).*/\1/')
 
-PY_MINOR_VERSION=$(python --version 2>&1 | sed 's/Python[[:space:]]\+[0-9]\+\.\([0-9]\+\).*/\1/')
-
-
-if [ $(echo "$PY_MAJOR_VERSION < 4" | bc) -eq 1  ] ; then
-
+if [ $PY_MAJOR_VERSION -lt 2 ] || [ $PY_MINOR_VERSION -lt 4 ]; then
     echo ""
     echo "Python version below 2.4. Please Upgrade your python."
     echo ""
     exit 1
-
 fi
 
 echo "Setting up Prerequisites and Dependencies"
