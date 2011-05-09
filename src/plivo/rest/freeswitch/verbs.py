@@ -182,14 +182,20 @@ class Dial(Verb):
         self.method = method
 
     def create_number(self, number_instance):
-        #TODO what about send_digits and url ?
+        #TODO what about url ?
         num_gw = []
         # skip number object without gateway or number
         if not number_instance.gateways or not number_instance.number:
             return ''
+        if number_instance.send_digits:
+            option_send_digits = "api_on_answer='uuid_recv_dtmf ${uuid} %s'" % number_instance.send_digits
+        else:
+            option_send_digits = ''
         count = 0
         for gw in number_instance.gateways:
             num_options = []
+            if option_send_digits:
+                num_options.append(option_send_digits)
             try:
                 gw_codec = number_instance.gateway_codecs[count]
                 num_options.append('absolute_codec_string=%s' % gw_codec)
