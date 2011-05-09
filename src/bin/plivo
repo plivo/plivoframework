@@ -36,6 +36,8 @@ do_help()
 
 do_start()
 {
+	rest_already_running="false"
+	outbound_already_running="false"
 	$VENV_OFF &>/dev/null
 	source $VENV_ON
 	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
@@ -43,22 +45,30 @@ do_start()
 	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
 	if [ $? -eq 0 ]; then
 		echo "$REST_NAME already running"
+		rest_already_running="true"
 	else
 		$REST_SERVER -d -c $CONFIG_FILE -p $rest_pidfile
 	fi
 	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
 	if [ $? -eq 0 ]; then
 		echo "$OUTBOUND_NAME already running"
+		outbound_already_running="true"
 	else
 		$OUTBOUND_SERVER -d -c $CONFIG_FILE -p $outbound_pidfile
 	fi
+	if [ "$rest_already_running" = "true" ] && [ "$outbound_already_running" = "true" ]; then
+		$VENV_OFF &>/dev/null
+		exit 0
+	fi
 	sleep 1s
-	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
-	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
-	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
-		&& echo "$REST_NAME started" || echo "$REST_NAME start failed"
-	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
-		&& echo "$OUTBOUND_NAME started" || echo "$OUTBOUND_NAME start failed"
+	if [ "$rest_already_running" = "false" ]; then
+		kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
+			&& echo "$REST_NAME started" || echo "$REST_NAME start failed"
+	fi
+	if [ "$outbound_already_running" = "false" ]; then
+		kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
+			&& echo "$OUTBOUND_NAME started" || echo "$OUTBOUND_NAME start failed"
+	fi
 	$VENV_OFF &>/dev/null
 }
 
