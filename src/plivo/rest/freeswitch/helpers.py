@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-import ConfigParser
+from ConfigParser import NoSectionError, NoOptionError
 import re
 import urlparse
 
@@ -20,7 +20,7 @@ def get_conf_value(config, section, key):
     try:
         value = config.get(section, key)
         return str(value)
-    except ConfigParser.NoSectionError:
+    except NoSectionError, NoOptionError:
         return ""
 
 

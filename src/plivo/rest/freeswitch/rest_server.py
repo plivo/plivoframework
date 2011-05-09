@@ -9,7 +9,6 @@ import os
 import pwd
 import signal
 import sys
-import ConfigParser
 
 from flask import Flask
 import gevent
@@ -98,26 +97,18 @@ class PlivoRestServer(PlivoRestApi):
 
     def do_daemon(self):
         # get user/group from config
-
-        try:
-            user = helpers.get_conf_value(self._config,
-                                            'rest_server', 'REST_SERVER_USER')
-        except ConfigParser.NoOptionError:
+        user = helpers.get_conf_value(self._config,
+                                        'rest_server', 'REST_SERVER_USER')
+        group = helpers.get_conf_value(self._config,
+                                        'rest_server', 'REST_SERVER_GROUP')
+        if not user or not group:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
-        try:
-            group = helpers.get_conf_value(self._config,
-                                            'rest_server', 'REST_SERVER_GROUP')
-        except ConfigParser.NoOptionError:
             gid = os.getgid()
             group = grp.getgrgid(gid)[0]
         # daemonize now
-        plivo.utils.daemonize.daemon(user,
-                                     group,
-                                     path='/',
-                                     pidfile=self._pidfile,
-                                     other_groups=()
-                                    )
+        plivo.utils.daemonize.daemon(user, group, path='/',
+                                     pidfile=self._pidfile, other_groups=())
 
     def sig_term(self, *args):
         self.log.warn("Shutdown ...")
