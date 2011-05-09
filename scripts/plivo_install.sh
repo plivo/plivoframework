@@ -61,10 +61,10 @@ fi
 echo "Setting up Prerequisites and Dependencies"
 case $DIST in
         'DEBIAN')
-            apt-get -y install python-setuptools python-dev build-essential
+            apt-get -y install python-setuptools python-dev build-essential libevent-dev
         ;;
         'CENTOS')
-            yum -y install python-setuptools python-tools python-devel
+            yum -y install python-setuptools python-tools python-devel libevent
         ;;
 esac
 
@@ -75,13 +75,11 @@ easy_install pip
 virtualenv --no-site-packages $REAL_PATH
 source $REAL_PATH/bin/activate
 
-pip install gevent
-pip install yolk
 pip install plivo
 
-mkdir -p $REAL_PATH/etc/plivo &>/dev/null
-wget $PLIVO_CONF_PATH
-mv default.conf $REAL_PATH/etc/plivo/
+#mkdir -p $REAL_PATH/etc/plivo &>/dev/null
+#wget $PLIVO_CONF_PATH
+#mv default.conf $REAL_PATH/etc/plivo/
 $REAL_PATH/bin/plivo-postinstall &>/dev/null
 
 
