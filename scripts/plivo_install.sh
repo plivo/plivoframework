@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Plivo Installation script for CentOS 5.5/5.6
 # and Debian based distros (Debian 5.0 , Ubuntu 10.04 and above)
