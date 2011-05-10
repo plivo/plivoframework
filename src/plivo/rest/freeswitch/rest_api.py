@@ -1,17 +1,60 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details
 
+import base64
 import re
 import uuid
 
 from flask import request
+from werkzeug.exceptions import Unauthorized
 
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value
+
+
+def auth_protect(decorated_func):
+    def wrapper(obj):
+        if obj._validate_http_auth() and obj._validate_ip_auth():
+            return decorated_func(obj)
+    wrapper.__name__ = decorated_func.__name__
+    wrapper.__doc__ = decorated_func.__doc__
+    return wrapper
 
 
 class PlivoRestApi(object):
     _config = None
     _rest_inbound_socket = None
+
+    def _validate_ip_auth(self):
+        """Verify request is from allowed ips
+        """
+        allowed_ips = get_conf_value(self._config, 'rest_server',
+                                                                'ALLOWED_IPS')
+        if not allowed_ips:
+            return True
+        ip_list = allowed_ips.split(',')
+        for ip in ip_list:
+            if str(ip) == str(request.remote_addr):
+                return True
+        raise Unauthorized("IP Auth Failed")
+
+    def _validate_http_auth(self):
+        """Verify http auth request with values in "Authorization" header
+        """
+        key = get_conf_value(self._config, 'rest_server', 'AUTH_ID')
+        secret = get_conf_value(self._config, 'rest_server', 'AUTH_TOKEN')
+        if not key or not secret:
+            return True
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization'].split()
+            if auth_header[0] == 'Basic':
+                encoded_auth_str = auth_header[1]
+                decoded_auth_str = base64.decodestring(encoded_auth_str)
+                auth_list = decoded_auth_str.split(':')
+                auth_id = auth_list[0]
+                auth_token = auth_list[1]
+                if auth_id == key and secret == auth_token:
+                    return True
+        raise Unauthorized("HTTP Auth Failed")
 
     def test_config(self):
         '''Test to get config parameter'''
@@ -69,6 +112,7 @@ class PlivoRestApi(object):
 
         return request_uuid
 
+    @auth_protect
     def calls(self):
         msg = None
         caller_id = request.form['From']
@@ -102,6 +146,7 @@ class PlivoRestApi(object):
 
         return msg
 
+    @auth_protect
     def bulk_calls(self):
         msg = None
         caller_id = request.form['From']

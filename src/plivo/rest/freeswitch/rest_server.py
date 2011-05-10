@@ -36,6 +36,7 @@ class PlivoRestServer(PlivoRestApi):
         self.app = Flask(self.name)
         self.app.secret_key = helpers.get_conf_value(self._config,
                                                 'rest_server', 'SECRET_KEY')
+        self.app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
         # create logger
         self.create_logger()
         # create rest server

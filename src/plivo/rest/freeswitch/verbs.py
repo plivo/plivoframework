@@ -750,7 +750,6 @@ class Say(Verb):
         self.sound_file_path = ""
         self.engine = ""
         self.voice = ""
-        self.googletts_url = "shout://translate.google.com/translate_tts"
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
@@ -758,10 +757,8 @@ class Say(Verb):
         if loop < 0:
             raise RESTFormatException("Say loop must be a positive integer")
         self.engine = self.extract_attribute_value("engine")
-        if self.engine == 'googletts':
-            self.language = self.extract_attribute_value("language")
-        else:
-           self.voice = self.extract_attribute_value("voice")
+        self.language = self.extract_attribute_value("language")
+        self.voice = self.extract_attribute_value("voice")
         if loop == 0:
             self.loop_times = 999
         else:
@@ -769,24 +766,12 @@ class Say(Verb):
         # Pull out the text within the element
         self.text = element.text.strip()
 
-    def prepare(self):
-        # Add caching logic here in future for google tts
-        pass
-
     def run(self, outbound_socket):
-        if self.engine == 'googletts':
-            lang = "tl=%s" % self.language
-            text = "q=%s" % self.text
-            url = "%s?%s&%s" % (self.googletts_url, lang, text)
-        else:
-            outbound_socket.set("tts_engine=%s" % self.engine)
-            outbound_socket.set("tts_voice=%s" % self.voice)
+        outbound_socket.set("tts_engine=%s" % self.engine)
+        outbound_socket.set("tts_voice=%s" % self.voice)
 
         for i in range(0, self.loop_times):
-            if self.engine == 'googletts':
-                outbound_socket.playback(url)
-            else:
-                outbound_socket.speak(self.text)
+            outbound_socket.speak(self.text)
             event = outbound_socket._action_queue.get()
             # Log Speak execute response
             outbound_socket.log.info("Speak finished once (%s)" \
