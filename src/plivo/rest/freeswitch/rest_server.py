@@ -23,10 +23,27 @@ from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 
 
 class PlivoRestServer(PlivoRestApi):
+    """Class PlivoRestServer"""
     name = "PlivoRestServer"
 
     def __init__(self, configfile, daemon=False,
-                                            pidfile='/tmp/plivo_rest.pid'):
+                        pidfile='/tmp/plivo_rest.pid'):
+        """Constructor
+        
+        Initialize main properties such as daemon, pidfile, config, etc...
+        
+        This will init the http server that will provide the Rest interface,
+        the rest server is configured on HTTP_ADDRESS
+        
+        Extra:
+        * FS_INBOUND_ADDRESS : Define the event_socket interface to connect to 
+        in order to initialize CallSession with Freeswitch
+        
+        * FS_OUTBOUND_ADDRESS : Define where on which address listen to 
+        initialize event_socket session with Freeswitch in order to control
+        new CallSession
+        
+        """
         self._daemon = daemon
         self._run = False
         self._pidfile = pidfile
@@ -66,6 +83,20 @@ class PlivoRestServer(PlivoRestApi):
                                        self.app, log=self.log)
 
     def create_logger(self):
+        """This will create a logger
+        
+        Based on the settings in the configuration file, 
+        LOG_TYPE will determine if we will log in file, syslog or stdout
+        
+        To log in file we use the following setting :
+        LOG_FILE = /tmp/plivo-rest.log
+        
+        To log to syslog we have several settings to configure the logging :
+            * LOG_TYPE = syslog
+            * SYSLOG_ADDRESS = /dev/log
+            * SYSLOG_FACILITY = local0
+        """
+        
         if self._daemon is False:
             self.log = StdoutLogger()
             self.log.set_debug()
@@ -97,6 +128,14 @@ class PlivoRestServer(PlivoRestApi):
         self.app._logger = self.log
 
     def do_daemon(self):
+        """This will daemonize the current application
+        
+        Two settings from our configuration files are also used to run the
+        daemon under a determine user & group.
+        
+        REST_SERVER_USER : determine the user running the daemon
+        REST_SERVER_GROUP : determine the group running the daemon
+        """
         # get user/group from config
         user = helpers.get_conf_value(self._config,
                                         'rest_server', 'REST_SERVER_USER')
@@ -112,15 +151,27 @@ class PlivoRestServer(PlivoRestApi):
                                      pidfile=self._pidfile, other_groups=())
 
     def sig_term(self, *args):
+        """if we receive a term signal, we will shutdown properly
+        """
         self.log.warn("Shutdown ...")
         self.stop()
         sys.exit(0)
 
     def stop(self):
+        """Method stop stop the infinite loop from start method
+        and close the socket
+        """
         self._run = False
         self._rest_inbound_socket.exit()
 
     def start(self):
+        """start method is where we decide to :
+            * catch term signal
+            * run as daemon
+            * start the http server
+            * connect to Freeswitch via our Inbound Socket interface
+            * wait even if it takes forever, ever, ever, evveeerrr...
+        """
         self.log.info("RESTServer starting ...")
         # catch SIG_TERM
         gevent.signal(signal.SIGTERM, self.sig_term)
