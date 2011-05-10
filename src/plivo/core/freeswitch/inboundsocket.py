@@ -74,9 +74,14 @@ class InboundEventSocket(EventSocket):
         self.connected = True
         return True
 
+    def exit(self):
+        super(InboundEventSocket, self).exit()
+        self.disconnect()
+
     def serve_forever(self):
         """
         Starts waiting for events in endless loop.
         """
         while self.is_connected():
             gevent.sleep(0.1)
+
