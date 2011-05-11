@@ -193,13 +193,22 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.info("Executed Live Call Transfer")
         else:  # Hangup Call
             if call_uuid:
-                args = "NORMAL_CLEARING %s %s" % ('Unique-ID', call_uuid)
+                args = "NORMAL_CLEARING Unique-ID %s" % (call_uuid)
             else:  # Use request uuid
-                args = "NORMAL_CLEARING %s %s" % ('variable_request_uuid',
-                                                                request_uuid)
+                args = "NORMAL_CLEARING variable_request_uuid %s" \
+                                                            % (request_uuid)
 
-            self.hupall(args)
-            self.log.info("Executed Call hangup")
+            bg_api_response = self.bgapi("hupall %s" % args)
+            job_uuid = bg_api_response.get_job_uuid()
+            if not job_uuid:
+                self.log.error("Hangup bgapi(%s) -- JobUUID not recieved \n")
+            else:
+                self.log.info("Executed Call hangup for Call ID")
 
     def hangup_all_calls(self):
-        self.hupall("NORMAL_CLEARING")
+        bg_api_response = self.bgapi("hupall NORMAL_CLEARING")
+        job_uuid = bg_api_response.get_job_uuid()
+        if not job_uuid:
+            self.log.error("Hangup bgapi(%s) -- JobUUID not recieved \n")
+        else:
+            self.log.info("Executed Hangup for all calls")
