@@ -21,10 +21,6 @@ class Commands(object):
     def exit(self):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#exit"
         res = self._protocol_send("exit")
-        try:
-            self.disconnect()
-        except:
-            pass
         return res
 
     def eventplain(self, args):
@@ -125,6 +121,16 @@ class Commands(object):
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_send("myevents", uuid)
+
+    def linger(self):
+        """Tell Freeswitch to wait for the last channel event before ending the connection
+
+        Can only be used with Outbound connection.
+
+        >>> linger()
+
+        """
+        return self._protocol_send("linger")
 
     def verbose_events(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_verbose_events

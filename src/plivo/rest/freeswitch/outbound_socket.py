@@ -16,6 +16,7 @@ except ImportError:
 import gevent
 import gevent.queue
 
+from plivo.core.freeswitch.eventtypes import Event
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import verbs
 from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
@@ -23,15 +24,32 @@ from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
                                     UnrecognizedVerbException
 
 
+
+class RequestLogger(object):
+    def __init__(self, logger, request_id=0):
+        self.logger = logger
+        self.request_id = request_id
+
+    def info(self, msg):
+        self.logger.info('(%s) %s' % (self.request_id, str(msg)))
+
+    def warn(self, msg):
+        self.logger.warn('(%s) %s' % (self.request_id, str(msg)))
+
+    def error(self, msg):
+        self.logger.error('(%s) %s' % (self.request_id, str(msg)))
+
+    def debug(self, msg):
+        self.logger.debug('(%s) %s' % (self.request_id, str(msg)))
+
+
+
 class PlivoOutboundEventSocket(OutboundEventSocket):
-    def __init__(self, socket, address, log, default_answer_url, filter=None):
-        self.log = log
+    def __init__(self, socket, address, log, default_answer_url, filter=None, request_id=0):
+        self._request_id = request_id
+        self._log = log
+        self.log = RequestLogger(logger=self._log, request_id=self._request_id)
         self.xml_response = ""
-        self.default_response = '''<?xml version="1.0" encoding="UTF-8" ?>
-            <Response>
-                <Reject/>
-            </Response>
-        '''
         self.parsed_verbs = []
         self.lexed_xml_response = []
         self.answer_url = ""
@@ -44,18 +62,18 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         OutboundEventSocket.__init__(self, socket, address, filter)
 
     def _protocol_send(self, command, args=""):
-        self.log.info("[%s] args='%s'" % (command, args))
+        self.log.debug("Execute: %s args='%s'" % (command, args))
         response = super(PlivoOutboundEventSocket, self)._protocol_send(
                                                                 command, args)
-        self.log.info(str(response))
+        self.log.debug("Response: %s" % str(response))
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
-        self.log.info("[%s] args=%s, uuid='%s', lock=%s, loops=%d" \
+        self.log.debug("Execute: %s args=%s, uuid='%s', lock=%s, loops=%d" \
                       % (name, str(args), uuid, str(lock), loops))
         response = super(PlivoOutboundEventSocket, self)._protocol_sendmsg(
                                                 name, args, uuid, lock, loops)
-        self.log.info(str(response))
+        self.log.debug("Response: %s" % str(response))
         return response
 
     # Commands like `playback`, `record` etc. return +OK "immediately".
@@ -79,12 +97,25 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self._action_queue.put(event)
 
     def on_channel_hangup(self, event):
-        self.exit()
-        self.log.warn('Channel %s has hung up' % self.get_channel_unique_id())
+        hangup_cause = event['Hangup-Cause']
+        self.log.info('Event: channel %s has hung up (%s)' % (self.get_channel_unique_id(), hangup_cause))
+
+    def on_channel_hangup_complete(self, event):
+        hangup_cause = event['Hangup-Cause']
+        self.log.info('Event: channel %s hangup complete (%s)' % (self.get_channel_unique_id(), hangup_cause))
+
+    def disconnect(self):
+        self.log.debug("Releasing connection ...")
+        super(PlivoOutboundEventSocket, self).disconnect()
+        # prevent command to be stuck while waiting response
+        self._action_queue.put_nowait(Event())
+        self.log.debug("Releasing connection done")
 
     def run(self):
         # Only catch events for this channel
         self.myevents()
+        # Linger to get all remaining events before closing
+        self.linger()
 
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
@@ -110,30 +141,28 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                   'aleg_uuid': aleg_uuid,
                   'aleg_request_uuid': aleg_request_uuid
         }
+        self.log.debug("Processing call ...")
         self.process_call()
+        self.log.debug("Processing call done")
 
     def process_call(self):
         self.fetch_xml()
-        if not self.xml_response:
-            self.log.warn("no xml response, executing default response")
-            # Play a default message
-            self.xml_response = self.default_response
-        try:
-            self.lex_xml()
-            self.parse_xml()
-            self.execute_xml()
-        except Exception, e:
-            self.log.error(str(e))
-            [self.log.error(line) for line in \
-                                        traceback.format_exc().splitlines()]
-            # if error occurs during xml parsing
-            # run default response and log exception
-            # Play a default message
-            self.log.warn("xml error, executing default response")
-            self.xml_response = self.default_response
-            self.lex_xml()
-            self.parse_xml()
-            self.execute_xml()
+        if self.xml_response:
+            try:
+                self.lex_xml()
+                self.parse_xml()
+                self.execute_xml()
+            except Exception, e:
+                # if error occurs during xml parsing
+                # log exception and hangup
+                self.log.error(str(e))
+                [self.log.error(line) for line in \
+                                            traceback.format_exc().splitlines()]
+                self.log.error("xml error, hanging up !")
+                self.hangup(cause="DESTINATION_OUT_OF_ORDER")
+        else:
+            self.log.warn("No xml response, hanging up !")
+            self.hangup()
 
     def fetch_xml(self):
         encoded_params = urllib.urlencode(self.params)
@@ -148,27 +177,26 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def lex_xml(self):
         # 1. Parse XML into a doctring
-        xmlStr = ' '.join(self.xml_response.split())
+        xml_str = ' '.join(self.xml_response.split())
         try:
-            doc = etree.fromstring(xmlStr)
-        except Exception:
-            raise RESTSyntaxException("Invalid RESTXML Response Syntax")
+            doc = etree.fromstring(xml_str)
+        except Exception, e:
+            raise RESTSyntaxException("Invalid RESTXML Response Syntax: %s" % str(e))
 
         # 2. Make sure the document has a <Response> root
         if doc.tag != "Response":
             raise RESTFormatException("No Response Tag Present")
 
         # 3. Make sure we recognize all the Verbs in the xml
-        if len(doc):
-            for element in doc:
-                invalid_verbs = []
-                if not hasattr(verbs, element.tag):
-                    invalid_verbs.append(element.tag)
-                else:
-                    self.lexed_xml_response.append(element)
-                if invalid_verbs:
-                    raise UnrecognizedVerbException("Unrecognized verbs: %s"
-                                                            % invalid_verbs)
+        for element in doc:
+            invalid_verbs = []
+            if not hasattr(verbs, element.tag):
+                invalid_verbs.append(element.tag)
+            else:
+                self.lexed_xml_response.append(element)
+            if invalid_verbs:
+                raise UnrecognizedVerbException("Unrecognized verbs: %s"
+                                                        % invalid_verbs)
 
     def parse_xml(self):
         # Check all Verb names

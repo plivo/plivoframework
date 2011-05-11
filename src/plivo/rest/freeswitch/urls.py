@@ -13,7 +13,7 @@ For instance /v0.1/Calls and /v0.2/Calls might not offer the same parameters
 to initiate calls
 """
 
-PLIVO_VERSION = 'v0.1;
+PLIVO_VERSION = 'v0.1';
 
 URLS = {
         # API Index
