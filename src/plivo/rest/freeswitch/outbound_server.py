@@ -22,6 +22,7 @@ from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 class PlivoOutboundServer(OutboundServer):
     def __init__(self, configfile, daemon=False,
                             pidfile='/tmp/plivo_outbound.pid', filter=None):
+        self._request_id = 0
         self._daemon = daemon
         self._run = False
         self._pidfile = pidfile
@@ -39,10 +40,19 @@ class PlivoOutboundServer(OutboundServer):
         OutboundServer.__init__(self, (fs_host, fs_port),
                                             PlivoOutboundEventSocket, filter)
 
+    def _get_request_id(self):
+        try:
+            self._request_id += 1
+        except OverflowError:
+            self._request_id = 1
+        return self._request_id
+
     def do_handle(self, socket, address):
-        self.log.info("New request from %s" % str(address))
+        request_id = self._get_request_id()
+        self.log.info("(%d) New request from %s" % (request_id, str(address)))
         self._handle_class(socket, address, self.log, self.default_answer_url,
-                                                        filter=self._filter)
+                           filter=self._filter, request_id=self._get_request_id())
+        self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
     def create_logger(self):
         if self._daemon is False:

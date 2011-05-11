@@ -22,6 +22,10 @@ class Transport(object):
 
     def close(self):
         try:
+            self.sock.shutdown(2)
+        except:
+            pass
+        try:
             self.sock.close()
         except:
             pass

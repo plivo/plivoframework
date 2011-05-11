@@ -30,7 +30,6 @@ class OutboundEventSocket(EventSocket):
         try:
             self.run()
         finally:
-            # Disconnects.
             self.disconnect()
 
     def connect(self):

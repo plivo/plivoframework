@@ -33,6 +33,8 @@ class EventSocket(Commands):
                                     'auth/request':self._auth_request,
                                     'text/disconnect-notice':self._disconnect_notice
                                    }
+        # Closing state flag
+        self._closing_state = False
         # Default event filter.
         self._filter = filter
         # Synchronized Gevent based Queue for response events.
@@ -41,6 +43,7 @@ class EventSocket(Commands):
         self._lock = RLock()
         # Sets connected to False.
         self.connected = False
+        self._running = True
         # Creates pool for spawning if pool_size > 0
         if pool_size > 0:
             self.pool = gevent.pool.Pool(pool_size)
@@ -97,6 +100,7 @@ class EventSocket(Commands):
             except GreenletExit, e:
                 self.connected = False
                 return
+        return
 
     def read_event(self):
         '''
@@ -206,7 +210,8 @@ class EventSocket(Commands):
         '''
         Receives text/disconnect-notice callback.
         '''
-        self.disconnect()
+        self._closing_state = True
+
 
     def _unknown_event(self, event):
         '''
@@ -249,14 +254,6 @@ class EventSocket(Commands):
         '''
         pass
 
-    def disconnect(self):
-        '''
-        Disconnects from eventsocket and stops handling events.
-        '''
-        self.transport.close()
-        self.stop_event_handler()
-        self.connected = False
-
     def connect(self):
         '''
         Connects to eventsocket.
@@ -264,6 +261,18 @@ class EventSocket(Commands):
         Must be implemented by subclass.
         '''
         pass
+
+    def disconnect(self):
+        '''
+        Disconnect and release socket and finally kill event handler.
+        '''
+        try:
+            self.transport.close()
+        except:
+            pass
+        self._handler_thread.kill()
+        # prevent any pending request to be stuck
+        self._response_queue.put_nowait(Event())
 
     def _send(self, cmd):
         if isinstance(cmd, types.UnicodeType):
@@ -287,6 +296,8 @@ class EventSocket(Commands):
         self.transport.write(msg + EOL)
 
     def _protocol_send(self, command, args=""):
+        if self._closing_state:
+            return Event()
         self._lock.acquire()
         try:
             self._send("%s %s" % (command, args))
@@ -306,6 +317,8 @@ class EventSocket(Commands):
         return event
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
+        if self._closing_state:
+            return Event()
         self._lock.acquire()
         try:
             self._sendmsg(name, args, uuid, lock, loops)
