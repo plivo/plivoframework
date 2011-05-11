@@ -263,9 +263,9 @@ class Dial(Verb):
             outbound_socket.set("bridge_terminate_key=*")
         # Play Dial music or bridge the early media accordingly
         if self.dial_music:
-            outbound_socket.set("campon=true")
-            music_str = "campon_hold_music=%s" % self.dial_music
-            outbound_socket.set(music_str)
+            outbound_socket.set("bridge_early_media=true")
+            outbound_socket.set("instant_ringback=true")
+            outbound_socket.set("ringback=file_string://%s" % self.dial_music)
         else:
             outbound_socket.set("bridge_early_media=true")
         if self.confirm_sound:
@@ -284,13 +284,24 @@ class Dial(Verb):
         outbound_socket.log.debug("Dial Started")
         outbound_socket.bridge(self.dial_str)
         event = outbound_socket._action_queue.get()
-        bridge_result = event['variable_originate_disposition']
-        if bridge_result == "SUCCESS":
-            hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
+        reason = None
+        originate_disposition = event['variable_originate_disposition']
+        hangup_cause = originate_disposition
+        if hangup_cause == 'ORIGINATOR_CANCEL':
+            reason = '%s (A leg)' % hangup_cause
         else:
-            hangup_cause = bridge_result
-        outbound_socket.log.info("Dial Finished with reason: %s"
-                                                            % hangup_cause)
+            reason = '%s (B leg)' % hangup_cause
+        if not hangup_cause or hangup_cause == 'SUCCESS':
+            hangup_cause = outbound_socket.get_hangup_cause()
+            reason = '%s (A leg)' % hangup_cause
+            if not hangup_cause:
+                hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
+                reason = '%s (B leg)' % hangup_cause
+                if not hangup_cause:
+                    hangup_cause = outbound_socket.get_var('hangup_cause')
+                    reason = '%s (A leg)' % hangup_cause
+        outbound_socket.log.info("Dial Finished with reason: %s" \
+                                 % reason)
         if self.action and is_valid_url(self.action):
              # Call Parent Class Function
             self.fetch_rest_xml(outbound_socket, self.action)

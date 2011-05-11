@@ -68,6 +68,10 @@ class PlivoRestServer(PlivoRestApi):
                                                     log=self.log)
         fs_out_address = helpers.get_conf_value(self._config,
                                         'freeswitch', 'FS_OUTBOUND_ADDRESS')
+        fs_out_host, fs_out_port  = fs_out_address.split(':', 1)
+        # if outbound host is 0.0.0.0, send to 127.0.0.1
+        if fs_out_host == '0.0.0.0':
+            fs_out_address = '127.0.0.1:%s' % fs_out_port
         self._rest_inbound_socket.fs_outbound_address = fs_out_address
         # expose api functions to flask app
         for path, func_desc in urls.URLS.iteritems():

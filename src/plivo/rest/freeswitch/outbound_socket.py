@@ -58,6 +58,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self._action_queue = gevent.queue.Queue()
         self.default_answer_url = default_answer_url
         self.answered = False
+        self._hangup_cause = ''
         self.no_answer_verbs = ['Pause', 'Reject', 'Preanswer', 'Dial']
         OutboundEventSocket.__init__(self, socket, address, filter)
 
@@ -98,12 +99,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self._action_queue.put(event)
 
     def on_channel_hangup(self, event):
-        hangup_cause = event['Hangup-Cause']
-        self.log.info('Event: channel %s has hung up (%s)' % (self.get_channel_unique_id(), hangup_cause))
+        self._hangup_cause = event['Hangup-Cause']
+        self.log.info('Event: channel %s has hung up (%s)' % (self.get_channel_unique_id(), self._hangup_cause))
 
     def on_channel_hangup_complete(self, event):
-        hangup_cause = event['Hangup-Cause']
-        self.log.info('Event: channel %s hangup complete (%s)' % (self.get_channel_unique_id(), hangup_cause))
+        if not self._hangup_cause:
+            self._hangup_cause = event['Hangup-Cause']
+        self.log.info('Event: channel %s hangup complete (%s)' % (self.get_channel_unique_id(), self._hangup_cause))
+
+    def has_hangup(self):
+        if self._hangup_cause:
+            return True
+        return False
+
+    def get_hangup_cause(self):
+        return self._hangup_cause
 
     def disconnect(self):
         self.log.debug("Releasing connection ...")
@@ -131,7 +141,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             aleg_request_uuid = channel.get_header('variable_request_uuid')
             self.answer_url = channel.get_header('variable_answer_url')
         else:
-            self.answer_url = self.default_answer_url
+            # Set answer url
+            # In case outbound socket is created by a transfer
+            #  get answer_url from channel variable
+            #  else fallback to default
+            answer_url = self.get_var('answer_url')
+            if not answer_url:
+                self.answer_url = self.default_answer_url
+            else:
+                self.answer_url = answer_url
 
         # Post to ANSWER URL and get XML Response
         self.params = {
@@ -159,11 +177,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.error(str(e))
                 [self.log.error(line) for line in \
                                             traceback.format_exc().splitlines()]
-                self.log.error("xml error, hanging up !")
-                self.hangup(cause="DESTINATION_OUT_OF_ORDER")
+                self.log.error("xml error")
+                #self.hangup(cause="DESTINATION_OUT_OF_ORDER")
         else:
-            self.log.warn("No xml response, hanging up !")
-            self.hangup()
+            self.log.warn("No xml response")
+            #self.hangup()
 
     def fetch_xml(self):
         encoded_params = urllib.urlencode(self.params)
