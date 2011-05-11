@@ -162,7 +162,7 @@ class RESTInboundSocket(InboundEventSocket):
             job_uuid = bg_api_response.get_job_uuid()
             self.bk_jobs[job_uuid] = request_uuid
             if not job_uuid:
-                self.log.error("bgapi(%s) -- Job UUID not recieved \n\n"
+                self.log.error("Originate bgapi(%s) -- JobUUID not recieved \n"
                                                                 % dial_str)
 
             # Reduce one from the call request param lists each time
@@ -183,3 +183,25 @@ class RESTInboundSocket(InboundEventSocket):
             job_pool = pool.Pool(len(request_uuid_list))
             [job_pool.spawn(self.spawn_originate, request_uuid)
                                         for request_uuid in request_uuid_list]
+
+    def modify_call(self, new_xml_url, status, call_uuid, request_uuid):
+        if new_xml_url:
+            self.setvar("variable_answer_url", new_xml_url, uuid=call_uuid)
+            outbound_str = "'socket:%s async full' inline" \
+                                                % (self.fs_outbound_address)
+            self.transfer(outbound_str, uuid=call_uuid)
+            self.log.info("Executed Live Call Transfer"")
+        else:  # Hangup Call
+            if call_uuid:
+                args = "NORMAL_CLEARING %s %s" % ('Unique-ID', call_uuid)
+            else:  # Use request uuid
+                args = "NORMAL_CLEARING %s %s" % ('variable_request_uuid',
+                                                                request_uuid)
+
+            self.hupall(args)
+            self.log.info("Executed Call hangup"")
+
+        self.log.info("Executed Modify Call"")
+
+    def hangup_all_calls(self):
+        self.hupall("NORMAL_CLEARING")

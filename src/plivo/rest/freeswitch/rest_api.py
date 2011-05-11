@@ -76,7 +76,7 @@ class PlivoRestApi(object):
 
     def prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
                         gw_timeouts, gw_retries, answer_url, hangup_url,
-                        ring_url):
+                        ring_url, send_digits):
 
         gw_retry_list = []
         gw_codec_list = []
@@ -97,10 +97,13 @@ class PlivoRestApi(object):
         args_list.append("request_uuid=%s" % request_uuid)
         args_list.append("answer_url=%s" % answer_url)
         args_list.append("origination_caller_id_number=%s" % caller_id)
+        if extra_dial_string:
+             args_list.append(extra_dial_string)
+        if send_digits:
+            args_list.append("api_on_answer='uuid_recv_dtmf ${uuid} %s'" \
+                                                % send_digits)
         args_str = ','.join(args_list)
         originate_str = ''.join(["originate {", args_str])
-        if extra_dial_string:
-            originate_str = "%s,%s" % (originate_str, extra_dial_string)
 
         gw_try_number = 0
         request_params = [originate_str, to, gw_try_number, gw_list,
@@ -114,6 +117,54 @@ class PlivoRestApi(object):
 
     @auth_protect
     def calls(self):
+        """Making Outbound Calls
+        Allow initiating outbound calls via the REST API. To make an
+        outbound call, make an HTTP POST request to the resource URI.
+
+        POST Parameters
+        ----------------
+
+        Required Parameters - You must POST the following parameters:
+
+        From: The phone number to use as the caller id for the call without
+        the leading +
+
+        To: The number to call without the leading +
+
+        Gateways: Comma separated string of gateways to dial the call out
+
+        AnswerUrl: The URL that should be requested for XML when the call
+        connects. Similiar to the URL for your inbound calls.
+
+
+        Optional Parameters - You may POST the following parameters:
+
+        HangUpUrl: A URL that Plivo will notify to, with POST params when
+        calls ends
+
+        RingUrl:A URL that Plivo will notify to, with POST params when
+        calls starts ringing
+
+        OriginateDialString: Additional Originate dialstring to be executed
+        while making the outbound call
+
+        GatewayCodecs: Comma separated string of codecs for gateways
+
+        GatewayTimeouts: Comma separated string of timeouts for gateways
+
+        GatewayRetries: Comma separated string of retries for gateways
+
+        SendDigits: A string of keys to dial after connecting to the number.
+        Valid digits in the string include: any digit (0-9), '#' and '*'.
+        Very useful, if you want to connect to a company phone number,
+        and wanted to dial extension 1234 and then the pound key,
+        use SendDigits=1234#.
+        Remember to URL-encode this string, since the '#' character has
+        special meaning in a URL.
+        To wait before sending DTMF to the extension, you can add leading 'w'
+        characters. Each 'w' character waits 0.5 seconds instead of sending a
+        digit.
+        """
         msg = None
         caller_id = request.form['From']
         to = request.form['To']
@@ -136,18 +187,68 @@ class PlivoRestApi(object):
                 gw_codecs = request.form['GatewayCodecs']
                 gw_timeouts = request.form['GatewayTimeouts']
                 gw_retries = request.form['GatewayRetries']
+                send_digits = request.form['SendDigits']
 
                 request_uuid = self.prepare_request(caller_id, to,
                             extra_dial_string, gw, gw_codecs, gw_timeouts,
-                            gw_retries, answer_url, hangup_url, ring_url)
+                            gw_retries, answer_url, hangup_url, ring_url,
+                            send_digits)
 
                 self._rest_inbound_socket.spawn_originate(request_uuid)
-                msg = "Request Executed %s" % request_uuid
+                msg = "Call Request Executed:%s" % request_uuid
 
         return msg
 
     @auth_protect
     def bulk_calls(self):
+        """Making Bulk Outbound Calls in one request
+        Allow initiating bulk outbound calls via the REST API. To make a
+        bulk outbound call, make an HTTP POST request to the resource URI.
+
+        POST Parameters
+        ----------------
+
+        Required Parameters - You must POST the following parameters:
+
+        From: The phone number to use as the caller id for the call without
+        the leading +
+
+        To: The number to call without the leading +
+
+        Gateways: Comma separated string of gateways to dial the call out
+
+        AnswerUrl: The URL that should be requested for XML when the call
+        connects. Similiar to the URL for your inbound calls.
+
+
+        Optional Parameters - You may POST the following parameters:
+
+        HangUpUrl: A URL that Plivo will notify to, with POST params when
+        calls ends
+
+        RingUrl:A URL that Plivo will notify to, with POST params when
+        calls starts ringing
+
+        OriginateDialString: Additional Originate dialstring to be executed
+        while making the outbound call
+
+        GatewayCodecs: Comma separated string of codecs for gateways
+
+        GatewayTimeouts: Comma separated string of timeouts for gateways
+
+        GatewayRetries: Comma separated string of retries for gateways
+
+        SendDigits: A string of keys to dial after connecting to the number.
+        Valid digits in the string include: any digit (0-9), '#' and '*'.
+        Very useful, if you want to connect to a company phone number,
+        and wanted to dial extension 1234 and then the pound key,
+        use SendDigits=1234#.
+        Remember to URL-encode this string, since the '#' character has
+        special meaning in a URL.
+        To wait before sending DTMF to the extension, you can add leading 'w'
+        characters. Each 'w' character waits 0.5 seconds instead of sending a
+        digit.
+        """
         msg = None
         caller_id = request.form['From']
         to_str = request.form['To']
@@ -172,6 +273,7 @@ class PlivoRestApi(object):
                 gw_codecs_str = request.form['GatewayCodecs']
                 gw_timeouts_str = request.form['GatewayTimeouts']
                 gw_retries_str = request.form['GatewayRetries']
+                send_digits_str = request.form['SendDigits']
                 request_uuid_list = []
                 i = 0
 
@@ -180,6 +282,7 @@ class PlivoRestApi(object):
                 gw_codecs_str_list = gw_codecs_str.split(delimeter)
                 gw_timeouts_str_list = gw_timeouts_str.split(delimeter)
                 gw_retries_str_list = gw_retries_str.split(delimeter)
+                send_digits_list = send_digits_str.split(delimeter)
 
                 if len(to_str_list) != len(gw_str_list):
                     msg = "Gateway length does not match with number length"
@@ -198,15 +301,88 @@ class PlivoRestApi(object):
                         except IndexError:
                             gw_retries = ""
 
+                        try:
+                            send_digits = send_digits_list[i]
+                        except IndexError:
+                            send_digits = ""
+
                         request_uuid = self.prepare_request(caller_id, to,
                                     extra_dial_string, gw_str_list[i],
                                     gw_codecs, gw_timeouts, gw_retries,
-                                    answer_url, hangup_url, ring_url)
+                                    answer_url, hangup_url, ring_url,
+                                    send_digits)
 
                         i += 1
                         request_uuid_list.append(request_uuid)
 
                 self._rest_inbound_socket.bulk_originate(request_uuid_list)
-                msg = "Requests Executed"
+                msg = "Bulk Call Requests Executed:%s" \
+                                                    % str(request_uuid_list)
 
+        return msg
+
+    @auth_protect
+    def modify_call(self):
+        """Modifying Live Calls
+        Realtime call modification allows you to interrupt an in-progress
+        call and terminate it. This is useful for any application where you
+        want to asynchronously change the behavior of a running call.
+        For example: forcing hangup, etc.
+
+        To terminate a live call, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        The following parameters are available for you to POST when modifying
+        a phone call:
+
+        Call ID Parameters: One of these parameters must be supplied
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        RequestUUID: Unique request ID which was given on a API response. This
+        should be used for calls which are currently in progress and have no
+        CallUUID.
+
+        Optional
+        Status: Specifying 'completed' will attempt to hang up the call.
+
+        Not Implemented
+        Url: A valid URL that returns RESTXML. Plivo will immediately fetch
+        the XML and continue the call as the new XML. (Will be added in V2)
+        """
+        msg = None
+        status = request.form['Status']
+        call_uuid = request.form['CallUUID']
+        request_uuid= request.form['RequestUUID']
+        new_xml_url = request.form['URL']
+
+        if not call_uuid and not request_uuid:
+            msg = "One of the Call ID Parameters must be present"
+        elif call_uuid and request_uuid:
+            msg = "Both Call ID Parameters cannot be present"
+        elif not status and not new_xml_url:
+            msg = "One of the optional Parameters must be present"
+        elif status and new_xml_url:
+            msg = "Both the optional Parameters cannot be present"
+        else:
+            if new_xml_url and not is_valid_url(new_xml_url):
+                msg = "URL is not Valid"
+            elif new_xml_url and is_valid_url(new_xml_url) and not call_uuid:
+                    msg = "Call UUID must be present with URL"
+            elif status and status != 'completed':
+                msg = "Invalid Value for Status"
+            else:
+                self._rest_inbound_socket.modify_call(new_xml_url, status,
+                                                    call_uuid, request_uuid)
+                msg = "Modify Request Executed"
+
+        return msg
+
+    @auth_protect
+    def hangup_all_calls(self):
+        """Hangup All Live Calls in the system
+        """
+        msg = "All Calls Hungup"
+        self._rest_inbound_socket.hangup_all_calls()
         return msg
