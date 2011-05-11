@@ -396,11 +396,19 @@ class Gather(Verb):
                                                         % (pause_secs * 1000)
                 self.sound_files.append(pause_str)
             elif isinstance(child_instance, Say):
-                engine = child_instance.engine
-                voice = child_instance.voice
                 text = child_instance.text
                 loop = child_instance.loop_times
-                say_str = "say:%s:%s:'%s'" % (engine, voice, text)
+                type = child_instance.type
+                method = child_instance.method
+                if type and method:
+                    language = child_instance.language
+                    say_args = "%s.wav %s %s %s '%s'" \
+                                    % (language, language, type, method, text)
+                    say_str = "${say_string %s}" % say_args
+                else:
+                    engine = child_instance.engine
+                    voice = child_instance.voice
+                    say_str = "say:%s:%s:'%s'" % (engine, voice, text)
                 for i in range(0, loop):
                     self.sound_files.append(say_str)
             else:
