@@ -387,7 +387,7 @@ class Commands(object):
 
     def play_and_get_digits(self, min_digits=1, max_digits=1, max_tries=1, timeout=5000, \
                             terminators='', sound_files=[], invalid_file = "", var_name='pagd_input', \
-                            valid_digits='0123456789*#', digit_timeout=None, play_beep=False, pause=500):
+                            valid_digits='0123456789*#', digit_timeout=None, play_beep=False):
         """
         Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_play_and_get_digits
         """
@@ -406,7 +406,6 @@ class Commands(object):
                 play_str = "file_string://%s!%s" % (play_str, beep)
         else:
             self.set("playback_delimiter=!")
-            self.set("playback_sleep_val=%s" % pause)
             play_str = "file_string://%s" % sound_files[0]
             for i in range(1,len(sound_files)):
                 play_str = "%s!%s" % (play_str, sound_files[i])

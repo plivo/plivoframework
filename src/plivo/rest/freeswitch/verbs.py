@@ -27,7 +27,6 @@ VERB_DEFAULT_PARAMS = {
                 "timeout": 5,
                 "finishOnKey": '#',
                 "numDigits": 999,
-                "pause": 0,
                 "retries": 1,
                 "playBeep": 'false',
                 "validDigits": '0123456789*#',
@@ -325,7 +324,7 @@ class Gather(Verb):
 
     def __init__(self):
         Verb.__init__(self)
-        self.nestables = ['Play', 'Say']
+        self.nestables = ['Play', 'Say', 'Pause']
         self.num_digits = None
         self.timeout = None
         self.finish_on_key = None
@@ -334,7 +333,6 @@ class Gather(Verb):
         self.valid_digits = ""
         self.invalid_digits_sound = ""
         self.retries = None
-        self.pause = None
         self.sound_files = []
         self.method = ""
 
@@ -349,7 +347,6 @@ class Gather(Verb):
         self.valid_digits = self.extract_attribute_value("validDigits")
         action = self.extract_attribute_value("action")
         retries = int(self.extract_attribute_value("retries"))
-        pause = int(self.extract_attribute_value("pause"))
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
@@ -359,8 +356,6 @@ class Gather(Verb):
             raise RESTFormatException("NumDigits must be greater than 1")
         if retries < 0:
             raise RESTFormatException("Retries must be greater than 0")
-        if pause < 0:
-            raise RESTFormatException("Pause must be greater than 0")
         if timeout < 0:
             raise RESTFormatException("Timeout must be a positive integer")
         if play_beep == 'true':
@@ -374,7 +369,6 @@ class Gather(Verb):
         self.num_digits = num_digits
         self.timeout = (timeout * 1000)
         self.finish_on_key = finish_on_key
-        self.pause = (pause * 1000)
         self.retries = retries
 
     def prepare(self):
@@ -385,16 +379,33 @@ class Gather(Verb):
 
     def run(self, outbound_socket):
         for child_instance in self.children:
-            try:
+            if isinstance(child_instance, Play):
                 sound_file = child_instance.sound_file_path
                 loop = child_instance.loop_times
                 if loop == 0:
-                    loop = 50  # Add a high number to Play infinitely
+                    loop = 99  # Add a high number to Play infinitely
                 # Play the file loop number of times
                 for i in range(0, loop):
                     self.sound_files.append(sound_file)
-            except Exception:
-                pass
+                # Infinite Loop, so ignore other children
+                if loop == 99:
+                    break
+            elif isinstance(child_instance, Pause):
+                pause_secs = child_instance.length
+                pause_str = play_str = 'silence_stream://%s'\
+                                                        % (pause_secs * 1000)
+                self.sound_files.append(pause_str)
+            elif isinstance(child_instance, Say):
+                engine = child_instance.engine
+                voice = child_instance.voice
+                text = child_instance.text
+                loop = child_instance.loop_times
+                say_str = "say:%s:%s:'%s'" % (engine, voice, text)
+                for i in range(0, loop):
+                    self.sound_files.append(say_str)
+            else:
+                pass  # Ignore all other nested Verbs
+
         outbound_socket.log.info("Running Gather %s " % self.sound_files)
         outbound_socket.log.info("Play beep %s " % self.play_beep)
         outbound_socket.play_and_get_digits(max_digits=self.num_digits,
@@ -403,7 +414,7 @@ class Gather(Verb):
                             sound_files=self.sound_files,
                             invalid_file=self.invalid_digits_sound,
                             valid_digits=self.valid_digits,
-                            play_beep=self.play_beep, pause=self.pause)
+                            play_beep=self.play_beep)
         event = outbound_socket._action_queue.get()
         digits = outbound_socket.get_var('pagd_input')
         outbound_socket.params.update({'Digits': digits})
