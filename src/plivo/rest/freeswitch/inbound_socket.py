@@ -186,16 +186,16 @@ class RESTInboundSocket(InboundEventSocket):
 
     def modify_call(self, new_xml_url, status, call_uuid, request_uuid):
         if new_xml_url:
-            self.setvar("variable_answer_url", new_xml_url, uuid=call_uuid)
+            self.set_var("variable_answer_url", new_xml_url, uuid=call_uuid)
             outbound_str = "'socket:%s async full' inline" \
                                                 % (self.fs_outbound_address)
             self.transfer(outbound_str, uuid=call_uuid)
             self.log.info("Executed Live Call Transfer")
         else:  # Hangup Call
             if call_uuid:
-                args = "NORMAL_CLEARING Unique-ID %s" % (call_uuid)
+                args = "NORMAL_CLEARING uuid %s" % (call_uuid)
             else:  # Use request uuid
-                args = "NORMAL_CLEARING variable_request_uuid %s" \
+                args = "NORMAL_CLEARING request_uuid %s" \
                                                             % (request_uuid)
 
             bg_api_response = self.bgapi("hupall %s" % args)

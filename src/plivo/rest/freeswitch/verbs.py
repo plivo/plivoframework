@@ -75,7 +75,9 @@ VERB_DEFAULT_PARAMS = {
                 "voice": "kal",
                 "language": "en",
                 "loop": 1,
-                "engine": "flite"
+                "engine": "flite",
+                "method": "",
+                "type": ""
         }
     }
 
@@ -727,7 +729,6 @@ class Reject(Verb):
                                                                 % self.reason)
 
 
-# Currently Broken - Needs to be implemented
 class Say(Verb):
     """
     Say text
@@ -736,11 +737,17 @@ class Say(Verb):
     voice: voice to be used based on engine
     language: language to use
     loop: number of times to say this text
-    engine: voice engine to be used for Say (flite, cepstral, googletts)
+    engine: voice engine to be used for Say (flite, cepstral)
+
+    Extended params - Currently uses Callie (Female) Voice
+    type: NUMBER, ITEMS, PERSONS, MESSAGES, CURRENCY, TIME_MEASUREMENT,
+          CURRENT_DATE, CURRENT_TIME, CURRENT_DATE_TIME, TELEPHONE_NUMBER,
+          TELEPHONE_EXTENSION, URL, IP_ADDRESS, EMAIL_ADDRESS, POSTAL_ADDRESS,
+          ACCOUNT_NUMBER, NAME_SPELLED, NAME_PHONETIC, SHORT_DATE_TIME
+    method: PRONOUNCED, ITERATED, COUNTED
 
     Flite Voices  : slt, rms, awb, kal
     Cepstral Voices : (Use any voice here supported by cepstral)
-    Google TTS : No Voices, has language as two letter code, English - en
     """
     def __init__(self):
         Verb.__init__(self)
@@ -750,6 +757,16 @@ class Say(Verb):
         self.sound_file_path = ""
         self.engine = ""
         self.voice = ""
+        self.method = ""
+        self.valid_methods = ['PRONOUNCED', 'ITERATED', 'COUNTED']
+        self.type = ""
+        self.valid_types = ['NUMBER', 'ITEMS', 'PERSONS', 'MESSAGES',
+                'CURRENCY', 'TIME_MEASUREMENT', 'CURRENT_DATE', ''
+                'CURRENT_TIME', 'CURRENT_DATE_TIME', 'TELEPHONE_NUMBER',
+                'TELEPHONE_EXTENSION', 'URL', 'IP_ADDRESS', 'EMAIL_ADDRESS',
+                'POSTAL_ADDRESS', 'ACCOUNT_NUMBER', 'NAME_SPELLED',
+                'NAME_PHONETIC', 'SHORT_DATE_TIME']
+
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
@@ -759,6 +776,14 @@ class Say(Verb):
         self.engine = self.extract_attribute_value("engine")
         self.language = self.extract_attribute_value("language")
         self.voice = self.extract_attribute_value("voice")
+        type = self.extract_attribute_value("type")
+        if type and (type in self.valid_types):
+            self.type = type
+
+        method = self.extract_attribute_value("method")
+        if method and (method in self.valid_methods):
+            self.method = method
+
         if loop == 0:
             self.loop_times = 999
         else:
@@ -767,12 +792,19 @@ class Say(Verb):
         self.text = element.text.strip()
 
     def run(self, outbound_socket):
-        outbound_socket.set("tts_engine=%s" % self.engine)
-        outbound_socket.set("tts_voice=%s" % self.voice)
+        if self.type and self.method:
+                say_args = "%s %s %s %s" \
+                        % (self.language, self.type, self.method, self.text)
+        else:
+            outbound_socket.set("tts_engine=%s" % self.engine)
+            outbound_socket.set("tts_voice=%s" % self.voice)
 
         for i in range(0, self.loop_times):
-            outbound_socket.speak(self.text)
+            if self.type and self.method:
+                outbound_socket.say(say_args)
+            else:
+                outbound_socket.speak(self.text)
             event = outbound_socket._action_queue.get()
             # Log Speak execute response
-            outbound_socket.log.info("Speak finished once (%s)" \
-                        % str(event.get_header('Application-Response')))
+            outbound_socket.log.info("Speak finished %s times - (%s)" \
+                        % (i, str(event.get_header('Application-Response'))))

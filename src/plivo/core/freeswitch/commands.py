@@ -454,3 +454,12 @@ class Commands(object):
     def hupall(self, args):
         "Please refer to http://wiki.freeswitch.org/wiki/Mod_commands#hupall"
         return self._protocol_sendmsg("hupall", args, uuid='', lock=True)
+
+    def say(self, args, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_say
+
+        >>> say(en number pronounced 12345)
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("say", args, uuid, lock)
