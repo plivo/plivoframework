@@ -190,7 +190,7 @@ class RESTInboundSocket(InboundEventSocket):
             outbound_str = "'socket:%s async full' inline" \
                                                 % (self.fs_outbound_address)
             self.transfer(outbound_str, uuid=call_uuid)
-            self.log.info("Executed Live Call Transfer"")
+            self.log.info("Executed Live Call Transfer")
         else:  # Hangup Call
             if call_uuid:
                 args = "NORMAL_CLEARING %s %s" % ('Unique-ID', call_uuid)
@@ -199,9 +199,7 @@ class RESTInboundSocket(InboundEventSocket):
                                                                 request_uuid)
 
             self.hupall(args)
-            self.log.info("Executed Call hangup"")
-
-        self.log.info("Executed Modify Call"")
+            self.log.info("Executed Call hangup")
 
     def hangup_all_calls(self):
         self.hupall("NORMAL_CLEARING")

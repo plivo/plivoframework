@@ -124,6 +124,7 @@ class PlivoOutboundServer(OutboundServer):
 
 
 if __name__ == '__main__':
-    outboundserver = PlivoOutboundServer(configfile='./plivo_rest.conf',
+    outboundserver = PlivoOutboundServer(
+                                    configfile='../../../config/default.conf',
                                                                 daemon=False)
     outboundserver.start()

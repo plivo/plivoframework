@@ -8,8 +8,8 @@ import uuid
 from flask import request
 from werkzeug.exceptions import Unauthorized
 
-from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value
-
+from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
+                                                                get_post_param
 
 def auth_protect(decorated_func):
     def wrapper(obj):
@@ -166,28 +166,28 @@ class PlivoRestApi(object):
         digit.
         """
         msg = None
-        caller_id = request.form['From']
-        to = request.form['To']
-        gw = request.form['Gateways']
-        answer_url = request.form['AnswerUrl']
+        caller_id = get_post_param(request, 'From')
+        to = get_post_param(request, 'To')
+        gw = get_post_param(request, 'Gateways')
+        answer_url = get_post_param(request, 'AnswerUrl')
 
         if not caller_id or not to or not gw or not answer_url:
             msg = "Mandatory Parameters Missing"
         elif not is_valid_url(answer_url):
             msg = "Answer URL is not Valid"
         else:
-            hangup_url = request.form['HangUpUrl']
-            ring_url = request.form['RingUrl']
+            hangup_url = get_post_param(request, 'HangUpUrl')
+            ring_url = get_post_param(request, 'RingUrl')
             if hangup_url and not is_valid_url(hangup_url):
                 msg = "Hangup URL is not Valid"
             elif ring_url and not is_valid_url(ring_url):
                 msg = "Ring URL is not Valid"
             else:
-                extra_dial_string = request.form['OriginateDialString']
-                gw_codecs = request.form['GatewayCodecs']
-                gw_timeouts = request.form['GatewayTimeouts']
-                gw_retries = request.form['GatewayRetries']
-                send_digits = request.form['SendDigits']
+                extra_dial_string = get_post_param(request, 'OriginateDialString')
+                gw_codecs = get_post_param(request, 'GatewayCodecs')
+                gw_timeouts = get_post_param(request, 'GatewayTimeouts')
+                gw_retries = get_post_param(request, 'GatewayRetries')
+                send_digits = get_post_param(request, 'SendDigits')
 
                 request_uuid = self.prepare_request(caller_id, to,
                             extra_dial_string, gw, gw_codecs, gw_timeouts,
@@ -250,39 +250,40 @@ class PlivoRestApi(object):
         digit.
         """
         msg = None
-        caller_id = request.form['From']
-        to_str = request.form['To']
-        gw_str = request.form['Gateways']
-        answer_url = request.form['AnswerUrl']
+        caller_id = get_post_param(request, 'From')
+        to_str = get_post_param(request, 'To')
+        gw_str = get_post_param(request, 'Gateways')
+        answer_url = get_post_param(request, 'AnswerUrl')
 
         if not caller_id or not to_str or not gw_str or not answer_url:
             msg = "Mandatory Parameters Missing"
         elif not is_valid_url(answer_url):
             msg = "Answer URL is not Valid"
         else:
-            hangup_url = request.form['HangUpUrl']
-            ring_url = request.form['RingUrl']
+            hangup_url = get_post_param(request, 'HangUpUrl')
+            ring_url = get_post_param(request, 'RingUrl')
             if hangup_url and not is_valid_url(hangup_url):
                 msg = "Hangup URL is not Valid"
             elif ring_url and not is_valid_url(ring_url):
                 msg = "Ring URL is not Valid"
             else:
-                extra_dial_string = request.form['OriginateDialString']
-                delimeter = request.form['Delimeter']
+                extra_dial_string = get_post_param(request,
+                                                        'OriginateDialString')
+                delimiter = get_post_param(request, 'Delimiter')
                 # Is a string of strings
-                gw_codecs_str = request.form['GatewayCodecs']
-                gw_timeouts_str = request.form['GatewayTimeouts']
-                gw_retries_str = request.form['GatewayRetries']
-                send_digits_str = request.form['SendDigits']
+                gw_codecs_str = get_post_param(request, 'GatewayCodecs')
+                gw_timeouts_str = get_post_param(request, 'GatewayTimeouts')
+                gw_retries_str = get_post_param(request, 'GatewayRetries')
+                send_digits_str = get_post_param(request, 'SendDigits')
                 request_uuid_list = []
                 i = 0
 
-                to_str_list = to_str.split(delimeter)
-                gw_str_list = gw_str.split(delimeter)
-                gw_codecs_str_list = gw_codecs_str.split(delimeter)
-                gw_timeouts_str_list = gw_timeouts_str.split(delimeter)
-                gw_retries_str_list = gw_retries_str.split(delimeter)
-                send_digits_list = send_digits_str.split(delimeter)
+                to_str_list = to_str.split(delimiter)
+                gw_str_list = gw_str.split(delimiter)
+                gw_codecs_str_list = gw_codecs_str.split(delimiter)
+                gw_timeouts_str_list = gw_timeouts_str.split(delimiter)
+                gw_retries_str_list = gw_retries_str.split(delimiter)
+                send_digits_list = send_digits_str.split(delimiter)
 
                 if len(to_str_list) != len(gw_str_list):
                     msg = "Gateway length does not match with number length"
@@ -352,10 +353,10 @@ class PlivoRestApi(object):
         the XML and continue the call as the new XML. (Will be added in V2)
         """
         msg = None
-        status = request.form['Status']
-        call_uuid = request.form['CallUUID']
-        request_uuid= request.form['RequestUUID']
-        new_xml_url = request.form['URL']
+        status = get_post_param(request, 'Status')
+        call_uuid = get_post_param(request, 'CallUUID')
+        request_uuid= get_post_param(request, 'RequestUUID')
+        new_xml_url = get_post_param(request, 'URL')
 
         if not call_uuid and not request_uuid:
             msg = "One of the Call ID Parameters must be present"

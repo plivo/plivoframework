@@ -5,6 +5,8 @@ import ConfigParser
 import re
 import urlparse
 
+from werkzeug.datastructures import MultiDict
+
 
 def get_http_header(file_url):
     return ""
@@ -14,6 +16,13 @@ def get_config(filename):
     config = ConfigParser.SafeConfigParser()
     config.read(filename)
     return config
+
+
+def get_post_param(request, str):
+    try:
+        return request.form[str]
+    except MultiDict.KeyError:
+        return ""
 
 
 def get_conf_value(config, section, key):

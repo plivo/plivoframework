@@ -29,20 +29,20 @@ class PlivoRestServer(PlivoRestApi):
     def __init__(self, configfile, daemon=False,
                         pidfile='/tmp/plivo_rest.pid'):
         """Constructor
-        
+
         Initialize main properties such as daemon, pidfile, config, etc...
-        
+
         This will init the http server that will provide the Rest interface,
         the rest server is configured on HTTP_ADDRESS
-        
+
         Extra:
-        * FS_INBOUND_ADDRESS : Define the event_socket interface to connect to 
+        * FS_INBOUND_ADDRESS : Define the event_socket interface to connect to
         in order to initialize CallSession with Freeswitch
-        
-        * FS_OUTBOUND_ADDRESS : Define where on which address listen to 
+
+        * FS_OUTBOUND_ADDRESS : Define where on which address listen to
         initialize event_socket session with Freeswitch in order to control
         new CallSession
-        
+
         """
         self._daemon = daemon
         self._run = False
@@ -84,19 +84,19 @@ class PlivoRestServer(PlivoRestApi):
 
     def create_logger(self):
         """This will create a logger
-        
-        Based on the settings in the configuration file, 
+
+        Based on the settings in the configuration file,
         LOG_TYPE will determine if we will log in file, syslog or stdout
-        
+
         To log in file we use the following setting :
         LOG_FILE = /tmp/plivo-rest.log
-        
+
         To log to syslog we have several settings to configure the logging :
             * LOG_TYPE = syslog
             * SYSLOG_ADDRESS = /dev/log
             * SYSLOG_FACILITY = local0
         """
-        
+
         if self._daemon is False:
             self.log = StdoutLogger()
             self.log.set_debug()
@@ -129,10 +129,10 @@ class PlivoRestServer(PlivoRestApi):
 
     def do_daemon(self):
         """This will daemonize the current application
-        
+
         Two settings from our configuration files are also used to run the
         daemon under a determine user & group.
-        
+
         REST_SERVER_USER : determine the user running the daemon
         REST_SERVER_GROUP : determine the group running the daemon
         """
@@ -213,5 +213,6 @@ class PlivoRestServer(PlivoRestApi):
 
 
 if __name__ == '__main__':
-    server = PlivoRestServer(configfile='./plivo_rest.conf', daemon=False)
+    server = PlivoRestServer(configfile='../../../config/default.conf',
+                                                                daemon=False)
     server.start()

@@ -6,7 +6,7 @@ from rest_api import PlivoRestApi
 """
 We defined here the different Urls available by the Plivo WSGIServer
 
-Each API needs to refer to a specific version number in order to provide 
+Each API needs to refer to a specific version number in order to provide
 a versionning on each API method.
 
 For instance /v0.1/Calls and /v0.2/Calls might not offer the same parameters
@@ -22,6 +22,10 @@ URLS = {
         '/' + PLIVO_VERSION + '/BulkCalls/': (PlivoRestApi.bulk_calls, ['POST']),
         # API to originate one single call
         '/' + PLIVO_VERSION + '/Calls/': (PlivoRestApi.calls, ['POST']),
+        # API to originate one single call
+        '/' + PLIVO_VERSION + '/ModifyCall/': (PlivoRestApi.modify_call, ['POST']),
+        # API to originate one single call
+        '/' + PLIVO_VERSION + '/HangupAll/': (PlivoRestApi.hangup_all_calls, ['GET']),
         # API to test the config
         '/TestConfig/': (PlivoRestApi.test_config, ['GET']),
         }
