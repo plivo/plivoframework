@@ -72,7 +72,7 @@ VERB_DEFAULT_PARAMS = {
                 "reason": "rejected"
         },
         "Say": {
-                "voice": "kal",
+                "voice": "slt",
                 "language": "en",
                 "loop": 1,
                 "engine": "flite",
@@ -807,4 +807,4 @@ class Say(Verb):
             event = outbound_socket._action_queue.get()
             # Log Speak execute response
             outbound_socket.log.info("Speak finished %s times - (%s)" \
-                        % (i, str(event.get_header('Application-Response'))))
+                        % ((i+1), str(event.get_header('Application-Response'))))
