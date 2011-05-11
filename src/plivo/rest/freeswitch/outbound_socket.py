@@ -50,11 +50,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
         self.xml_response = ""
-        self.default_response = '''<?xml version="1.0" encoding="UTF-8" ?>
-            <Response>
-                <Hangup/>
-            </Response>
-        '''
         self.parsed_verbs = []
         self.lexed_xml_response = []
         self.answer_url = ""
