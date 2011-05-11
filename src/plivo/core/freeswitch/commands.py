@@ -444,3 +444,7 @@ class Commands(object):
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("speak", text, uuid, lock)
+
+    def hupall(self, args):
+        "Please refer to http://wiki.freeswitch.org/wiki/Mod_commands#hupall"
+        return self._protocol_sendmsg("hupall", args, uuid='', lock=True)
