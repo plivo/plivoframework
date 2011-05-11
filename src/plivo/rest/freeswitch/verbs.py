@@ -826,14 +826,13 @@ class Say(Verb):
                 say_args = "%s %s %s %s" \
                         % (self.language, self.type, self.method, self.text)
         else:
-            outbound_socket.set("tts_engine=%s" % self.engine)
-            outbound_socket.set("tts_voice=%s" % self.voice)
+            say_args = "%s|%s|%s" %(self.engine, self.voice, self.text)
 
         for i in range(0, self.loop_times):
             if self.type and self.method:
                 outbound_socket.say(say_args)
             else:
-                outbound_socket.speak(self.text)
+                outbound_socket.speak(say_args)
             event = outbound_socket._action_queue.get()
             # Log Speak execute response
             outbound_socket.log.info("Speak finished %s times - (%s)" \
