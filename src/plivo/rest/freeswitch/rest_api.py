@@ -5,6 +5,7 @@ import base64
 import re
 import uuid
 
+import flask
 from flask import request
 from werkzeug.exceptions import Unauthorized
 
@@ -165,7 +166,10 @@ class PlivoRestApi(object):
         characters. Each 'w' character waits 0.5 seconds instead of sending a
         digit.
         """
-        msg = None
+        msg = ""
+        result = "Error"
+        request_uuid = ""
+
         caller_id = get_post_param(request, 'From')
         to = get_post_param(request, 'To')
         gw = get_post_param(request, 'Gateways')
@@ -195,9 +199,11 @@ class PlivoRestApi(object):
                             send_digits)
 
                 self._rest_inbound_socket.spawn_originate(request_uuid)
-                msg = "Call Request Executed:%s" % request_uuid
+                msg = "Call Request Executed"
+                result = "Success"
 
-        return msg
+        return flask.jsonify(Result=result, Message=msg,
+                                                    RequestUUID=request_uuid)
 
     @auth_protect
     def bulk_calls(self):
@@ -249,7 +255,10 @@ class PlivoRestApi(object):
         characters. Each 'w' character waits 0.5 seconds instead of sending a
         digit.
         """
-        msg = None
+        msg = ""
+        result = "Error"
+        request_uuid = ""
+
         caller_id = get_post_param(request, 'From')
         to_str = get_post_param(request, 'To')
         gw_str = get_post_param(request, 'Gateways')
@@ -317,10 +326,11 @@ class PlivoRestApi(object):
                         request_uuid_list.append(request_uuid)
 
                 self._rest_inbound_socket.bulk_originate(request_uuid_list)
-                msg = "Bulk Call Requests Executed:%s" \
-                                                    % str(request_uuid_list)
+                msg = "Bulk Call Requests Executed"
+                result = "Success"
 
-        return msg
+        return flask.jsonify(Result=result, Message=msg,
+                                        RequestUUID=str(request_uuid_list))
 
     @auth_protect
     def modify_call(self):
@@ -352,7 +362,9 @@ class PlivoRestApi(object):
         Url: A valid URL that returns RESTXML. Plivo will immediately fetch
         the XML and continue the call as the new XML. (Will be added in V2)
         """
-        msg = None
+        msg = ""
+        result = "Error"
+
         status = get_post_param(request, 'Status')
         call_uuid = get_post_param(request, 'CallUUID')
         request_uuid= get_post_param(request, 'RequestUUID')
@@ -377,8 +389,9 @@ class PlivoRestApi(object):
                 self._rest_inbound_socket.modify_call(new_xml_url, status,
                                                     call_uuid, request_uuid)
                 msg = "Modify Request Executed"
+                result = "Success"
 
-        return msg
+        return flask.jsonify(Result=result, Message=msg, RequestUUID="")
 
     @auth_protect
     def hangup_all_calls(self):
@@ -386,4 +399,4 @@ class PlivoRestApi(object):
         """
         msg = "All Calls Hungup"
         self._rest_inbound_socket.hangup_all_calls()
-        return msg
+        return flask.jsonify(Result="Success", Message=msg, RequestUUID="")
