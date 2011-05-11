@@ -51,7 +51,7 @@ class PlivoOutboundServer(OutboundServer):
         request_id = self._get_request_id()
         self.log.info("(%d) New request from %s" % (request_id, str(address)))
         self._handle_class(socket, address, self.log, self.default_answer_url,
-                           filter=self._filter, request_id=self._get_request_id())
+                           filter=self._filter, request_id=request_id)
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
     def create_logger(self):
