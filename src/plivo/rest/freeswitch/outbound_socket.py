@@ -107,7 +107,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     # Such events are received by the on_channel_execute_complete method
     #
     # In order to "block" the execution of our service until the
-    # playback is finished, we use a syncronized queue from gevent
+    # playback is finished, we use a synchronized queue from gevent
     # and wait for such event to come. The on_channel_execute_complete
     # method will put that event in the queue, then we may continue working.
     #
@@ -123,12 +123,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def on_channel_hangup(self, event):
         self._hangup_cause = event['Hangup-Cause']
-        self.log.info('Event: channel %s has hung up (%s)' % (self.get_channel_unique_id(), self._hangup_cause))
+        self.log.info('Event: channel %s has hung up (%s)' %
+                      (self.get_channel_unique_id(), self._hangup_cause))
 
     def on_channel_hangup_complete(self, event):
         if not self._hangup_cause:
             self._hangup_cause = event['Hangup-Cause']
-        self.log.info('Event: channel %s hangup complete (%s)' % (self.get_channel_unique_id(), self._hangup_cause))
+        self.log.info('Event: channel %s hangup complete (%s)' %
+                      (self.get_channel_unique_id(), self._hangup_cause))
 
     def has_hangup(self):
         if self._hangup_cause:
@@ -191,6 +193,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.debug("Processing call done")
 
     def process_call(self):
+        """
+        Method to proceed on the call
+        This will fetch the XML, validate the response
+        Parse the XML and Execute it
+        """
         self.fetch_xml()
         if self.xml_response:
             try:
@@ -202,7 +209,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 # log exception and hangup
                 self.log.error(str(e))
                 [self.log.error(line) for line in \
-                                            traceback.format_exc().splitlines()]
+                                        traceback.format_exc().splitlines()]
                 self.log.error("xml error")
                 #self.hangup(cause="DESTINATION_OUT_OF_ORDER")
         else:
@@ -210,6 +217,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             #self.hangup()
 
     def fetch_xml(self):
+        """
+        This method will retrieve the xml from the url answer_url
+        The url result expected is an XML content which will be stored in
+        xml_response
+        """
         encoded_params = urllib.urlencode(self.params)
         request = urllib2.Request(self.answer_url, encoded_params)
         try:
@@ -221,12 +233,17 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                         % (self.answer_url, self.params, e))
 
     def lex_xml(self):
-        # 1. Parse XML into a doctring
+        """
+        Validate the XML document and make sure we recognize all Verbs
+        """
+        #1. Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
         try:
+            #convert the string into an Element instance
             doc = etree.fromstring(xml_str)
         except Exception, e:
-            raise RESTSyntaxException("Invalid RESTXML Response Syntax: %s" % str(e))
+            raise RESTSyntaxException("Invalid RESTXML Response Syntax: %s"
+                        % str(e))
 
         # 2. Make sure the document has a <Response> root
         if doc.tag != "Response":
@@ -244,24 +261,27 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                                         % invalid_verbs)
 
     def parse_xml(self):
+        """
+        This method will parse the XML and add the Verbs into parsed_verbs
+        """
         # Check all Verb names
         for element in self.lexed_xml_response:
             verb = getattr(verbs, str(element.tag), None)
             verb_instance = verb()
             verb_instance.parse_verb(element, self.answer_url)
             self.parsed_verbs.append(verb_instance)
-            # Validate, Parse and store the nested childrens inside main verb
+            # Validate, Parse & Store the nested children inside the main verb
             self.validate_verb(element, verb_instance)
 
     def validate_verb(self, element, verb_instance):
         children = element.getchildren()
         if children and not verb_instance.nestables:
             raise RESTFormatException("%s cannot have any children!"
-                                                        % verb_instance.name)
+                                            % verb_instance.name)
         for child in children:
             if child.tag not in verb_instance.nestables:
                 raise RESTFormatException("%s is not nestable inside %s"
-                                                % (child, verb_instance.name))
+                                            % (child, verb_instance.name))
             else:
                 self.parse_children(child, verb_instance)
 
@@ -276,9 +296,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             if hasattr(verbs, "prepare"):
                 # :TODO Prepare verbs concurrently
                 verb.prepare()
-            # Check If inbound call
+            # Check if it's an inbound call
             if self.direction == 'inbound':
-                # Dont answer the call if verb is a reject, pause or preanswer
+                # Don't answer the call if verb is a reject, pause or pre_answer
                 # Only execute the verbs
                 if self.answered == False and \
                     verb.name not in self.no_answer_verbs:
