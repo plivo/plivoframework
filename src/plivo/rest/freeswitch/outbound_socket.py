@@ -146,10 +146,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.debug("Releasing connection done")
 
     def run(self):
+        self.resume()
         # Only catch events for this channel
         self.myevents()
         # Linger to get all remaining events before closing
         self.linger()
+
+        self.set("hangup_after_bridge=false")
 
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
@@ -164,15 +167,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             aleg_request_uuid = channel.get_header('variable_request_uuid')
             self.answer_url = channel.get_header('variable_answer_url')
         else:
-            # Set answer url
-            # In case outbound socket is created by a transfer
+            # Look for an answer url in order below :
+            #  get transfer_url from channel variable
             #  get answer_url from channel variable
-            #  else fallback to default
-            answer_url = self.get_var('answer_url')
-            if not answer_url:
+            #  get default answer_url
+            self.answer_url = self.get_var('transfer_url')
+            if not self.answer_url:
+                self.answer_url = self.get_var('answer_url')
+            if not self.answer_url:
                 self.answer_url = self.default_answer_url
-            else:
-                self.answer_url = answer_url
 
         # Post to ANSWER URL and get XML Response
         self.params = {
