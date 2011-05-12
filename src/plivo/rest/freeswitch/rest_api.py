@@ -101,7 +101,7 @@ class PlivoRestApi(object):
         if extra_dial_string:
              args_list.append(extra_dial_string)
         if send_digits:
-            args_list.append("api_on_answer='uuid_recv_dtmf ${uuid} %s'" \
+            args_list.append("execute_on_answer='send_dtmf %s'" \
                                                 % send_digits)
         args_str = ','.join(args_list)
         originate_str = ''.join(["originate {", args_str])
@@ -163,8 +163,8 @@ class PlivoRestApi(object):
         Remember to URL-encode this string, since the '#' character has
         special meaning in a URL.
         To wait before sending DTMF to the extension, you can add leading 'w'
-        characters. Each 'w' character waits 0.5 seconds instead of sending a
-        digit.
+        or 'W' characters. Each 'w' character waits 0.5 seconds and each 'W'
+        character waits for 1.0 seconds instead of sending a digit.
         """
         msg = ""
         result = "Error"
