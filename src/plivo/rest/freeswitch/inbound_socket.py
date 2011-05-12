@@ -24,6 +24,8 @@ class RESTInboundSocket(InboundEventSocket):
         self.log = log
         # Mapping of Key: job-uuid - Value: request_id
         self.bk_jobs = {}
+        # Transfer jobs: call_uuid - Value: where to transfer
+        self.xfer_jobs = {}
         # Mapping of Key to-callerid vs request id to indicate ringing
         self.ring_map = {}
         # Track When Calls rang
@@ -84,7 +86,22 @@ class RESTInboundSocket(InboundEventSocket):
                                                                 hangup_url)
 
     def on_channel_state(self, ev):
-        if ev['Answer-State'] == 'ringing' and \
+        if ev['Channel-State'] == 'CS_RESET':
+            call_uuid = ev['Unique-ID']
+            xfer = self.xfer_jobs.pop(call_uuid, None)
+            if not xfer:
+                return
+            self.log.info("Executing Live Call Transfer for %s" % call_uuid)
+            res = self.api("uuid_transfer %s '%s' inline" % (call_uuid, xfer))
+            if res.is_success():
+                self.log.info("Executing Live Call Transfer Done for %s" % call_uuid)
+            else:
+                self.log.info("Executing Live Call Transfer Failed for %s: %s" \
+                               % (call_uuid, res.get_response()))
+        elif ev['Channel-State'] == 'CS_HANGUP':
+            call_uuid = ev['Unique-ID']
+            self.xfer_jobs.pop(call_uuid, None)
+        elif ev['Answer-State'] == 'ringing' and \
             ev['Call-Direction'] == 'outbound':
             call_uuid = ev['Unique-ID']
             to = ev['Caller-Destination-Number']
@@ -186,19 +203,26 @@ class RESTInboundSocket(InboundEventSocket):
 
     def modify_call(self, new_xml_url, status, call_uuid, request_uuid):
         if new_xml_url:
-            self.set_var("answer_url", new_xml_url, uuid=call_uuid)
+            self.set_var("transfer_url", new_xml_url, uuid=call_uuid)
             outbound_str = "socket:%s async full" \
-                                                % (self.fs_outbound_address)
-            self.bgapi("uuid_transfer %s '%s' inline" \
-                                                % (call_uuid, outbound_str))
-            self.log.info("Executed Live Call Transfer")
+                            % (self.fs_outbound_address)
+            self.xfer_jobs[call_uuid] = outbound_str
+            res = self.api("uuid_transfer %s 'sleep:5000' inline" % call_uuid)
+            if res.is_success():
+                self.log.info("Spawning Live Call Transfer for %s" % call_uuid)
+            else:
+                try:
+                    del self.xfer_jobs[call_uuid]
+                except KeyError:
+                    pass
+                self.log.error("Spawning Live Call Transfer Failed for %s : %s" \
+                                % (call_uuid, str(res.get_response())))
         else:  # Hangup Call
             if call_uuid:
                 args = "NORMAL_CLEARING uuid %s" % (call_uuid)
             else:  # Use request uuid
                 args = "NORMAL_CLEARING request_uuid %s" \
                                                             % (request_uuid)
-
             bg_api_response = self.bgapi("hupall %s" % args)
             job_uuid = bg_api_response.get_job_uuid()
             if not job_uuid:
