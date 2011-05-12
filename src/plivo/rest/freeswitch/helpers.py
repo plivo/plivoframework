@@ -44,8 +44,8 @@ def is_valid_url(value):
       r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
     # If no domain starters we assume its http and add it
-    if not value.startswith('http://') or not value.startswith('https://') \
-        or not value.startswith('ftp://'):
+    if not value.startswith('http://') and not value.startswith('https://') \
+        and not value.startswith('ftp://'):
         value = ''.join(['http://', value])
 
     if regex.search(value):
