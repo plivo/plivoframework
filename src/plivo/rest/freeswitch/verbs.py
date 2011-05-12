@@ -534,7 +534,6 @@ class Play(Verb):
         Verb.__init__(self)
         self.audio_directory = ""
         self.loop_times = 1
-        self.file_url = ""
         self.sound_file_path = ""
 
     def parse_verb(self, element, uri=None):
@@ -549,14 +548,23 @@ class Play(Verb):
         audio_path = element.text.strip()
 
         if audio_path is None:
-            raise RESTFormatException("No File URL given!")
+            raise RESTFormatException("No File for play given!")
 
         if not is_valid_url(audio_path):
             self.sound_file_path = audio_path
-            self.file_url = None
         else:
-            self.file_url = audio_path
-            raise RESTFormatException("Only local files are supported.")
+            if audio_path[-4:].lower() != '.mp3':
+                error_msg = "Only mp3 files allowed for remote file play"
+                print error_msg
+            if audio_path[:7].lower() == "http://":
+                audio_path = audio_path[7:]
+            elif audio_path[:8].lower() == "https://":
+                audio_path = audio_path[8:]
+            elif audio_path[:6].lower() == "ftp://":
+                audio_path = audio_path[6:]
+            else:
+                pass
+            self.sound_file_path = "shout://%s" % audio_path
 
     def prepare(self):
         # TODO: If Sound File is Audio URL then Check file type format
