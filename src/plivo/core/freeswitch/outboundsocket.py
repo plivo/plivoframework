@@ -3,6 +3,8 @@
 
 """
 Outbound Event Socket class
+
+This manage Event Socket communication with the Freeswitch Server
 """
 
 from gevent.server import StreamServer

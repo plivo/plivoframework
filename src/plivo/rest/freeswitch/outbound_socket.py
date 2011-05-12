@@ -26,25 +26,42 @@ from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
 
 
 class RequestLogger(object):
+    """
+    Class RequestLogger
+    
+    This Class allows a quick way to log a message with request ID
+    """
     def __init__(self, logger, request_id=0):
         self.logger = logger
         self.request_id = request_id
 
     def info(self, msg):
+        """Log info level"""
         self.logger.info('(%s) %s' % (self.request_id, str(msg)))
 
     def warn(self, msg):
+        """Log warn level"""
         self.logger.warn('(%s) %s' % (self.request_id, str(msg)))
 
     def error(self, msg):
+        """Log error level"""
         self.logger.error('(%s) %s' % (self.request_id, str(msg)))
 
     def debug(self, msg):
+        """Log debug level"""
         self.logger.debug('(%s) %s' % (self.request_id, str(msg)))
 
 
 
 class PlivoOutboundEventSocket(OutboundEventSocket):
+    """
+    Class PlivoOutboundEventSocket
+    
+    An instance of this class is created every time an incoming call is received. 
+    The instance requests for a XML grammer set to execute the call and acts as a 
+    bridge between Event_Socket and the web application
+    """
+    
     def __init__(self, socket, address, log, default_answer_url, filter=None, request_id=0):
         self._request_id = request_id
         self._log = log
@@ -63,6 +80,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         OutboundEventSocket.__init__(self, socket, address, filter)
 
     def _protocol_send(self, command, args=""):
+        """
+        Access parent method _protocol_send
+        """
         self.log.debug("Execute: %s args='%s'" % (command, args))
         response = super(PlivoOutboundEventSocket, self)._protocol_send(
                                                                 command, args)
@@ -70,6 +90,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
+        """
+        Access parent method _protocol_sendmsg
+        """
         self.log.debug("Execute: %s args=%s, uuid='%s', lock=%s, loops=%d" \
                       % (name, str(args), uuid, str(lock), loops))
         response = super(PlivoOutboundEventSocket, self)._protocol_sendmsg(
