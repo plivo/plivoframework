@@ -58,7 +58,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     Class PlivoOutboundEventSocket
     
     An instance of this class is created every time an incoming call is received. 
-    The instance requests for a XML grammer set to execute the call and acts as a 
+    The instance requests for a XML grammar set to execute the call and acts as a
     bridge between Event_Socket and the web application
     """
     

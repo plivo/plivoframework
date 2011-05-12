@@ -28,7 +28,7 @@ class OutboundEventSocket(EventSocket):
         self._channel = None
         # Connects.
         self.connect()
-        # Runs the main funtion .
+        # Runs the main function .
         try:
             self.run()
         finally:
@@ -87,6 +87,7 @@ class OutboundServer(StreamServer):
     '''
     def __init__(self, address, handle_class, filter="ALL"):
         self._filter = filter
+        #Define the Class that will handle process when receiving message
         self._handle_class = handle_class
         StreamServer.__init__(self, address, self.do_handle)
 

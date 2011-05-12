@@ -46,6 +46,8 @@ class PlivoOutboundServer(OutboundServer):
         fs_port = int(fs_port)
         self.default_answer_url = helpers.get_conf_value(self._config,
                                         'freeswitch', 'DEFAULT_ANSWER_URL')
+        #This is where we define the connection with the
+        #Plivo XML grammar Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
                                             PlivoOutboundEventSocket, filter)
 
@@ -134,6 +136,6 @@ class PlivoOutboundServer(OutboundServer):
 
 if __name__ == '__main__':
     outboundserver = PlivoOutboundServer(
-                                    configfile='../../../config/default.conf',
-                                                                daemon=False)
+                                configfile='../../../config/default.conf',
+                                daemon=False)
     outboundserver.start()
