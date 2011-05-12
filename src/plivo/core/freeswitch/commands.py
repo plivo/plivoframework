@@ -20,8 +20,18 @@ class Commands(object):
 
     def exit(self):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#exit"
-        res = self._protocol_send("exit")
-        return res
+        return self._protocol_send("exit")
+
+    def resume(self):
+        """Socket resume for Outbound connection only.
+        
+        If enabled, the dialplan will resume execution with the next action 
+        
+        after the call to the socket application.
+        
+        If there is a bridge active when the disconnect happens, it is killed.
+        """
+        return self._protocol_send("resume")
 
     def eventplain(self, args):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#event"
@@ -57,7 +67,7 @@ class Commands(object):
         if not value:
             value = ''
         if not uuid:
-            uuid = self.unique_id
+            uuid = self.get_channel_unique_id()
         api_response = self.api("uuid_setvar %s %s %s" % (uuid, var, str(value)))
         result = api_response.get_body()
         if not result:
