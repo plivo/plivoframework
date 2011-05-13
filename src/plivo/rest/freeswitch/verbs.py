@@ -64,12 +64,14 @@ VERB_DEFAULT_PARAMS = {
                 "finishOnKey": "1234567890*#",
                 "maxLength": 3600,
                 "playBeep": 'true',
-                "filePath": "/usr/local/freeswitch/sounds/",
-                "format": "mp3"
+                "filePath": "/usr/local/freeswitch/recordings/",
+                "format": "mp3",
+                "prefix": ""
         },
         "RecordSession": {
-                        "filePath": "/usr/local/freeswitch/sounds/",
-                        "format": "mp3"
+                        "filePath": "/usr/local/freeswitch/recordings/",
+                        "format": "mp3",
+                        "prefix": ""
         },
         "Redirect": {
                 "method": "POST"
@@ -674,6 +676,7 @@ class Record(Verb):
         self.file_path = ""
         self.play_beep = ""
         self.format = ""
+        self.prefix = ""
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
@@ -686,6 +689,7 @@ class Record(Verb):
             self.file_path = os.path.normpath(self.file_path) + os.sep
         self.play_beep = self.extract_attribute_value("playBeep")
         self.format = self.extract_attribute_value("format")
+        self.prefix = self.extract_attribute_value("prefix")
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
@@ -705,8 +709,9 @@ class Record(Verb):
         self.finish_on_key = finish_on_key
 
     def run(self, outbound_socket):
-        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
-                              outbound_socket.call_uuid)
+        filename = "%s%s-%s" % (self.prefix,
+                                datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.format)
         if self.play_beep == 'true':
             beep = 'tone_stream://%(300,200,700)'
@@ -735,10 +740,12 @@ class RecordSession(Verb):
         Verb.__init__(self)
         self.file_path = ""
         self.format = ""
+        self.prefix = ""
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         self.file_path = self.extract_attribute_value("filePath")
+        self.prefix = self.extract_attribute_value("prefix")
         if self.file_path:
             self.file_path = os.path.normpath(self.file_path) + os.sep
         self.format = self.extract_attribute_value("format")
@@ -746,8 +753,9 @@ class RecordSession(Verb):
     def run(self, outbound_socket):
         outbound_socket.set("RECORD_STEREO=true")
         outbound_socket.set("media_bug_answer_req=true")
-        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
-                              outbound_socket.call_uuid)
+        filename = "%s%s-%s" % (self.prefix,
+                                datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                outbound_socket.call_uuid)
         record_file = "%s%s%s.%s" % (self.file_path, filename, self.format)
         outbound_socket.record_session("%s%s" % (self.file_path, filename))
         outbound_socket.log.info("Call Recording command executed")
