@@ -24,11 +24,11 @@ class Commands(object):
 
     def resume(self):
         """Socket resume for Outbound connection only.
-        
-        If enabled, the dialplan will resume execution with the next action 
-        
+
+        If enabled, the dialplan will resume execution with the next action
+
         after the call to the socket application.
-        
+
         If there is a bridge active when the disconnect happens, it is killed.
         """
         return self._protocol_send("resume")
@@ -472,3 +472,12 @@ class Commands(object):
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("say", args, uuid, lock)
+
+    def sched_hangup(self, args, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_sched_hangup
+
+        >>> sched_hangup("+60 alloted_timeout")
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("sched_hangup", args, uuid, lock)

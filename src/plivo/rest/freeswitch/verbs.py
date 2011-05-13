@@ -77,13 +77,15 @@ VERB_DEFAULT_PARAMS = {
                 "engine": "flite",
                 "method": "",
                 "type": ""
+        },
+        "ScheduleHangup": {
+                "time": 0
         }
     }
 
 
 class Verb(object):
-    """
-    Abstract Verb Class to be inherited by all Verbs
+    """Abstract Verb Class to be inherited by all Verbs
     """
     def __init__(self):
         self.name = str(self.__class__.__name__)
@@ -133,8 +135,7 @@ class Verb(object):
 
 
 class Dial(Verb):
-    """
-    Dial another phone number and connect it to this call
+    """Dial another phone number and connect it to this call
 
     action: submit the result of the dial to this URL
     method: submit to 'action' url using GET or POST
@@ -307,8 +308,7 @@ class Dial(Verb):
 
 
 class Gather(Verb):
-    """
-    Gather digits from the caller's keypad
+    """Gather digits from the caller's keypad
 
     action: URL to which the digits entered will be sent
     method: submit to 'action' url using GET or POST
@@ -433,8 +433,7 @@ class Gather(Verb):
 
 
 class Hangup(Verb):
-    """
-    Hangup the call
+    """Hangup the call
     """
     def __init__(self):
         Verb.__init__(self)
@@ -448,8 +447,7 @@ class Hangup(Verb):
 
 
 class Number(Verb):
-    """
-    Specify phone number in a nested Dial element.
+    """Specify phone number in a nested Dial element.
 
     number: number to dial
     send_digits: key to press after connecting to the number
@@ -500,8 +498,7 @@ class Number(Verb):
 
 
 class Pause(Verb):
-    """
-    Pause the call
+    """Pause the call
 
     length: length of pause in seconds
     """
@@ -523,8 +520,7 @@ class Pause(Verb):
 
 
 class Play(Verb):
-    """
-    Play audio file at a URL
+    """Play audio file at a URL
 
     url: url of audio file, MIME type on file must be set correctly
     loop: number of time to play the audio - loop = 0 means infinite
@@ -594,8 +590,7 @@ class Play(Verb):
 
 
 class Preanswer(Verb):
-    """
-    Answer the call in Early Media Mode and execute nested verbs
+    """Answer the call in Early Media Mode and execute nested verbs
     """
     def __init__(self):
         Verb.__init__(self)
@@ -618,8 +613,7 @@ class Preanswer(Verb):
 
 
 class Record(Verb):
-    """
-    Record audio from caller
+    """Record audio from caller
 
     action: submit to this URL once recording finishes
     method: submit to 'action' url using GET or POST
@@ -687,8 +681,7 @@ class Record(Verb):
 
 
 class RecordSession(Verb):
-    """
-    Record call session
+    """Record call session
 
     filePath: complete file path to save the file to
     """
@@ -712,8 +705,7 @@ class RecordSession(Verb):
 
 
 class Redirect(Verb):
-    """
-    Redirect call flow to another URL
+    """Redirect call flow to another URL
 
     url: redirect url
     """
@@ -741,8 +733,7 @@ class Redirect(Verb):
 
 
 class Reject(Verb):
-    """
-    Reject the call - This wont answer the call, and should be the first verb
+    """Reject the call - This wont answer the call, and should be the first verb
 
     reason: reject reason/code
     """
@@ -768,8 +759,7 @@ class Reject(Verb):
 
 
 class Say(Verb):
-    """
-    Say text
+    """Say text
 
     text: text to say
     voice: voice to be used based on engine
@@ -845,3 +835,25 @@ class Say(Verb):
             # Log Speak execute response
             outbound_socket.log.info("Speak finished %s times - (%s)" \
                         % ((i+1), str(event.get_header('Application-Response'))))
+
+
+class ScheduleHangup(Verb):
+    """Hangup the call after certain time
+
+        time: time in seconds to hangup the call after
+    """
+    def __init__(self):
+        Verb.__init__(self)
+        self.time = 0
+
+    def parse_verb(self, element, uri=None):
+        Verb.parse_verb(self, element, uri)
+        self.time = self.extract_attribute_value("time")
+
+    def run(self, outbound_socket):
+        if self.time:
+            outbound_socket.sched_hangup("+%s alloted_timeout" % self.time)
+            outbound_socket.log.info("Scheduled for Hangup after %s secs"
+                                                                % self.time)
+        else:
+            outbound_socket.log.info("Ignoring Schedule hangup")
