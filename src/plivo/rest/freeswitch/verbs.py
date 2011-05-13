@@ -310,7 +310,7 @@ class Dial(Verb):
         outbound_socket.log.info("Dial Finished with reason: %s" \
                                  % reason)
         # Unsched hangup
-        self.bgapi("sched_del %s" % sched_hangup_id)
+        outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
         # Call url action
         if self.action and is_valid_url(self.action):
             self.fetch_rest_xml(outbound_socket, self.action)
