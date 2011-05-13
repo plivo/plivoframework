@@ -2,14 +2,28 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 import ConfigParser
+import httplib
+import os.path
 import re
 import urlparse
 
 from werkzeug.datastructures import MultiDict
 
 
-def get_http_header(file_url):
-    return ""
+def url_exists(url):
+    p = urlparse.urlparse(url)
+    try:
+        connection = httplib.HTTPConnection(p[1])
+        connection.request('HEAD', p[2])
+        response = connection.getresponse()
+        connection.close()
+        return response.status == httplib.OK
+    except Exception:
+        return False
+
+
+def file_exists(filepath):
+    return os.path.isfile(filepath)
 
 
 def get_config(filename):
