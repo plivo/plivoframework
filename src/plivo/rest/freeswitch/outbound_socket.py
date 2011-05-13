@@ -179,8 +179,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             if not self.answer_url:
                 self.answer_url = self.default_answer_url
 
-        # Look for a sched_hangup_id
-        self.sched_hangup_id = self.get_var('sched_hangup_id')
         # Post to ANSWER URL and get XML Response
         self.params = {
                   'call_uuid': self.call_uuid,
@@ -190,10 +188,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                   'aleg_uuid': aleg_uuid,
                   'aleg_request_uuid': aleg_request_uuid
         }
+        # Look for a sched_hangup_id and add it to params if found
+        self.sched_hangup_id = self.get_var('sched_hangup_id')
         if self.sched_hangup_id:
             self.params['sched_hangup_id'] = self.sched_hangup_id
-        # Remove sched_hangup_id from channel vars # TODO to be tested
-        self.set("sched_hangup_id=''")
+        # Remove sched_hangup_id from channel vars
+        self.unset("sched_hangup_id")
+        # Run application
         self.log.debug("Processing Call")
         self.process_call()
         self.log.debug("Processing Call Done")
