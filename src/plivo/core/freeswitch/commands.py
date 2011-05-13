@@ -490,3 +490,4 @@ class Commands(object):
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("sched_hangup", args, uuid, lock)
+

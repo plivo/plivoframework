@@ -10,7 +10,7 @@ from flask import request
 from werkzeug.exceptions import Unauthorized
 
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
-                                                                get_post_param
+                                                            get_post_param
 
 def auth_protect(decorated_func):
     def wrapper(obj):
@@ -112,7 +112,7 @@ class PlivoRestApi(object):
             args_list.append("execute_on_answer_1='send_dtmf %s'" \
                                                 % send_digits)
         if time_limit:
-            args_list.append("execute_on_answer_2='sched_hangup +%s alloted_timeout'" \
+            args_list.append("execute_on_answer_2='sched_hangup +%s ALLOTTED_TIMEOUT'" \
                                                                 % time_limit)
 
         args_str = ','.join(args_list)
@@ -425,3 +425,52 @@ class PlivoRestApi(object):
         msg = "All Calls Hungup"
         self._rest_inbound_socket.hangup_all_calls()
         return flask.jsonify(Result="Success", Message=msg, RequestUUID="")
+
+
+    @auth_protect
+    def sched_hangup(self):
+        msg = ""
+        result = "Error"
+        sched_id = ""
+
+        time = get_post_param(request, 'Time')
+        call_uuid = get_post_param(request, 'CallUUID')
+
+        if not call_uuid:
+            msg = "CallUUID Parameter must be present"
+        elif not time:
+            msg = "Time Parameter must be present"
+        else:
+            try:
+                time = int(time)
+                if time <= 0:
+                    msg = "Time Parameter must be > 0 !"
+                else:
+                    sched_id = str(uuid.uuid1())
+                    res = self._rest_inbound_socket.api("sched_api %s +%d uuid_kill %s ALLOTTED_TIMEOUT" \
+                                                        % (sched_id, time, call_uuid))
+                    if res.is_success():
+                        msg = "Scheduled Hangup Done with id %s" % sched_id
+                    else:
+                        msg = "Scheduled Hangup Failed: %s" % res.get_response()
+            except ValueError:
+                msg = "Invalid Time Parameter !"
+        return flask.jsonify(Result=result, Message=msg, RequestUUID="", Id=sched_id)
+
+    @auth_protect
+    def sched_cancel_hangup(self):
+        msg = ""
+        result = "Error"
+
+        sched_id = get_post_param(request, 'Id')
+        if not sched_id:
+            msg = "Id Parameter must be present"
+        else:
+            self._rest_inbound_socket.api("sched_del %s" % sched_id)
+            if res.is_success():
+                msg = "Scheduled Hangup Canceled"
+            else:
+                msg = "Scheduled Hangup Cancelation Failed: %s" % res.get_response()
+        return flask.jsonify(Result=result, Message=msg, RequestUUID="", Id=sched_id)
+
+
