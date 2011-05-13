@@ -4,6 +4,7 @@
 import os.path
 from datetime import datetime
 import re
+import uuid
 
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
                                                                 file_exists
@@ -239,32 +240,34 @@ class Dial(Verb):
     def run(self, outbound_socket):
         dial_options = []
         numbers = []
-        # set timeout
+        # Set timeout
         outbound_socket.set("call_timeout=%d" % self.timeout)
         outbound_socket.set("answer_timeout=%d" % self.timeout)
-        # set callerid
+        # Set callerid
         if self.caller_id:
             caller_id = "effective_caller_id_number=%s" % self.caller_id
             dial_options.append(caller_id)
-        # set numbers to dial from Number nouns
+        # Set numbers to dial from Number nouns
         for child in self.children:
             if isinstance(child, Number):
                 dial_num = self.create_number(child)
                 if not dial_num:
                     continue
                 numbers.append(dial_num)
-        # create dialstring
+        # Create dialstring
         self.dial_str = '{'
         self.dial_str += ','.join(dial_options)
         self.dial_str += '}'
         self.dial_str += ','.join(numbers)
-        # don't hangup after bridge !
+        # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
-        # set time limit
-        if self.time_limit:
-            hangup_str = "execute_on_answer=sched_hangup +%s alloted_timeout" \
-                                                            % self.time_limit
-            outbound_socket.set(hangup_str)
+        # Set time limit
+        sched_hangup_id = str(uuid.uuid1())
+        hangup_str = "api_on_answer=sched_api +%d %s uuid_kill %s alloted_timeout" \
+                      % (self.time_limit, sched_hangup_id,
+                         outbound_socket.get_channel_unique_id())
+        outbound_socket.set(hangup_str)
+        # Set hangup on '*'
         if self.hangup_on_star:
             outbound_socket.set("bridge_terminate_key=*")
         # Play Dial music or bridge the early media accordingly
@@ -275,7 +278,7 @@ class Dial(Verb):
         else:
             outbound_socket.set("bridge_early_media=true")
         if self.confirm_sound:
-            # use confirm key if present else just play music
+            # Use confirm key if present else just play music
             if self.confirm_key:
                 confirm_music_str = "group_confirm_file=%s" % self.confirm_sound
                 confirm_key_str = "group_confirm_key=%s" % self.confirm_key
@@ -286,7 +289,7 @@ class Dial(Verb):
             outbound_socket.set("group_confirm_cancel_timeout=1")
             outbound_socket.set(confirm_music_str)
             outbound_socket.set(confirm_key_str)
-        # start dial
+        # Start dial
         outbound_socket.log.debug("Dial Started")
         outbound_socket.bridge(self.dial_str)
         event = outbound_socket._action_queue.get()
@@ -308,8 +311,10 @@ class Dial(Verb):
                     reason = '%s (A leg)' % hangup_cause
         outbound_socket.log.info("Dial Finished with reason: %s" \
                                  % reason)
+        # Unsched hangup
+        outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
+        # Call url action
         if self.action and is_valid_url(self.action):
-             # Call Parent Class Function
             self.fetch_rest_xml(outbound_socket, self.action)
 
 
@@ -677,7 +682,8 @@ class Record(Verb):
         action = self.extract_attribute_value("action")
         finish_on_key = self.extract_attribute_value("finishOnKey")
         self.file_path = self.extract_attribute_value("filePath")
-        self.file_path = os.path.normpath(self.file_path) + os.sep
+        if self.file_path:
+            self.file_path = os.path.normpath(self.file_path) + os.sep
         self.play_beep = self.extract_attribute_value("playBeep")
         self.format = self.extract_attribute_value("format")
         method = self.extract_attribute_value("method")
@@ -733,7 +739,8 @@ class RecordSession(Verb):
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         self.file_path = self.extract_attribute_value("filePath")
-        self.file_path = os.path.normpath(self.file_path) + os.sep
+        if self.file_path:
+            self.file_path = os.path.normpath(self.file_path) + os.sep
         self.format = self.extract_attribute_value("format")
 
     def run(self, outbound_socket):
