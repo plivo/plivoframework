@@ -75,7 +75,7 @@ class PlivoRestApi(object):
         """
         return message
 
-    def prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
+    def _prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
                         gw_timeouts, gw_retries, answer_url, hangup_url,
                         ring_url, send_digits, time_limit, hangup_on_ring):
 
@@ -207,7 +207,7 @@ class PlivoRestApi(object):
                 time_limit = get_post_param(request, 'TimeLimit')
                 hangup_on_ring = get_post_param(request, 'HangupOnRing')
 
-                request_uuid = self.prepare_request(caller_id, to,
+                request_uuid = self._prepare_request(caller_id, to,
                             extra_dial_string, gw, gw_codecs, gw_timeouts,
                             gw_retries, answer_url, hangup_url, ring_url,
                             send_digits, time_limit, hangup_on_ring)
@@ -400,6 +400,23 @@ class PlivoRestApi(object):
 
     @auth_protect
     def transfer_call(self):
+        """Transfer Call
+        Realtime call transfer allows you to interrupt an in-progress
+        call and place it another scenario. 
+        
+        To transfer a live call, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        The following parameters are available for you to POST when transfering
+        a phone call:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        URL: A valid URL that returns RESTXML. Plivo will immediately fetch
+              the XML and continue the call as the new XML.
+        """
         msg = ""
         result = "Error"
 
@@ -436,6 +453,25 @@ class PlivoRestApi(object):
 
     @auth_protect
     def sched_hangup(self):
+        """Schedule Call Hangup
+        Schedule an hangup on a call in the future.
+        
+        To schedule a hangup, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        The following parameters are available for you to POST when transfering
+        a phone call:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        Time: When hanging up call in seconds.
+
+
+        Returns a scheduled task "Id" you can use to cancel hangup.
+        """
+
         msg = ""
         result = "Error"
         sched_id = ""
@@ -466,6 +502,19 @@ class PlivoRestApi(object):
 
     @auth_protect
     def sched_cancel_hangup(self):
+        """Cancel a Scheduled Call Hangup
+        Unschedule an hangup on a call.
+        
+        To unschedule a hangup, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        The following parameters are available for you to POST when transfering
+        a phone call:
+
+        Id: id of the scheduled hangup.
+        """
         msg = ""
         result = "Error"
 
