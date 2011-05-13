@@ -192,6 +192,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         }
         if self.sched_hangup_id:
             self.params['sched_hangup_id'] = self.sched_hangup_id
+        # Remove sched_hangup_id from channel vars # TODO to be tested
+        self.set("sched_hangup_id=''")
         self.log.debug("Processing Call")
         self.process_call()
         self.log.debug("Processing Call Done")
