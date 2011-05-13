@@ -449,6 +449,15 @@ class Commands(object):
         """
         self.execute("pre_answer")
 
+    def conference(self, room, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/Mod_conference
+
+        >>> conference(room)
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("conference", room, uuid, lock)
+
     def speak(self, text, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/TTS
 

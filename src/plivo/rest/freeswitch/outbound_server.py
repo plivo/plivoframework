@@ -19,6 +19,15 @@ import plivo.utils.daemonize
 from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 
 
+"""
+PlivoOutboundServer is our event_socket server listening for connection 
+with Freeswitch. 
+
+This server is listening by default on 127.0.0.1:8084
+
+"""
+
+
 class PlivoOutboundServer(OutboundServer):
     def __init__(self, configfile, daemon=False,
                             pidfile='/tmp/plivo_outbound.pid', filter=None):
@@ -37,6 +46,8 @@ class PlivoOutboundServer(OutboundServer):
         fs_port = int(fs_port)
         self.default_answer_url = helpers.get_conf_value(self._config,
                                         'freeswitch', 'DEFAULT_ANSWER_URL')
+        #This is where we define the connection with the
+        #Plivo XML grammar Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
                                             PlivoOutboundEventSocket, filter)
 
@@ -125,6 +136,6 @@ class PlivoOutboundServer(OutboundServer):
 
 if __name__ == '__main__':
     outboundserver = PlivoOutboundServer(
-                                    configfile='../../../config/default.conf',
-                                                                daemon=False)
+                                configfile='../../../config/default.conf',
+                                daemon=False)
     outboundserver.start()
