@@ -5,7 +5,9 @@ import os.path
 from datetime import datetime
 import re
 
-from plivo.rest.freeswitch.helpers import is_valid_url
+from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
+                                                                file_exists
+
 from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
                                                 RESTAttributeException
 
@@ -385,15 +387,16 @@ class Gather(Verb):
         for child_instance in self.children:
             if isinstance(child_instance, Play):
                 sound_file = child_instance.sound_file_path
-                loop = child_instance.loop_times
-                if loop == 0:
-                    loop = 99  # Add a high number to Play infinitely
-                # Play the file loop number of times
-                for i in range(loop):
-                    self.sound_files.append(sound_file)
-                # Infinite Loop, so ignore other children
-                if loop == 99:
-                    break
+                if sound_file:
+                    loop = child_instance.loop_times
+                    if loop == 0:
+                        loop = 99  # Add a high number to Play infinitely
+                    # Play the file loop number of times
+                    for i in range(loop):
+                        self.sound_files.append(sound_file)
+                    # Infinite Loop, so ignore other children
+                    if loop == 99:
+                        break
             elif isinstance(child_instance, Pause):
                 pause_secs = child_instance.length
                 pause_str = play_str = 'silence_stream://%s'\
@@ -416,7 +419,7 @@ class Gather(Verb):
                 for i in range(loop):
                     self.sound_files.append(say_str)
             else:
-                pass  # Ignore all other nested Verbs
+                pass  # Ignore invalid nested Verbs
 
         outbound_socket.log.info("Running Gather %s " % self.sound_files)
         outbound_socket.log.info("Play beep %s " % self.play_beep)
@@ -573,20 +576,22 @@ class Play(Verb):
             raise RESTFormatException("No File for play given!")
 
         if not is_valid_url(audio_path):
-            self.sound_file_path = audio_path
+            if file_exists(audio_path):
+                self.sound_file_path = audio_path
         else:
-            if audio_path[-4:].lower() != '.mp3':
-                error_msg = "Only mp3 files allowed for remote file play"
-                print error_msg
-            if audio_path[:7].lower() == "http://":
-                audio_path = audio_path[7:]
-            elif audio_path[:8].lower() == "https://":
-                audio_path = audio_path[8:]
-            elif audio_path[:6].lower() == "ftp://":
-                audio_path = audio_path[6:]
-            else:
-                pass
-            self.sound_file_path = "shout://%s" % audio_path
+            if url_exists(audio_path):
+                if audio_path[-4:].lower() != '.mp3':
+                    error_msg = "Only mp3 files allowed for remote file play"
+                    print error_msg
+                if audio_path[:7].lower() == "http://":
+                    audio_path = audio_path[7:]
+                elif audio_path[:8].lower() == "https://":
+                    audio_path = audio_path[8:]
+                elif audio_path[:6].lower() == "ftp://":
+                    audio_path = audio_path[6:]
+                else:
+                    pass
+                self.sound_file_path = "shout://%s" % audio_path
 
     def prepare(self):
         # TODO: If Sound File is Audio URL then Check file type format
@@ -595,19 +600,22 @@ class Play(Verb):
         pass
 
     def run(self, outbound_socket):
-        if self.is_infinite():
-            # Play sound infinitely
-            outbound_socket.endless_playback(self.sound_file_path)
-            # Log playback execute response
-            outbound_socket.log.info("Endless Playback started")
-            outbound_socket._action_queue.get()
-        else:
-            for i in range(self.loop_times):
-                outbound_socket.playback(self.sound_file_path)
-                event = outbound_socket._action_queue.get()
+        if self.sound_file_path:
+            if self.is_infinite():
+                # Play sound infinitely
+                outbound_socket.endless_playback(self.sound_file_path)
                 # Log playback execute response
-                outbound_socket.log.info("Playback finished once (%s)" \
+                outbound_socket.log.info("Endless Playback started")
+                outbound_socket._action_queue.get()
+            else:
+                for i in range(self.loop_times):
+                    outbound_socket.playback(self.sound_file_path)
+                    event = outbound_socket._action_queue.get()
+                    # Log playback execute response
+                    outbound_socket.log.info("Playback finished once (%s)" \
                             % str(event.get_header('Application-Response')))
+        else:
+            outbound_socket.log.info("Invalid Sound File - Ignoring Playback")
 
     def is_infinite(self):
         if self.loop_times <= 0:
@@ -691,7 +699,7 @@ class Record(Verb):
         self.finish_on_key = finish_on_key
 
     def run(self, outbound_socket):
-        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), 
+        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                               outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.format)
         if self.play_beep == 'true':
@@ -731,7 +739,7 @@ class RecordSession(Verb):
     def run(self, outbound_socket):
         outbound_socket.set("RECORD_STEREO=true")
         outbound_socket.set("media_bug_answer_req=true")
-        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), 
+        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                               outbound_socket.call_uuid)
         record_file = "%s%s%s.%s" % (self.file_path, filename, self.format)
         outbound_socket.record_session("%s%s" % (self.file_path, filename))
