@@ -20,16 +20,18 @@ URLS = {
         '/': (PlivoRestApi.index, ['GET']),
         # API to originate several calls simultaneously
         '/' + PLIVO_VERSION + '/BulkCalls/': (PlivoRestApi.bulk_calls, ['POST']),
-        # API to originate one single call
+        # API to originate a single call
         '/' + PLIVO_VERSION + '/Calls/': (PlivoRestApi.calls, ['POST']),
-        # API to originate one single call
-        '/' + PLIVO_VERSION + '/ModifyCall/': (PlivoRestApi.modify_call, ['POST']),
-        # API to originate one single call
+        # API to hangup a single call
+        '/' + PLIVO_VERSION + '/HangupCall/': (PlivoRestApi.hangup_call, ['POST']),
+        # API to transfer a single call
+        '/' + PLIVO_VERSION + '/TransferCall/': (PlivoRestApi.hangup_call, ['POST']),
+        # API to hangup all calls
         '/' + PLIVO_VERSION + '/HangupAll/': (PlivoRestApi.hangup_all_calls, ['POST']),
-        # API to schedule hangup on one single call
+        # API to schedule hangup on a single call
         '/' + PLIVO_VERSION + '/SchedHangup/': (PlivoRestApi.sched_hangup, ['POST']),
-        # API to cancel a scheduled hangup on one single call
-        '/' + PLIVO_VERSION + '/SchedCancelHangup/': (PlivoRestApi.sched_hangup, ['POST']),
+        # API to cancel a scheduled hangup on a single call
+        '/' + PLIVO_VERSION + '/SchedCancelHangup/': (PlivoRestApi.sched_cancel_hangup, ['POST']),
         # API to test the config
         '/TestConfig/': (PlivoRestApi.test_config, ['GET']),
         }

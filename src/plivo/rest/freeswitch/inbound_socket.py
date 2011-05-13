@@ -55,7 +55,7 @@ class RESTInboundSocket(InboundEventSocket):
                     #TODO: Need to check if there are some other edge cases
                     request_params = self.call_request[request_uuid]
                     hangup_url = request_params[8]
-                    self.log.debug("Request: %s cannot be comleted as %s \n\n"
+                    self.log.debug("Request: %s cannot be comleted as %s"
                                                     % (request_uuid, info))
                     params = {'request_uuid': request_uuid, 'reason': info}
                     self.post_to_url(hangup_url, params)
@@ -119,13 +119,13 @@ class RESTInboundSocket(InboundEventSocket):
                         request_params = self.call_request[request_uuid]
                         ring_url = request_params[9]
                         self.log.info( \
-                        "Call Ringing for: %s  with request id %s \n\n "
+                        "Call Ringing for: %s  with request id %s"
                                                         % (to, request_uuid))
                         params = {'to': to, 'request_uuid': request_uuid}
                         self.post_to_url(ring_url, params)
 
     def hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
-        self.log.debug("Call: %s hungup, Reason %s, Request uuid %s\n\n "
+        self.log.debug("Call: %s hungup, Reason %s, Request uuid %s"
                                         % (call_uuid, reason, request_uuid))
         del self.call_request[request_uuid]
         # Check if call cleans up if no user
@@ -179,7 +179,7 @@ class RESTInboundSocket(InboundEventSocket):
             job_uuid = bg_api_response.get_job_uuid()
             self.bk_jobs[job_uuid] = request_uuid
             if not job_uuid:
-                self.log.error("Originate bgapi(%s) -- JobUUID not received \n"
+                self.log.error("Originate bgapi(%s) -- JobUUID not received"
                                                                 % dial_str)
             # Reduce one from the call request param lists each time
             if gw_retry_list:
@@ -200,39 +200,47 @@ class RESTInboundSocket(InboundEventSocket):
             [job_pool.spawn(self.spawn_originate, request_uuid)
                                         for request_uuid in request_uuid_list]
 
-    def modify_call(self, new_xml_url, status, call_uuid, request_uuid):
-        if new_xml_url:
-            self.set_var("transfer_url", new_xml_url, uuid=call_uuid)
-            outbound_str = "socket:%s async full" \
-                            % (self.fs_outbound_address)
-            self.xfer_jobs[call_uuid] = outbound_str
-            res = self.api("uuid_transfer %s 'sleep:5000' inline" % call_uuid)
-            if res.is_success():
-                self.log.info("Spawning Live Call Transfer for %s" % call_uuid)
-            else:
-                try:
-                    del self.xfer_jobs[call_uuid]
-                except KeyError:
-                    pass
-                self.log.error("Spawning Live Call Transfer Failed for %s : %s" \
-                                % (call_uuid, str(res.get_response())))
-        else:  # Hangup Call
-            if call_uuid:
-                args = "NORMAL_CLEARING uuid %s" % (call_uuid)
-            else:  # Use request uuid
-                args = "NORMAL_CLEARING request_uuid %s" \
-                                                            % (request_uuid)
-            bg_api_response = self.bgapi("hupall %s" % args)
-            job_uuid = bg_api_response.get_job_uuid()
-            if not job_uuid:
-                self.log.error("Hangup bgapi(%s) -- JobUUID not recieved \n")
-            else:
-                self.log.info("Executed Call hangup for Call ID")
+    def transfer_call(self, new_xml_url, call_uuid):
+        self.set_var("transfer_url", new_xml_url, uuid=call_uuid)
+        outbound_str = "socket:%s async full" \
+                        % (self.fs_outbound_address)
+        self.xfer_jobs[call_uuid] = outbound_str
+        res = self.api("uuid_transfer %s 'sleep:5000' inline" % call_uuid)
+        if res.is_success():
+            self.log.info("Spawning Live Call Transfer for %s" % call_uuid)
+            return True
+        try:
+            del self.xfer_jobs[call_uuid]
+        except KeyError:
+            pass
+        self.log.error("Spawning Live Call Transfer Failed for %s : %s" \
+                        % (call_uuid, str(res.get_response())))
+        return False
+
+    def hangup_call(self, call_uuid="", request_uuid=""):
+        if not call_uuid and not request_uuid:
+            self.log.error("Hangup bgapi(%s) -- Missing call_uuid or request_uuid")
+            return
+        if call_uuid:
+            callid = "CallUUID %s" % call_uuid
+            args = "NORMAL_CLEARING uuid %s" % call_uuid
+        else:  # Use request uuid
+            callid = "RequestUUID %s" % request_uuid
+            args = "NORMAL_CLEARING request_uuid %s" % request_uuid
+        bg_api_response = self.bgapi("hupall %s" % args)
+        job_uuid = bg_api_response.get_job_uuid()
+        if not job_uuid:
+            self.log.error("Call Hangup Failed for %s -- JobUUID not received" % callid)
+            return False
+        self.log.info("Executed Call hangup for %s" % callid)
+        return True
 
     def hangup_all_calls(self):
         bg_api_response = self.bgapi("hupall NORMAL_CLEARING")
         job_uuid = bg_api_response.get_job_uuid()
         if not job_uuid:
-            self.log.error("Hangup bgapi(%s) -- JobUUID not recieved \n")
-        else:
-            self.log.info("Executed Hangup for all calls")
+            self.log.error("Hangup bgapi(%s) -- JobUUID not received")
+            return
+        self.log.info("Executed Hangup for all calls")
+
+

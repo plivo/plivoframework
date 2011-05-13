@@ -358,13 +358,11 @@ class PlivoRestApi(object):
                                         RequestUUID=str(request_uuid_list))
 
     @auth_protect
-    def modify_call(self):
-        """Modifying Live Calls
-        Realtime call modification allows you to interrupt an in-progress
-        call and terminate it. This is useful for any application where you
-        want to asynchronously change the behavior of a running call.
-        For example: forcing hangup, etc.
-
+    def hangup_call(self):
+        """Hangup Call
+        Realtime call hangup allows you to interrupt an in-progress
+        call and terminate it. 
+        
         To terminate a live call, you make an HTTP POST request to a
         resource URI.
 
@@ -373,49 +371,58 @@ class PlivoRestApi(object):
         The following parameters are available for you to POST when modifying
         a phone call:
 
-        Call ID Parameters: One of these parameters must be supplied
+        Call ID Parameters: One of these parameters must be supplied :
+
         CallUUID: Unique Call ID to which the action should occur to.
 
         RequestUUID: Unique request ID which was given on a API response. This
-        should be used for calls which are currently in progress and have no
-        CallUUID.
-
-        Optional
-        Status: Specifying 'completed' will attempt to hang up the call.
-
-        Not Implemented
-        Url: A valid URL that returns RESTXML. Plivo will immediately fetch
-        the XML and continue the call as the new XML. (Will be added in V2)
+        should be used for calls which are currently in progress and have no CallUUID.
         """
         msg = ""
         result = "Error"
 
-        status = get_post_param(request, 'Status')
         call_uuid = get_post_param(request, 'CallUUID')
         request_uuid= get_post_param(request, 'RequestUUID')
-        new_xml_url = get_post_param(request, 'URL')
 
         if not call_uuid and not request_uuid:
             msg = "One of the Call ID Parameters must be present"
+            return flask.jsonify(Result=result, Message=msg, RequestUUID="")
         elif call_uuid and request_uuid:
             msg = "Both Call ID Parameters cannot be present"
-        elif not status and not new_xml_url:
-            msg = "One of the optional Parameters must be present"
-        elif status and new_xml_url:
-            msg = "Both the optional Parameters cannot be present"
+            return flask.jsonify(Result=result, Message=msg, RequestUUID="")
+        res = self._rest_inbound_socket.hangup_call(call_uuid, request_uuid)
+        if res:
+            msg = "Hangup Call Executed"
+            result = "Success"
         else:
-            if new_xml_url and not is_valid_url(new_xml_url):
-                msg = "URL is not Valid"
-            elif new_xml_url and is_valid_url(new_xml_url) and not call_uuid:
-                    msg = "Call UUID must be present with URL"
-            elif status and status != 'completed':
-                msg = "Invalid Value for Status"
-            else:
-                self._rest_inbound_socket.modify_call(new_xml_url, status,
-                                                    call_uuid, request_uuid)
-                msg = "Modify Request Executed"
-                result = "Success"
+            msg = "Hangup Call Failed"
+        return flask.jsonify(Result=result, Message=msg, RequestUUID="")
 
+    @auth_protect
+    def transfer_call(self):
+        msg = ""
+        result = "Error"
+
+        call_uuid = get_post_param(request, 'CallUUID')
+        new_xml_url = get_post_param(request, 'URL')
+
+        if not call_uuid:
+            msg = "CallUUID Parameter must be present"
+            return flask.jsonify(Result=result, Message=msg, RequestUUID="")
+        elif not new_xml_url:
+            msg = "URL Parameter must be present"
+            return flask.jsonify(Result=result, Message=msg, RequestUUID="")
+        elif not is_valid_url(new_xml_url):
+            msg = "URL is not Valid"
+            return flask.jsonify(Result=result, Message=msg, RequestUUID="")
+        msg = "Call UUID must be present with URL"
+        res = self._rest_inbound_socket.transfer_call(new_xml_url, status,
+                                                      call_uuid, request_uuid)
+        if res:
+            msg = "Transfer Call Executed"
+            result = "Success"
+        else:
+            msg = "Transfer Call Failed"
         return flask.jsonify(Result=result, Message=msg, RequestUUID="")
 
     @auth_protect
@@ -469,6 +476,7 @@ class PlivoRestApi(object):
             self._rest_inbound_socket.api("sched_del %s" % sched_id)
             if res.is_success():
                 msg = "Scheduled Hangup Canceled"
+                result = "Success"
             else:
                 msg = "Scheduled Hangup Cancelation Failed: %s" % res.get_response()
         return flask.jsonify(Result=result, Message=msg, RequestUUID="", Id=sched_id)
