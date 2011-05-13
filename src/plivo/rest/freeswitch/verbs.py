@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-from datetime import date
+import os.path
+from datetime import datetime
 import re
 
-from helpers import is_valid_url
-from rest_exceptions import RESTFormatException, RESTAttributeException
+from plivo.rest.freeswitch.helpers import is_valid_url
+from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
+                                                RESTAttributeException
 
 
 RECOGNIZED_SOUND_FORMATS = ["audio/mpeg", "audio/wav", "audio/x-wav"]
@@ -387,7 +389,7 @@ class Gather(Verb):
                 if loop == 0:
                     loop = 99  # Add a high number to Play infinitely
                 # Play the file loop number of times
-                for i in range(0, loop):
+                for i in range(loop):
                     self.sound_files.append(sound_file)
                 # Infinite Loop, so ignore other children
                 if loop == 99:
@@ -400,18 +402,18 @@ class Gather(Verb):
             elif isinstance(child_instance, Say):
                 text = child_instance.text
                 loop = child_instance.loop_times
-                type = child_instance.type
+                child_type = child_instance.type
                 method = child_instance.method
-                if type and method:
+                if child_type and method:
                     language = child_instance.language
                     say_args = "%s.wav %s %s %s '%s'" \
-                                    % (language, language, type, method, text)
+                                    % (language, language, child_type, method, text)
                     say_str = "${say_string %s}" % say_args
                 else:
                     engine = child_instance.engine
                     voice = child_instance.voice
                     say_str = "say:%s:%s:'%s'" % (engine, voice, text)
-                for i in range(0, loop):
+                for i in range(loop):
                     self.sound_files.append(say_str)
             else:
                 pass  # Ignore all other nested Verbs
@@ -428,10 +430,9 @@ class Gather(Verb):
         event = outbound_socket._action_queue.get()
         digits = outbound_socket.get_var('pagd_input')
         outbound_socket.params.update({'Digits': digits})
-        if digits is not None:
-            if self.action:
-                # Call Parent Class Function
-                self.fetch_rest_xml(outbound_socket, self.action)
+        if digits is not None and self.action:
+            # Call Parent Class Function
+            self.fetch_rest_xml(outbound_socket, self.action)
 
 
 class Hangup(Verb):
@@ -538,7 +539,7 @@ class Conference(Verb):
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         room = element.text.strip()
-        if not room or len(room)==0:
+        if not room:
             raise RESTFormatException("Room must be defined")
         self.room = room
 
@@ -605,7 +606,7 @@ class Play(Verb):
             outbound_socket.log.info("Endless Playback started")
             outbound_socket._action_queue.get()
         else:
-            for i in range(0, self.loop_times):
+            for i in range(self.loop_times):
                 outbound_socket.playback(self.sound_file_path)
                 event = outbound_socket._action_queue.get()
                 # Log playback execute response
@@ -613,7 +614,7 @@ class Play(Verb):
                             % str(event.get_header('Application-Response')))
 
     def is_infinite(self):
-        if self.loop_times == 0:
+        if self.loop_times <= 0:
             return True
         return False
 
@@ -650,6 +651,9 @@ class Record(Verb):
     method: submit to 'action' url using GET or POST
     max_length: maximum number of seconds to record
     timeout: seconds of silence before considering the recording complete
+    playBeep: play a beep before recording (true/false)
+    format: file format
+    filePath: complete file path to save the file to
     finishOnKey: Stop recording on this key
     """
     def __init__(self):
@@ -671,6 +675,7 @@ class Record(Verb):
         action = self.extract_attribute_value("action")
         finish_on_key = self.extract_attribute_value("finishOnKey")
         self.file_path = self.extract_attribute_value("filePath")
+        self.file_path = os.path.normpath(self.file_path) + os.sep
         self.play_beep = self.extract_attribute_value("playBeep")
         self.format = self.extract_attribute_value("format")
         method = self.extract_attribute_value("method")
@@ -692,7 +697,8 @@ class Record(Verb):
         self.finish_on_key = finish_on_key
 
     def run(self, outbound_socket):
-        filename = "%s-%s" % (str(date.today()), outbound_socket.call_uuid)
+        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), 
+                              outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.format)
         if self.play_beep == 'true':
             beep = 'tone_stream://%(300,200,700)'
@@ -715,6 +721,7 @@ class RecordSession(Verb):
     """
     Record call session
 
+    format: file format
     filePath: complete file path to save the file to
     """
     def __init__(self):
@@ -725,15 +732,17 @@ class RecordSession(Verb):
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
         self.file_path = self.extract_attribute_value("filePath")
+        self.file_path = os.path.normpath(self.file_path) + os.sep
         self.format = self.extract_attribute_value("format")
 
     def run(self, outbound_socket):
         outbound_socket.set("RECORD_STEREO=true")
         outbound_socket.set("media_bug_answer_req=true")
-        filename = "%s-%s.%s" % (str(date.today()), outbound_socket.call_uuid,
-                                self.format)
+        filename = "%s-%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), 
+                              outbound_socket.call_uuid)
+        record_file = "%s%s%s.%s" % (self.file_path, filename, self.format)
         outbound_socket.record_session("%s%s" % (self.file_path, filename))
-        outbound_socket.log.info("Call Recording command issued")
+        outbound_socket.log.info("Call Recording command executed")
 
 
 class Redirect(Verb):
@@ -812,6 +821,14 @@ class Say(Verb):
     Flite Voices  : slt, rms, awb, kal
     Cepstral Voices : (Use any voice here supported by cepstral)
     """
+    valid_methods = ['PRONOUNCED', 'ITERATED', 'COUNTED']
+    valid_types = ['NUMBER', 'ITEMS', 'PERSONS', 'MESSAGES',
+                   'CURRENCY', 'TIME_MEASUREMENT', 'CURRENT_DATE', ''
+                   'CURRENT_TIME', 'CURRENT_DATE_TIME', 'TELEPHONE_NUMBER',
+                   'TELEPHONE_EXTENSION', 'URL', 'IP_ADDRESS', 'EMAIL_ADDRESS',
+                   'POSTAL_ADDRESS', 'ACCOUNT_NUMBER', 'NAME_SPELLED',
+                   'NAME_PHONETIC', 'SHORT_DATE_TIME']
+
     def __init__(self):
         Verb.__init__(self)
         self.loop_times = 1
@@ -821,15 +838,7 @@ class Say(Verb):
         self.engine = ""
         self.voice = ""
         self.method = ""
-        self.valid_methods = ['PRONOUNCED', 'ITERATED', 'COUNTED']
         self.type = ""
-        self.valid_types = ['NUMBER', 'ITEMS', 'PERSONS', 'MESSAGES',
-                'CURRENCY', 'TIME_MEASUREMENT', 'CURRENT_DATE', ''
-                'CURRENT_TIME', 'CURRENT_DATE_TIME', 'TELEPHONE_NUMBER',
-                'TELEPHONE_EXTENSION', 'URL', 'IP_ADDRESS', 'EMAIL_ADDRESS',
-                'POSTAL_ADDRESS', 'ACCOUNT_NUMBER', 'NAME_SPELLED',
-                'NAME_PHONETIC', 'SHORT_DATE_TIME']
-
 
     def parse_verb(self, element, uri=None):
         Verb.parse_verb(self, element, uri)
@@ -839,9 +848,9 @@ class Say(Verb):
         self.engine = self.extract_attribute_value("engine")
         self.language = self.extract_attribute_value("language")
         self.voice = self.extract_attribute_value("voice")
-        type = self.extract_attribute_value("type")
-        if type and (type in self.valid_types):
-            self.type = type
+        item_type = self.extract_attribute_value("type")
+        if item_type and (item_type in self.valid_types):
+            self.type = item_type
 
         method = self.extract_attribute_value("method")
         if method and (method in self.valid_methods):

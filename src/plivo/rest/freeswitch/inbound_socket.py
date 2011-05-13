@@ -173,15 +173,14 @@ class RESTInboundSocket(InboundEventSocket):
             answer_url = request_params[7]
             outbound_str = "'socket:%s async full' inline" \
                                                 % (self.fs_outbound_address)
-            dial_str = "%s}%s%s %s" \
+            dial_str = "%s}%s/%s %s" \
                             % (originate_str, gw_list[0], to, outbound_str)
             bg_api_response = self.bgapi(dial_str)
             job_uuid = bg_api_response.get_job_uuid()
             self.bk_jobs[job_uuid] = request_uuid
             if not job_uuid:
-                self.log.error("Originate bgapi(%s) -- JobUUID not recieved \n"
+                self.log.error("Originate bgapi(%s) -- JobUUID not received \n"
                                                                 % dial_str)
-
             # Reduce one from the call request param lists each time
             if gw_retry_list:
                 gw_tries_done += 1

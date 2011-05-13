@@ -29,7 +29,7 @@ class PlivoRestApi(object):
         """Verify request is from allowed ips
         """
         allowed_ips = get_conf_value(self._config, 'rest_server',
-                                                                'ALLOWED_IPS')
+                                     'ALLOWED_IPS')
         if not allowed_ips:
             return True
         ip_list = allowed_ips.split(',')
@@ -82,8 +82,10 @@ class PlivoRestApi(object):
         gw_retry_list = []
         gw_codec_list = []
         gw_timeout_list = []
-
-        gw_list = gw.split(',')
+        # don't allow "|" and "," in 'to' (destination) to avoid call injection
+        to = re.split(',|\|', to)[0]
+        # build gateways list removing trailing '/' character
+        gw_list = [ gateway.rstrip('/') for gateway in gw.split(',') ]
         # split gw codecs by , but only outside the ''
         if gw_codecs:
             gw_codec_list = re.split(''',(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''',
