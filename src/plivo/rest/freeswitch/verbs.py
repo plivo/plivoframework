@@ -261,9 +261,9 @@ class Dial(Verb):
         self.dial_str += ','.join(numbers)
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
-        # Set time limit
+        # Set time limit: when reached, B Leg is hung up
         sched_hangup_id = str(uuid.uuid1())
-        hangup_str = "api_on_answer=sched_api +%d %s uuid_kill %s ALLOTTED_TIMEOUT" \
+        hangup_str = "api_on_answer=sched_api +%d %s uuid_transfer %s -bleg 'hangup:ALLOTTED_TIMEOUT' inline" \
                       % (self.time_limit, sched_hangup_id,
                          outbound_socket.get_channel_unique_id())
         outbound_socket.set(hangup_str)

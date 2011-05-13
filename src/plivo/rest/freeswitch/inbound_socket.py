@@ -55,7 +55,7 @@ class RESTInboundSocket(InboundEventSocket):
                     #TODO: Need to check if there are some other edge cases
                     request_params = self.call_request[request_uuid]
                     hangup_url = request_params[8]
-                    self.log.debug("Request: %s cannot be comleted as %s"
+                    self.log.debug("Request: %s cannot be completed as %s"
                                                     % (request_uuid, info))
                     params = {'request_uuid': request_uuid, 'reason': info}
                     self.post_to_url(hangup_url, params)
@@ -179,7 +179,7 @@ class RESTInboundSocket(InboundEventSocket):
             job_uuid = bg_api_response.get_job_uuid()
             self.bk_jobs[job_uuid] = request_uuid
             if not job_uuid:
-                self.log.error("Originate bgapi(%s) -- JobUUID not received"
+                self.log.error("Calls Failed -- JobUUID not received"
                                                                 % dial_str)
             # Reduce one from the call request param lists each time
             if gw_retry_list:
@@ -219,7 +219,7 @@ class RESTInboundSocket(InboundEventSocket):
 
     def hangup_call(self, call_uuid="", request_uuid=""):
         if not call_uuid and not request_uuid:
-            self.log.error("Hangup bgapi(%s) -- Missing call_uuid or request_uuid")
+            self.log.error("Call Hangup Failed -- Missing call_uuid or request_uuid")
             return
         if call_uuid:
             callid = "CallUUID %s" % call_uuid
@@ -239,7 +239,7 @@ class RESTInboundSocket(InboundEventSocket):
         bg_api_response = self.bgapi("hupall NORMAL_CLEARING")
         job_uuid = bg_api_response.get_job_uuid()
         if not job_uuid:
-            self.log.error("Hangup bgapi(%s) -- JobUUID not received")
+            self.log.error("Hangup All Calls Failed -- JobUUID not received")
             return
         self.log.info("Executed Hangup for all calls")
 

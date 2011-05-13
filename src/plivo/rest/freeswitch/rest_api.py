@@ -82,6 +82,7 @@ class PlivoRestApi(object):
         gw_retry_list = []
         gw_codec_list = []
         gw_timeout_list = []
+        sched_hangup_id = None
         # don't allow "|" and "," in 'to' (destination) to avoid call injection
         to = re.split(',|\|', to)[0]
         # build gateways list removing trailing '/' character
@@ -109,11 +110,19 @@ class PlivoRestApi(object):
                 args_list.append("execute_on_ring='sched_hangup +%s ORIGINATOR_CANCEL'" \
                                                                 % hangup_on_ring)
         if send_digits:
-            args_list.append("execute_on_answer_1='send_dtmf %s'" \
+            args_list.append("execute_on_answer='send_dtmf %s'" \
                                                 % send_digits)
-        if time_limit:
-            args_list.append("execute_on_answer_2='sched_hangup +%s ALLOTTED_TIMEOUT'" \
-                                                                % time_limit)
+        try:
+            time_limit = int(time_limit)
+        except ValueError:
+            time_limit = 0
+        if time_limit > 0:
+            sched_hangup_id = str(uuid.uuid1())
+            #args_list.append("execute_on_answer_2='sched_hangup +%s ALLOTTED_TIMEOUT'" \
+            #                                                    % time_limit)
+            args_list.append("api_on_answer='sched_api %s +%d hupall ALLOTTED_TIMEOUT request_uuid %s'" \
+                                                % (sched_hangup_id, time_limit, request_uuid))
+            args_list.append("sched_hangup_id=%s" % sched_hangup_id)
 
         args_str = ','.join(args_list)
         originate_str = ''.join(["originate {", args_str])
@@ -152,10 +161,10 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
-        HangUpUrl: A URL that Plivo will notify to, with POST params when
+        HangUpUrl: An URL that Plivo will notify to, with POST params when
         calls ends
 
-        RingUrl:A URL that Plivo will notify to, with POST params when
+        RingUrl: An URL that Plivo will notify to, with POST params when
         calls starts ringing
 
         OriginateDialString: Additional Originate dialstring to be executed
