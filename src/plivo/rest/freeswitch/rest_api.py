@@ -77,7 +77,7 @@ class PlivoRestApi(object):
 
     def prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
                         gw_timeouts, gw_retries, answer_url, hangup_url,
-                        ring_url, send_digits, time_limit):
+                        ring_url, send_digits, time_limit, hangup_on_ring):
 
         gw_retry_list = []
         gw_codec_list = []
@@ -102,6 +102,12 @@ class PlivoRestApi(object):
         args_list.append("origination_caller_id_number=%s" % caller_id)
         if extra_dial_string:
              args_list.append(extra_dial_string)
+        if hangup_on_ring != '':
+            if hangup_on_ring == '0':
+                args_list.append("execute_on_ring='hangup ORIGINATOR_CANCEL'")
+            else:
+                args_list.append("execute_on_ring='sched_hangup +%s ORIGINATOR_CANCEL'" \
+                                                                % hangup_on_ring)
         if send_digits:
             args_list.append("execute_on_answer_1='send_dtmf %s'" \
                                                 % send_digits)
@@ -199,11 +205,12 @@ class PlivoRestApi(object):
                 gw_retries = get_post_param(request, 'GatewayRetries')
                 send_digits = get_post_param(request, 'SendDigits')
                 time_limit = get_post_param(request, 'TimeLimit')
+                hangup_on_ring = get_post_param(request, 'HangupOnRing')
 
                 request_uuid = self.prepare_request(caller_id, to,
                             extra_dial_string, gw, gw_codecs, gw_timeouts,
                             gw_retries, answer_url, hangup_url, ring_url,
-                            send_digits, time_limit)
+                            send_digits, time_limit, hangup_on_ring)
 
                 self._rest_inbound_socket.spawn_originate(request_uuid)
                 msg = "Call Request Executed"
@@ -292,6 +299,7 @@ class PlivoRestApi(object):
                 gw_retries_str = get_post_param(request, 'GatewayRetries')
                 send_digits_str = get_post_param(request, 'SendDigits')
                 time_limit_str = get_post_param(request, 'TimeLimit')
+                hangup_on_ring_str = get_post_param(request, 'HangupOnRing')
                 request_uuid_list = []
                 i = 0
 
@@ -302,6 +310,7 @@ class PlivoRestApi(object):
                 gw_retries_str_list = gw_retries_str.split(delimiter)
                 send_digits_list = send_digits_str.split(delimiter)
                 time_limit_list = time_limit_str.split(delimiter)
+                hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
 
                 if len(to_str_list) != len(gw_str_list):
                     msg = "Gateway length does not match with number length"
@@ -319,22 +328,24 @@ class PlivoRestApi(object):
                             gw_retries = gw_retries_str_list[i]
                         except IndexError:
                             gw_retries = ""
-
                         try:
                             send_digits = send_digits_list[i]
                         except IndexError:
                             send_digits = ""
-
                         try:
                             time_limit = time_limit_list[i]
                         except IndexError:
                             time_limit = ""
+                        try:
+                            hangup_on_ring = hangup_on_ring_list[i]
+                        except IndexError:
+                            hangup_on_ring = ""
 
                         request_uuid = self.prepare_request(caller_id, to,
                                     extra_dial_string, gw_str_list[i],
                                     gw_codecs, gw_timeouts, gw_retries,
                                     answer_url, hangup_url, ring_url,
-                                    send_digits, time_limit)
+                                    send_digits, time_limit, hangup_on_ring)
 
                         i += 1
                         request_uuid_list.append(request_uuid)
