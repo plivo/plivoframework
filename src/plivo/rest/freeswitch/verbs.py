@@ -48,6 +48,8 @@ VERB_DEFAULT_PARAMS = {
         "Play": {
                 "loop": 1
         },
+        "Conference": {
+        },
         "Preanswer": {
         },
         "Record": {
@@ -519,8 +521,31 @@ class Pause(Verb):
     def run(self, outbound_socket):
         outbound_socket.sleep(str(self.length * 1000))
         outbound_socket.log.info("Pause Executed for %s seconds"
-                                                                % self.length)
+                                                            % self.length)
 
+
+
+class Conference(Verb):
+    """
+    Got to a Conference Room
+
+    room: number or name of the conference room
+    """
+    def __init__(self):
+        Verb.__init__(self)
+        self.room = 'default'
+
+    def parse_verb(self, element, uri=None):
+        Verb.parse_verb(self, element, uri)
+        room = element.text.strip()
+        if not room or len(room)==0:
+            raise RESTFormatException("Room must be defined")
+        self.room = room
+
+    def run(self, outbound_socket):
+        outbound_socket.conference(str(self.room))
+        outbound_socket.log.info("Go to Conference Room : %s"
+                                                    % str(self.room))
 
 class Play(Verb):
     """
