@@ -161,10 +161,10 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
-        HangUpUrl: An URL that Plivo will notify to, with POST params when
+        HangUpUrl: URL that Plivo will notify to, with POST params when
         calls ends
 
-        RingUrl: An URL that Plivo will notify to, with POST params when
+        RingUrl: URL that Plivo will notify to, with POST params when
         calls starts ringing
 
         OriginateDialString: Additional Originate dialstring to be executed
@@ -252,10 +252,10 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
-        HangUpUrl: A URL that Plivo will notify to, with POST params when
+        HangUpUrl: URL that Plivo will notify to, with POST params when
         calls ends
 
-        RingUrl:A URL that Plivo will notify to, with POST params when
+        RingUrl:URL that Plivo will notify to, with POST params when
         calls starts ringing
 
         OriginateDialString: Additional Originate dialstring to be executed
@@ -370,8 +370,8 @@ class PlivoRestApi(object):
     def hangup_call(self):
         """Hangup Call
         Realtime call hangup allows you to interrupt an in-progress
-        call and terminate it. 
-        
+        call and terminate it.
+
         To terminate a live call, you make an HTTP POST request to a
         resource URI.
 
@@ -411,8 +411,8 @@ class PlivoRestApi(object):
     def transfer_call(self):
         """Transfer Call
         Realtime call transfer allows you to interrupt an in-progress
-        call and place it another scenario. 
-        
+        call and place it another scenario.
+
         To transfer a live call, you make an HTTP POST request to a
         resource URI.
 
@@ -460,10 +460,10 @@ class PlivoRestApi(object):
         return flask.jsonify(Success="Success", Message=msg)
 
     @auth_protect
-    def sched_hangup(self):
+    def schedule_hangup(self):
         """Schedule Call Hangup
         Schedule an hangup on a call in the future.
-        
+
         To schedule a hangup, you make an HTTP POST request to a
         resource URI.
 
@@ -510,10 +510,10 @@ class PlivoRestApi(object):
         return flask.jsonify(Success=result, Message=msg, SchedHangupId=sched_id)
 
     @auth_protect
-    def sched_cancel_hangup(self):
+    def cancel_scheduled_hangup(self):
         """Cancel a Scheduled Call Hangup
         Unschedule an hangup on a call.
-        
+
         To unschedule a hangup, you make an HTTP POST request to a
         resource URI.
 
@@ -538,5 +538,3 @@ class PlivoRestApi(object):
             else:
                 msg = "Scheduled Hangup Cancelation Failed: %s" % res.get_response()
         return flask.jsonify(Success=result, Message=msg)
-
-

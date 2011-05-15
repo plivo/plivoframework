@@ -27,11 +27,11 @@ URLS = {
         # API to transfer a single call
         '/' + PLIVO_VERSION + '/TransferCall/': (PlivoRestApi.hangup_call, ['POST']),
         # API to hangup all calls
-        '/' + PLIVO_VERSION + '/HangupAll/': (PlivoRestApi.hangup_all_calls, ['POST']),
+        '/' + PLIVO_VERSION + '/HangupAllCalls/': (PlivoRestApi.hangup_all_calls, ['POST']),
         # API to schedule hangup on a single call
-        '/' + PLIVO_VERSION + '/SchedHangup/': (PlivoRestApi.sched_hangup, ['POST']),
+        '/' + PLIVO_VERSION + '/ScheduleHangup/': (PlivoRestApi.schedule_hangup, ['POST']),
         # API to cancel a scheduled hangup on a single call
-        '/' + PLIVO_VERSION + '/SchedCancelHangup/': (PlivoRestApi.sched_cancel_hangup, ['POST']),
+        '/' + PLIVO_VERSION + '/CancelScheduledHangup/': (PlivoRestApi.cancel_scheduled_hangup, ['POST']),
         # API to test the config
         '/TestConfig/': (PlivoRestApi.test_config, ['GET']),
         }
