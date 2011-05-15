@@ -3,26 +3,25 @@
 
 from gevent import monkey
 monkey.patch_all()
-
 import traceback
 import urllib
 import urllib2
-
 try:
     import xml.etree.cElementTree as etree
 except ImportError:
     from xml.etree.elementtree import ElementTree as etree
-
 import gevent
 import gevent.queue
-
 from plivo.core.freeswitch.eventtypes import Event
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import verbs
 from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
-                                    UnrecognizedVerbException
+                                    UnrecognizedVerbException, \
+                                    RESTRedirectException
 
+
+MAX_REDIRECT = 10000
 
 
 class RequestLogger(object):
@@ -205,23 +204,33 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         This will fetch the XML, validate the response
         Parse the XML and Execute it
         """
-        self.fetch_xml()
-        if self.xml_response:
+        for x in range(MAX_REDIRECT):
             try:
+                self.fetch_xml()
+                if not self.xml_response:
+                    self.log.warn("No XML Response")
+                    return
                 self.lex_xml()
                 self.parse_xml()
                 self.execute_xml()
+            except RESTRedirectException, redirect:
+                # Set Answer URL to Redirect URL
+                self.answer_url = redirect.get_url()
+                # Reset all the previous response and verbs
+                self.xml_response = ""
+                self.parsed_verbs = []
+                self.lexed_xml_response = []
+                self.log.info("Redirecting to %s to fetch RESTXML" \
+                                            % self.answer_url)
+                continue
             except Exception, e:
                 # if error occurs during xml parsing
-                # log exception and hangup
+                # log exception and break
                 self.log.error(str(e))
-                [self.log.error(line) for line in \
-                                        traceback.format_exc().splitlines()]
+                [ self.log.error(line) for line in \
+                            traceback.format_exc().splitlines() ]
                 self.log.error("XML error")
-                #self.hangup(cause="DESTINATION_OUT_OF_ORDER")
-        else:
-            self.log.warn("No XML Response")
-            #self.hangup()
+                return
 
     def fetch_xml(self):
         """

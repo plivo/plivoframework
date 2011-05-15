@@ -5,12 +5,11 @@ import os.path
 from datetime import datetime
 import re
 import uuid
-
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
-                                                                file_exists
-
+                                                        file_exists
 from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
-                                                RESTAttributeException
+                                                RESTAttributeException, \
+                                                RESTRedirectException
 
 
 RECOGNIZED_SOUND_FORMATS = ["audio/mpeg", "audio/wav", "audio/x-wav"]
@@ -131,16 +130,8 @@ class Verb(object):
         else:
             self.text = text.strip()
 
-    def fetch_rest_xml(self, outbound_socket, url):
-        # Set Answer URL to Redirect URL
-        outbound_socket.answer_url = url
-        # Reset all the previous response and verbs
-        outbound_socket.xml_response = ""
-        outbound_socket.parsed_verbs = []
-        outbound_socket.lexed_xml_response = []
-        outbound_socket.log.info("Redirecting to %s to fetch RESTXML"
-                                                % outbound_socket.answer_url)
-        outbound_socket.process_call()
+    def fetch_rest_xml(self, url):
+        raise RESTRedirectException(url)
 
 
 class Dial(Verb):
@@ -317,7 +308,7 @@ class Dial(Verb):
         outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
         # Call url action
         if self.action and is_valid_url(self.action):
-            self.fetch_rest_xml(outbound_socket, self.action)
+            self.fetch_rest_xml(self.action)
 
 
 class Gather(Verb):
@@ -442,7 +433,7 @@ class Gather(Verb):
         outbound_socket.params.update({'Digits': digits})
         if digits is not None and self.action:
             # Call Parent Class Function
-            self.fetch_rest_xml(outbound_socket, self.action)
+            self.fetch_rest_xml(self.action)
 
 
 class Hangup(Verb):
@@ -787,8 +778,7 @@ class Redirect(Verb):
         self.url = url
 
     def run(self, outbound_socket):
-        # Call Parent Class Function
-        self.fetch_rest_xml(outbound_socket, self.url)
+        self.fetch_rest_xml(self.url)
 
 
 class Reject(Verb):
