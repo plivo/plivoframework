@@ -240,6 +240,7 @@ class Dial(Verb):
         return result
 
     def run(self, outbound_socket):
+        outbound_socket.log.info("Dial Started")
         dial_options = []
         numbers = []
         # Set timeout
@@ -292,7 +293,6 @@ class Dial(Verb):
             outbound_socket.set(confirm_music_str)
             outbound_socket.set(confirm_key_str)
         # Start dial
-        outbound_socket.log.debug("Dial Started")
         outbound_socket.bridge(self.dial_str)
         event = outbound_socket._action_queue.get()
         reason = None
@@ -366,11 +366,11 @@ class Gather(Verb):
         self.method = method
 
         if num_digits < 1:
-            raise RESTFormatException("NumDigits must be greater than 1")
+            raise RESTFormatException("Gather 'numDigits' must be greater than 1")
         if retries < 0:
-            raise RESTFormatException("Retries must be greater than 0")
+            raise RESTFormatException("Gather 'retries' must be greater than 0")
         if timeout < 0:
-            raise RESTFormatException("Timeout must be a positive integer")
+            raise RESTFormatException("Gather 'timeout' must be a positive integer")
         if play_beep == 'true':
             self.play_beep = True
         else:
@@ -428,8 +428,8 @@ class Gather(Verb):
             else:
                 pass  # Ignore invalid nested Verbs
 
-        outbound_socket.log.info("Running Gather %s " % self.sound_files)
-        outbound_socket.log.info("Play beep %s " % self.play_beep)
+        outbound_socket.log.info("Gather Started %s" % self.sound_files)
+        outbound_socket.log.info("Gather Play beep %s " % self.play_beep)
         outbound_socket.play_and_get_digits(max_digits=self.num_digits,
                             max_tries=self.retries, timeout=self.timeout,
                             terminators=self.finish_on_key,
@@ -456,7 +456,7 @@ class Hangup(Verb):
 
     def run(self, outbound_socket):
         outbound_socket.hangup()
-        outbound_socket.log.info("Channel Hangup Done")
+        outbound_socket.log.info("Hangup Done")
 
 
 class Number(Verb):
@@ -527,8 +527,10 @@ class Pause(Verb):
         self.length = length
 
     def run(self, outbound_socket):
+        outbound_socket.log.info("Pause Started for %s seconds"
+                                                            % self.length)
         outbound_socket.sleep(str(self.length * 1000))
-        outbound_socket.log.info("Pause Executed for %s seconds"
+        outbound_socket.log.info("Pause Done after %s seconds"
                                                             % self.length)
 
 
@@ -696,10 +698,10 @@ class Record(Verb):
         self.method = method
 
         if max_length < 0:
-            raise RESTFormatException("Max Length must be a positive integer")
+            raise RESTFormatException("Record 'maxLength' must be a positive integer")
         self.max_length = max_length
         if timeout < 0:
-            raise RESTFormatException("Silence Timeout must be positive")
+            raise RESTFormatException("Record 'timeout' must be positive")
         self.timeout = timeout
         if action and is_valid_url(action):
             self.action = action
@@ -718,15 +720,15 @@ class Record(Verb):
             outbound_socket.playback(beep)
             event = outbound_socket._action_queue.get()
             # Log playback execute response
-            outbound_socket.log.info("Finished Playing beep (%s)" \
+            outbound_socket.log.debug("Record Beep played (%s)" \
                             % str(event.get_header('Application-Response')))
         outbound_socket.start_dtmf()
-        outbound_socket.log.info("Starting Recording")
+        outbound_socket.log.info("Record Started")
         outbound_socket.record(record_file, self.max_length,
                             self.silence_threshold, self.timeout,
                             self.finish_on_key)
         event = outbound_socket._action_queue.get()
-        outbound_socket.log.info("Recording Completed")
+        outbound_socket.log.info("Record Done")
         outbound_socket.stop_dtmf()
 
 
@@ -758,7 +760,7 @@ class RecordSession(Verb):
                                 outbound_socket.call_uuid)
         record_file = "%s%s%s.%s" % (self.file_path, filename, self.format)
         outbound_socket.record_session("%s%s" % (self.file_path, filename))
-        outbound_socket.log.info("Call Recording command executed")
+        outbound_socket.log.info("RecordSession Executed")
 
 
 class Redirect(Verb):
@@ -806,13 +808,13 @@ class Reject(Verb):
         elif reason == 'busy':
             self.reason = 'USER_BUSY'
         else:
-            raise RESTAttributeException("Wrong Attribute Value for %s"
+            raise RESTAttributeException("Reject Wrong Attribute Value for %s"
                                                                 % self.name)
 
     def run(self, outbound_socket):
         outbound_socket.hangup(self.reason)
-        outbound_socket.log.info("Call Rejection Done with reason: %s"
-                                                                % self.reason)
+        outbound_socket.log.info("Reject Done with reason: %s" \
+                                                % self.reason)
 
 
 class Say(Verb):
@@ -845,7 +847,6 @@ class Say(Verb):
     def __init__(self):
         Verb.__init__(self)
         self.loop_times = 1
-        self.text = ""
         self.language = ""
         self.sound_file_path = ""
         self.engine = ""
@@ -873,8 +874,6 @@ class Say(Verb):
             self.loop_times = 999
         else:
             self.loop_times = loop
-        # Pull out the text within the element
-        self.text = element.text.strip()
 
     def run(self, outbound_socket):
         if self.type and self.method:
@@ -883,14 +882,14 @@ class Say(Verb):
         else:
             say_args = "%s|%s|%s" %(self.engine, self.voice, self.text)
 
-        for i in range(0, self.loop_times):
+        for i in range(self.loop_times):
             if self.type and self.method:
                 outbound_socket.say(say_args)
             else:
                 outbound_socket.speak(say_args)
             event = outbound_socket._action_queue.get()
             # Log Speak execute response
-            outbound_socket.log.info("Speak finished %s times - (%s)" \
+            outbound_socket.log.info("Say finished %s times - (%s)" \
                         % ((i+1), str(event.get_header('Application-Response'))))
 
 
@@ -911,19 +910,19 @@ class ScheduleHangup(Verb):
         try:
             self.time = int(self.time)
         except ValueError:
-            outbound_socket.log.info("Scheduled for Hangup Failed: bad value for 'time'")
+            outbound_socket.log.error("ScheduleHangup Failed: bad value for 'time'")
             return
         if self.time > 0:
             res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
                                       % (self.time, outbound_socket.get_channel_unique_id()))
             if res.is_success():
-                outbound_socket.log.info("Scheduled for Hangup after %s secs" \
+                outbound_socket.log.info("ScheduleHangup after %s secs" \
                                                                     % self.time)
                 return
             else:
-                outbound_socket.log.error("Scheduled for Hangup Failed: %s" % str(res.get_response()))
+                outbound_socket.log.error("ScheduleHangup Failed: %s" % str(res.get_response()))
                 return
-        outbound_socket.log.info("Scheduled for Hangup Failed: 'time' must be > 0 !")
+        outbound_socket.log.error("ScheduleHangup Failed: 'time' must be > 0 !")
         return
 
 

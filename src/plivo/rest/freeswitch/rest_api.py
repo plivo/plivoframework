@@ -118,8 +118,6 @@ class PlivoRestApi(object):
             time_limit = 0
         if time_limit > 0:
             sched_hangup_id = str(uuid.uuid1())
-            #args_list.append("execute_on_answer_2='sched_hangup +%s ALLOTTED_TIMEOUT'" \
-            #                                                    % time_limit)
             args_list.append("api_on_answer='sched_api %s +%d hupall ALLOTTED_TIMEOUT request_uuid %s'" \
                                                 % (sched_hangup_id, time_limit, request_uuid))
             args_list.append("sched_hangup_id=%s" % sched_hangup_id)
@@ -457,7 +455,7 @@ class PlivoRestApi(object):
         """
         msg = "All Calls Hungup"
         self._rest_inbound_socket.hangup_all_calls()
-        return flask.jsonify(Success="Success", Message=msg)
+        return flask.jsonify(Success=True, Message=msg)
 
     @auth_protect
     def schedule_hangup(self):
