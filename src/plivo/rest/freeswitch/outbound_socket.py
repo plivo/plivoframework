@@ -188,9 +188,16 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                   'aleg_uuid': aleg_uuid,
                   'aleg_request_uuid': aleg_request_uuid
         }
-        self.log.debug("Processing call ...")
+        # Look for a sched_hangup_id and add it to params if found
+        self.sched_hangup_id = self.get_var('sched_hangup_id')
+        if self.sched_hangup_id:
+            self.params['sched_hangup_id'] = self.sched_hangup_id
+        # Remove sched_hangup_id from channel vars
+        self.unset("sched_hangup_id")
+        # Run application
+        self.log.debug("Processing Call")
         self.process_call()
-        self.log.debug("Processing call done")
+        self.log.debug("Processing Call Done")
 
     def process_call(self):
         """
@@ -210,10 +217,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.error(str(e))
                 [self.log.error(line) for line in \
                                         traceback.format_exc().splitlines()]
-                self.log.error("xml error")
+                self.log.error("XML error")
                 #self.hangup(cause="DESTINATION_OUT_OF_ORDER")
         else:
-            self.log.warn("No xml response")
+            self.log.warn("No XML Response")
             #self.hangup()
 
     def fetch_xml(self):

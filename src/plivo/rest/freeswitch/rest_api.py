@@ -10,7 +10,7 @@ from flask import request
 from werkzeug.exceptions import Unauthorized
 
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
-                                                                get_post_param
+                                                            get_post_param
 
 def auth_protect(decorated_func):
     def wrapper(obj):
@@ -75,13 +75,14 @@ class PlivoRestApi(object):
         """
         return message
 
-    def prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
+    def _prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
                         gw_timeouts, gw_retries, answer_url, hangup_url,
                         ring_url, send_digits, time_limit, hangup_on_ring):
 
         gw_retry_list = []
         gw_codec_list = []
         gw_timeout_list = []
+        sched_hangup_id = None
         # don't allow "|" and "," in 'to' (destination) to avoid call injection
         to = re.split(',|\|', to)[0]
         # build gateways list removing trailing '/' character
@@ -109,11 +110,19 @@ class PlivoRestApi(object):
                 args_list.append("execute_on_ring='sched_hangup +%s ORIGINATOR_CANCEL'" \
                                                                 % hangup_on_ring)
         if send_digits:
-            args_list.append("execute_on_answer_1='send_dtmf %s'" \
+            args_list.append("execute_on_answer='send_dtmf %s'" \
                                                 % send_digits)
-        if time_limit:
-            args_list.append("execute_on_answer_2='sched_hangup +%s alloted_timeout'" \
-                                                                % time_limit)
+        try:
+            time_limit = int(time_limit)
+        except ValueError:
+            time_limit = 0
+        if time_limit > 0:
+            sched_hangup_id = str(uuid.uuid1())
+            #args_list.append("execute_on_answer_2='sched_hangup +%s ALLOTTED_TIMEOUT'" \
+            #                                                    % time_limit)
+            args_list.append("api_on_answer='sched_api %s +%d hupall ALLOTTED_TIMEOUT request_uuid %s'" \
+                                                % (sched_hangup_id, time_limit, request_uuid))
+            args_list.append("sched_hangup_id=%s" % sched_hangup_id)
 
         args_str = ','.join(args_list)
         originate_str = ''.join(["originate {", args_str])
@@ -152,10 +161,10 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
-        HangUpUrl: A URL that Plivo will notify to, with POST params when
+        HangUpUrl: An URL that Plivo will notify to, with POST params when
         calls ends
 
-        RingUrl:A URL that Plivo will notify to, with POST params when
+        RingUrl: An URL that Plivo will notify to, with POST params when
         calls starts ringing
 
         OriginateDialString: Additional Originate dialstring to be executed
@@ -179,7 +188,7 @@ class PlivoRestApi(object):
         character waits for 1.0 seconds instead of sending a digit.
         """
         msg = ""
-        result = "Error"
+        result = False
         request_uuid = ""
 
         caller_id = get_post_param(request, 'From')
@@ -207,16 +216,16 @@ class PlivoRestApi(object):
                 time_limit = get_post_param(request, 'TimeLimit')
                 hangup_on_ring = get_post_param(request, 'HangupOnRing')
 
-                request_uuid = self.prepare_request(caller_id, to,
+                request_uuid = self._prepare_request(caller_id, to,
                             extra_dial_string, gw, gw_codecs, gw_timeouts,
                             gw_retries, answer_url, hangup_url, ring_url,
                             send_digits, time_limit, hangup_on_ring)
 
                 self._rest_inbound_socket.spawn_originate(request_uuid)
                 msg = "Call Request Executed"
-                result = "Success"
+                result = True
 
-        return flask.jsonify(Result=result, Message=msg,
+        return flask.jsonify(Success=result, Message=msg,
                                                     RequestUUID=request_uuid)
 
     @auth_protect
@@ -270,7 +279,7 @@ class PlivoRestApi(object):
         digit.
         """
         msg = ""
-        result = "Error"
+        result = False
         request_uuid = ""
 
         caller_id = get_post_param(request, 'From')
@@ -352,19 +361,17 @@ class PlivoRestApi(object):
 
                 self._rest_inbound_socket.bulk_originate(request_uuid_list)
                 msg = "Bulk Call Requests Executed"
-                result = "Success"
+                result = True
 
-        return flask.jsonify(Result=result, Message=msg,
+        return flask.jsonify(Success=result, Message=msg,
                                         RequestUUID=str(request_uuid_list))
 
     @auth_protect
-    def modify_call(self):
-        """Modifying Live Calls
-        Realtime call modification allows you to interrupt an in-progress
-        call and terminate it. This is useful for any application where you
-        want to asynchronously change the behavior of a running call.
-        For example: forcing hangup, etc.
-
+    def hangup_call(self):
+        """Hangup Call
+        Realtime call hangup allows you to interrupt an in-progress
+        call and terminate it. 
+        
         To terminate a live call, you make an HTTP POST request to a
         resource URI.
 
@@ -373,50 +380,76 @@ class PlivoRestApi(object):
         The following parameters are available for you to POST when modifying
         a phone call:
 
-        Call ID Parameters: One of these parameters must be supplied
+        Call ID Parameters: One of these parameters must be supplied :
+
         CallUUID: Unique Call ID to which the action should occur to.
 
         RequestUUID: Unique request ID which was given on a API response. This
-        should be used for calls which are currently in progress and have no
-        CallUUID.
-
-        Optional
-        Status: Specifying 'completed' will attempt to hang up the call.
-
-        Not Implemented
-        Url: A valid URL that returns RESTXML. Plivo will immediately fetch
-        the XML and continue the call as the new XML. (Will be added in V2)
+        should be used for calls which are currently in progress and have no CallUUID.
         """
         msg = ""
-        result = "Error"
+        result = False
 
-        status = get_post_param(request, 'Status')
         call_uuid = get_post_param(request, 'CallUUID')
         request_uuid= get_post_param(request, 'RequestUUID')
-        new_xml_url = get_post_param(request, 'URL')
 
         if not call_uuid and not request_uuid:
             msg = "One of the Call ID Parameters must be present"
+            return flask.jsonify(Success=result, Message=msg)
         elif call_uuid and request_uuid:
             msg = "Both Call ID Parameters cannot be present"
-        elif not status and not new_xml_url:
-            msg = "One of the optional Parameters must be present"
-        elif status and new_xml_url:
-            msg = "Both the optional Parameters cannot be present"
+            return flask.jsonify(Success=result, Message=msg)
+        res = self._rest_inbound_socket.hangup_call(call_uuid, request_uuid)
+        if res:
+            msg = "Hangup Call Executed"
+            result = True
         else:
-            if new_xml_url and not is_valid_url(new_xml_url):
-                msg = "URL is not Valid"
-            elif new_xml_url and is_valid_url(new_xml_url) and not call_uuid:
-                    msg = "Call UUID must be present with URL"
-            elif status and status != 'completed':
-                msg = "Invalid Value for Status"
-            else:
-                self._rest_inbound_socket.modify_call(new_xml_url, status,
-                                                    call_uuid, request_uuid)
-                msg = "Modify Request Executed"
-                result = "Success"
+            msg = "Hangup Call Failed"
+        return flask.jsonify(Success=result, Message=msg)
 
-        return flask.jsonify(Result=result, Message=msg, RequestUUID="")
+    @auth_protect
+    def transfer_call(self):
+        """Transfer Call
+        Realtime call transfer allows you to interrupt an in-progress
+        call and place it another scenario. 
+        
+        To transfer a live call, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        The following parameters are available for you to POST when transfering
+        a phone call:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        URL: A valid URL that returns RESTXML. Plivo will immediately fetch
+              the XML and continue the call as the new XML.
+        """
+        msg = ""
+        result = False
+
+        call_uuid = get_post_param(request, 'CallUUID')
+        new_xml_url = get_post_param(request, 'URL')
+
+        if not call_uuid:
+            msg = "CallUUID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not new_xml_url:
+            msg = "URL Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not is_valid_url(new_xml_url):
+            msg = "URL is not Valid"
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Call UUID must be present with URL"
+        res = self._rest_inbound_socket.transfer_call(new_xml_url, status,
+                                                      call_uuid, request_uuid)
+        if res:
+            msg = "Transfer Call Executed"
+            result = True
+        else:
+            msg = "Transfer Call Failed"
+        return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
     def hangup_all_calls(self):
@@ -424,4 +457,86 @@ class PlivoRestApi(object):
         """
         msg = "All Calls Hungup"
         self._rest_inbound_socket.hangup_all_calls()
-        return flask.jsonify(Result="Success", Message=msg, RequestUUID="")
+        return flask.jsonify(Success="Success", Message=msg)
+
+    @auth_protect
+    def sched_hangup(self):
+        """Schedule Call Hangup
+        Schedule an hangup on a call in the future.
+        
+        To schedule a hangup, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        The following parameters are available for you to POST when transfering
+        a phone call:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        Time: When hanging up call in seconds.
+
+
+        Returns a scheduled task with id SchedHangupId that you can use to cancel hangup.
+        """
+
+        msg = ""
+        result = False
+        sched_id = ""
+
+        time = get_post_param(request, 'Time')
+        call_uuid = get_post_param(request, 'CallUUID')
+
+        if not call_uuid:
+            msg = "CallUUID Parameter must be present"
+        elif not time:
+            msg = "Time Parameter must be present"
+        else:
+            try:
+                time = int(time)
+                if time <= 0:
+                    msg = "Time Parameter must be > 0 !"
+                else:
+                    sched_id = str(uuid.uuid1())
+                    res = self._rest_inbound_socket.api("sched_api %s +%d uuid_kill %s ALLOTTED_TIMEOUT" \
+                                                        % (sched_id, time, call_uuid))
+                    if res.is_success():
+                        msg = "Scheduled Hangup Done with SchedHangupId %s" % sched_id
+                        result = True
+                    else:
+                        msg = "Scheduled Hangup Failed: %s" % res.get_response()
+            except ValueError:
+                msg = "Invalid Time Parameter !"
+        return flask.jsonify(Success=result, Message=msg, SchedHangupId=sched_id)
+
+    @auth_protect
+    def sched_cancel_hangup(self):
+        """Cancel a Scheduled Call Hangup
+        Unschedule an hangup on a call.
+        
+        To unschedule a hangup, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        The following parameters are available for you to POST when transfering
+        a phone call:
+
+        SchedHangupId: id of the scheduled hangup.
+        """
+        msg = ""
+        result = False
+
+        sched_id = get_post_param(request, 'SchedHangupId')
+        if not sched_id:
+            msg = "Id Parameter must be present"
+        else:
+            self._rest_inbound_socket.api("sched_del %s" % sched_id)
+            if res.is_success():
+                msg = "Scheduled Hangup Canceled"
+                result = True
+            else:
+                msg = "Scheduled Hangup Cancelation Failed: %s" % res.get_response()
+        return flask.jsonify(Success=result, Message=msg)
+
+
