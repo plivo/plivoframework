@@ -2,9 +2,7 @@
 
 > Rapid Communication Application Development Framework
 
->**Authors:** Michael Ricordeau (tamiel) and Venky (bevenky)
-
->**Contact:** contact@plivo.org
+>**[Plivo Team](http://www.plivo.org/about/)**
 
 
 ##About
@@ -18,11 +16,11 @@ Currently, it supports FreeSWITCH. Future support is planned for XMPP, Asterisk 
 
 ## Documentation
 
-* [Plivo Documentation](http://www.plivo.org/documentation.html)
+* [Plivo Documentation](http://www.plivo.org/documentation/)
 
 
 ## License
 
-Copyright (c) 2011 Plivo Team <contact@plivo.org>
+Copyright (c) 2011 Plivo Team <hello@plivo.org>
 
 Plivo is distributed under the terms of the Mozilla Public License Version 1.1, see `LICENSE`.
