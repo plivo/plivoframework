@@ -148,7 +148,6 @@ class HTTPRequest:
         # compute signature and compare signatures
         signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
                                                             digest()).strip()
-        #authstring = authstring.replace('\n', '')
         request.add_header("X-Plivo-Signature", "%s" % signature)
         return request
 
@@ -156,11 +155,6 @@ class HTTPRequest:
         if method and method not in ['GET', 'POST']:
             raise NotImplementedError('HTTP %s method not implemented'
                                                                     % method)
-
         request = self._prepare_http_request(uri, params, method)
-        try:
-            response = urllib2.urlopen(request).read()
-        except Exception, e:
-            response = ""
-
+        response = urllib2.urlopen(request).read()
         return response
