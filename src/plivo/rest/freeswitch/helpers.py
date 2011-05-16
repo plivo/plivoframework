@@ -3,12 +3,15 @@
 
 import base64
 import ConfigParser
+from hashlib import sha1
+import hmac
 import httplib
 import os.path
 import re
 import urllib
 import urllib2
 import urlparse
+
 
 from werkzeug.datastructures import MultiDict
 
@@ -136,11 +139,17 @@ class HTTPRequest:
             if method and (method == 'DELETE' or method == 'PUT'):
                 request.http_method = method
 
-        authstring = base64.encodestring('%s:%s' % (self.auth_id,
-                                                            self.auth_token))
-        authstring = authstring.replace('\n', '')
-        request.add_header("Authorization", "Basic %s" % authstring)
+        # append the POST variables sorted by key to the uri
+        s = uri
+        if len(params) > 0:
+            for k, v in sorted(params.items()):
+                s += k + v
 
+        # compute signature and compare signatures
+        signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
+                                                            digest()).strip()
+        #authstring = authstring.replace('\n', '')
+        request.add_header("X-Plivo-Signature", "%s" % signature)
         return request
 
     def fetch_response(self, uri, params, method='POST'):
