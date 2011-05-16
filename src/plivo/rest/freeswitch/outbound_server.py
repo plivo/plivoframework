@@ -20,8 +20,8 @@ from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 
 
 """
-PlivoOutboundServer is our event_socket server listening for connection 
-with Freeswitch. 
+PlivoOutboundServer is our event_socket server listening for connection
+with Freeswitch.
 
 This server is listening by default on 127.0.0.1:8084
 
@@ -46,6 +46,10 @@ class PlivoOutboundServer(OutboundServer):
         fs_port = int(fs_port)
         self.default_answer_url = helpers.get_conf_value(self._config,
                                         'freeswitch', 'DEFAULT_ANSWER_URL')
+        self.auth_id = helpers.get_conf_value(self._config,
+                                        'rest_server', 'AUTH_ID')
+        self.auth_token = helpers.get_conf_value(self._config,
+                                        'rest_server', 'AUTH_TOKEN')
         #This is where we define the connection with the
         #Plivo XML grammar Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
@@ -62,7 +66,8 @@ class PlivoOutboundServer(OutboundServer):
         request_id = self._get_request_id()
         self.log.info("(%d) New request from %s" % (request_id, str(address)))
         self._handle_class(socket, address, self.log, self.default_answer_url,
-                           filter=self._filter, request_id=request_id)
+                           filter=self._filter, request_id=request_id,
+                           auth_id=self.auth_id, auth_token= self.auth_token)
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
     def create_logger(self):

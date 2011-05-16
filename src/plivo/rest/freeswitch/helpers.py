@@ -100,7 +100,7 @@ class HTTPUrlRequest(urllib2.Request):
 class HTTPRequest:
     """Helper class for preparing HTTP requests.
     """
-    def __init__(self, id ='', token =''):
+    def __init__(self, auth_id ='', auth_token =''):
         """initialize a object
 
         id: Plivo SID/ID
@@ -108,8 +108,8 @@ class HTTPRequest:
 
         returns a HTTPRequest object
         """
-        self.id = id
-        self.token = token
+        self.auth_id = auth_id
+        self.auth_token = auth_token
         self.opener = None
 
     def _build_get_uri(self, uri, params):
@@ -136,7 +136,8 @@ class HTTPRequest:
             if method and (method == 'DELETE' or method == 'PUT'):
                 request.http_method = method
 
-        authstring = base64.encodestring('%s:%s' % (self.id, self.token))
+        authstring = base64.encodestring('%s:%s' % (self.auth_id,
+                                                            self.auth_token))
         authstring = authstring.replace('\n', '')
         request.add_header("Authorization", "Basic %s" % authstring)
 

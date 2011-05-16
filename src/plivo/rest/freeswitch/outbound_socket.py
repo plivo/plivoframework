@@ -63,7 +63,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     """
 
     def __init__(self, socket, address, log, default_answer_url, filter=None,
-                                                                request_id=0):
+                                    request_id=0, auth_id="", auth_token=""):
         self._request_id = request_id
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
@@ -78,6 +78,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.answered = False
         self._hangup_cause = ''
         self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial']
+        self.auth_id = auth_id
+        self.auth_token = auth_token
         OutboundEventSocket.__init__(self, socket, address, filter)
 
     def _protocol_send(self, command, args=""):
@@ -239,7 +241,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         The url result expected is an XML content which will be stored in
         xml_response
         """
-        http_obj = HTTPRequest('111', '111')
+        http_obj = HTTPRequest(self.auth_id, self.auth_token)
         self.xml_response = http_obj.fetch_response(self.answer_url,
                                                         self.params, method)
         self.log.info("Requested to %s with %s" % (self.answer_url,
