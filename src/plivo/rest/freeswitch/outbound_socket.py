@@ -204,8 +204,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         Parse the XML and Execute it
         """
         for x in range(MAX_REDIRECT):
+            fetch_method = 'POST'
             try:
-                self.fetch_xml()
+                self.fetch_xml(fetch_method)
                 if not self.xml_response:
                     self.log.warn("No XML Response")
                     return
@@ -215,6 +216,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             except RESTRedirectException, redirect:
                 # Set Answer URL to Redirect URL
                 self.answer_url = redirect.get_url()
+                fetch_method = redirect.method()
                 # Reset all the previous response and grammar
                 self.xml_response = ""
                 self.parsed_grammar = []

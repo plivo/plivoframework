@@ -23,8 +23,12 @@ class RESTDownloadException(Exception):
 
 
 class RESTRedirectException(Exception):
-    def __init__(self, url=None):
+    def __init__(self, url=None, method=None):
         self.url = url
+        self.method = method
 
     def get_url(self):
         return self.url
+
+    def get_method(self):
+        return self.method

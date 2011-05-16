@@ -132,8 +132,8 @@ class Grammar(object):
         else:
             self.text = text.strip()
 
-    def fetch_rest_xml(self, url):
-        raise RESTRedirectException(url)
+    def fetch_rest_xml(self, url, method='POST'):
+        raise RESTRedirectException(url, method)
 
 
 class Conference(Grammar):
