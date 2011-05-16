@@ -332,7 +332,7 @@ class Dial(Grammar):
         outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
         # Call url action
         if self.action and is_valid_url(self.action):
-            self.fetch_rest_xml(self.action)
+            self.fetch_rest_xml(self.action, self.method)
 
 
 class GetDigits(Grammar):
@@ -457,7 +457,7 @@ class GetDigits(Grammar):
         outbound_socket.params.update({'Digits': digits})
         if digits is not None and self.action:
             # Call Parent Class Function
-            self.fetch_rest_xml(self.action)
+            self.fetch_rest_xml(self.action, self.method)
 
 
 class Hangup(Grammar):
@@ -779,7 +779,7 @@ class Redirect(Grammar):
         self.url = url
 
     def run(self, outbound_socket):
-        self.fetch_rest_xml(self.url)
+        self.fetch_rest_xml(self.url, self.method)
 
 
 class Reject(Grammar):
