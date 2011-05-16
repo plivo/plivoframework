@@ -5,8 +5,6 @@ from gevent import monkey
 monkey.patch_all()
 
 import traceback
-import urllib
-import urllib2
 try:
     import xml.etree.cElementTree as etree
 except ImportError:
@@ -16,6 +14,7 @@ import gevent
 import gevent.queue
 
 from plivo.core.freeswitch.eventtypes import Event
+from plivo.rest.freeswitch.helpers import HTTPRequest
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import grammar
 from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
@@ -63,7 +62,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     bridge between Event_Socket and the web application
     """
 
-    def __init__(self, socket, address, log, default_answer_url, filter=None, request_id=0):
+    def __init__(self, socket, address, log, default_answer_url, filter=None,
+                                                                request_id=0):
         self._request_id = request_id
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
@@ -231,21 +231,18 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.error("XML error")
                 return
 
-    def fetch_xml(self):
+    def fetch_xml(self, method='POST'):
         """
-        This method will retrieve the xml from the url answer_url
+        This method will retrieve the xml from the answer_url
         The url result expected is an XML content which will be stored in
         xml_response
         """
-        encoded_params = urllib.urlencode(self.params)
-        request = urllib2.Request(self.answer_url, encoded_params)
-        try:
-            self.xml_response = urllib2.urlopen(request).read()
-            self.log.info("Posted to %s with %s" % (self.answer_url,
+        http_obj = HTTPRequest('111', '111')
+        self.xml_response = http_obj.fetch_response(self.answer_url,
+                                                        self.params, method)
+        self.log.info("Requested to %s with %s" % (self.answer_url,
                                                                 self.params))
-        except Exception, e:
-            self.log.error("Post to %s with %s --Error: %s" \
-                                        % (self.answer_url, self.params, e))
+
 
     def lex_xml(self):
         """
