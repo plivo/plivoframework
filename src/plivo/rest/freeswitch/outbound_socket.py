@@ -61,9 +61,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     The instance requests for a XML grammar set to execute the call and acts as a
     bridge between Event_Socket and the web application
     """
-
-    def __init__(self, socket, address, log, default_answer_url, filter=None,
-                                    request_id=0, auth_id="", auth_token=""):
+    def __init__(self, socket, address, log, 
+                 default_answer_url=None, 
+                 default_hangup_url=None,
+                 auth_id="",
+                 auth_token="",
+                 request_id=0,
+                 filter=None): 
         self._request_id = request_id
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
@@ -71,10 +75,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.parsed_grammar = []
         self.lexed_xml_response = []
         self.answer_url = ""
+        self.hangup_url = ""
         self.direction = ""
         self.params = None
         self._action_queue = gevent.queue.Queue()
         self.default_answer_url = default_answer_url
+        self.default_hangup_url = default_hangup_url
         self.answered = False
         self._hangup_cause = ''
         self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial']
@@ -126,11 +132,29 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self._hangup_cause = event['Hangup-Cause']
         self.log.info('Event: channel %s has hung up (%s)' %
                       (self.get_channel_unique_id(), self._hangup_cause))
+        if self.hangup_url:
+            hangup_url = self.hangup_url
+        elif self.default_hangup_url:
+            hangup_url = self.default_hangup_url
+        if hangup_url:
+            params = {
+                  'call_uuid': self.call_uuid,
+                  'reason': self._hangup_cause
+            }
+            encoded_params = urllib.urlencode(params)
+            request = urllib2.Request(hangup_url, encoded_params)
+            try:
+                self.xml_response = urllib2.urlopen(request).read()
+                self.log.info("Posted to %s with %s" % (hangup_url,
+                                                        params))
+            except Exception, e:
+                self.log.error("Post to %s with %s --Error: %s" \
+                                        % (hangup_url, params, e))
 
     def on_channel_hangup_complete(self, event):
         if not self._hangup_cause:
             self._hangup_cause = event['Hangup-Cause']
-        self.log.info('Event: channel %s hangup complete (%s)' %
+        self.log.info('Event: channel %s hangup completed (%s)' %
                       (self.get_channel_unique_id(), self._hangup_cause))
 
     def has_hangup(self):
@@ -142,11 +166,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         return self._hangup_cause
 
     def disconnect(self):
-        self.log.debug("Releasing connection ...")
+        self.log.debug("Releasing Connection ...")
         super(PlivoOutboundEventSocket, self).disconnect()
-        # prevent command to be stuck while waiting response
+        # Prevent command to be stuck while waiting response
         self._action_queue.put_nowait(Event())
-        self.log.debug("Releasing connection done")
+        self.log.debug("Releasing Connection Done")
 
     def run(self):
         self.resume()
@@ -162,13 +186,18 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         called_no = channel.get_header('Caller-Destination-Number')
         from_no = channel.get_header('Caller-Caller-ID-Number')
         self.direction = channel.get_header('Call-Direction')
-
         aleg_uuid = ""
         aleg_request_uuid = ""
+
         if self.direction == 'outbound':
+            # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
             aleg_request_uuid = channel.get_header('variable_request_uuid')
             self.answer_url = channel.get_header('variable_answer_url')
+            sched_hangup_id = channel.get_header('variable_sched_hangup_id')
+            # Don't post hangup in outbound direction
+            self.default_hangup_url = None
+            self.hangup_url = None
         else:
             # Look for an answer url in order below :
             #  get transfer_url from channel variable
@@ -179,6 +208,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.answer_url = self.get_var('answer_url')
             if not self.answer_url:
                 self.answer_url = self.default_answer_url
+            # Look for a sched_hangup_id
+            sched_hangup_id = self.get_var('sched_hangup_id')
+            # Look for hangup_url
+            self.hangup_url = self.get_var('hangup_url')
+
+        if not sched_hangup_id:
+            sched_hangup_id = ""
 
         # Post to ANSWER URL and get XML Response
         self.params = {
@@ -187,14 +223,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                   'from_no': from_no,
                   'direction': self.direction,
                   'aleg_uuid': aleg_uuid,
-                  'aleg_request_uuid': aleg_request_uuid
+                  'aleg_request_uuid': aleg_request_uuid,
+                  'sched_hangup_id': sched_hangup_id
         }
-        # Look for a sched_hangup_id and add it to params if found
-        self.sched_hangup_id = self.get_var('sched_hangup_id')
-        if self.sched_hangup_id:
-            self.params['sched_hangup_id'] = self.sched_hangup_id
         # Remove sched_hangup_id from channel vars
-        self.unset("sched_hangup_id")
+        if sched_hangup_id:
+            self.unset("sched_hangup_id")
         # Run application
         self.log.debug("Processing Call")
         self.process_call()
@@ -206,9 +240,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         Parse the XML and Execute it
         """
         for x in range(MAX_REDIRECT):
-            fetch_method = 'POST'
             try:
-                self.fetch_xml(fetch_method)
+                if self.has_hangup():
+                    self.log.warn("Channel has hung up, breaking Processing Call")
+                    return
+                self.fetch_xml(method='POST')
                 if not self.xml_response:
                     self.log.warn("No XML Response")
                     return
@@ -225,15 +261,17 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.lexed_xml_response = []
                 self.log.info("Redirecting to %s to fetch RESTXML" \
                                             % self.answer_url)
+                gevent.sleep(0.010)
                 continue
             except Exception, e:
-                # if error occurs during xml parsing
+                # If error occurs during xml parsing
                 # log exception and break
                 self.log.error(str(e))
                 [ self.log.error(line) for line in \
                             traceback.format_exc().splitlines() ]
                 self.log.error("XML error")
                 return
+        self.log.warn("Max Redirect reached !")
 
     def fetch_xml(self, method='POST'):
         """
@@ -247,12 +285,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.info("Requested to %s with %s" % (self.answer_url,
                                                                 self.params))
 
-
     def lex_xml(self):
         """
         Validate the XML document and make sure we recognize all Grammar
         """
-        #1. Parse XML into a doctring
+        # Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
         try:
             #convert the string into an Element instance
@@ -261,11 +298,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             raise RESTSyntaxException("Invalid RESTXML Response Syntax: %s"
                         % str(e))
 
-        # 2. Make sure the document has a <Response> root
+        # Make sure the document has a <Response> root
         if doc.tag != "Response":
             raise RESTFormatException("No Response Tag Present")
 
-        # 3. Make sure we recognize all the Grammar in the xml
+        # Make sure we recognize all the Grammar in the xml
         for element in doc:
             invalid_grammar = []
             if not hasattr(grammar, element.tag):
@@ -311,7 +348,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def execute_xml(self):
         for grammar_element in self.parsed_grammar:
             if hasattr(grammar, "prepare"):
-                # :TODO Prepare grammar concurrently
+                # TODO Prepare grammar concurrently
                 grammar_element.prepare()
             # Check if it's an inbound call
             if self.direction == 'inbound':

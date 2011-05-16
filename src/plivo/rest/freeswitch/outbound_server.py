@@ -50,10 +50,12 @@ class PlivoOutboundServer(OutboundServer):
                                         'rest_server', 'AUTH_ID')
         self.auth_token = helpers.get_conf_value(self._config,
                                         'rest_server', 'AUTH_TOKEN')
-        #This is where we define the connection with the
-        #Plivo XML grammar Processor
+        self.default_hangup_url = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'DEFAULT_HANGUP_URL')
+        # This is where we define the connection with the
+        # Plivo XML grammar Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
-                                            PlivoOutboundEventSocket, filter)
+                                        PlivoOutboundEventSocket, filter)
 
     def _get_request_id(self):
         try:
@@ -65,9 +67,13 @@ class PlivoOutboundServer(OutboundServer):
     def do_handle(self, socket, address):
         request_id = self._get_request_id()
         self.log.info("(%d) New request from %s" % (request_id, str(address)))
-        self._handle_class(socket, address, self.log, self.default_answer_url,
-                           filter=self._filter, request_id=request_id,
-                           auth_id=self.auth_id, auth_token= self.auth_token)
+        self._handle_class(socket, address, self.log, 
+                           default_answer_url=self.default_answer_url,
+                           default_hangup_url=self.default_hangup_url,
+                           auth_id=self.auth_id, 
+                           auth_token=self.auth_token,
+                           request_id=request_id,
+                           filter=self._filter)
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
     def create_logger(self):
