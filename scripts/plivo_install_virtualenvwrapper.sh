@@ -12,10 +12,6 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 PLIVO_ENV=plivo
 REAL_PATH=$VIRTUALENV_PATH/$PLIVO_ENV
 
-# Set full path
-
-
-
 # Check if the Virtual Env Directory Exist
 if [ $1 ] && [ ! -d "$1" ] ; then
     echo ""
@@ -28,12 +24,9 @@ elif [ $1 ] ; then
     REAL_PATH=$VIRTUALENV_PATH'plivo'
 fi
 
-echo "VIRTUALENV_PATH="
-echo $VIRTUALENV_PATH
-echo "PLIVO_ENV="
-echo $PLIVO_ENV
-echo "REAL_PATH="
-echo $REAL_PATH
+echo "VIRTUALENV_PATH=$VIRTUALENV_PATH"
+echo "PLIVO_ENV=$PLIVO_ENV"
+echo "REAL_PATH=$REAL_PATH"
 
 
 [ -d $PLIVO_ENV ] && echo "Abort. $PLIVO_ENV already exists !" && exit 1
@@ -103,9 +96,8 @@ workon $PLIVO_ENV
 
 pip install plivo
 
-#mkdir -p $REAL_PATH/etc/plivo &>/dev/null
-#wget $PLIVO_CONF_PATH
-#mv default.conf $REAL_PATH/etc/plivo/
+mkdir -p $REAL_PATH/etc/plivo &>/dev/null
+wget --no-check-certificate $PLIVO_CONF_PATH -O $REAL_PATH/etc/plivo/default.conf
 $REAL_PATH/bin/plivo-postinstall &>/dev/null
 
 

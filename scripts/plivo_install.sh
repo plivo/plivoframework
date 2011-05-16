@@ -5,7 +5,7 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 
-PLIVO_CONF_PATH=https://github.com/miglu/plivo/blob/master/src/config/default.conf
+PLIVO_CONF_PATH=https://github.com/miglu/plivo/raw/master/src/config/default.conf
 
 #####################################################
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
@@ -77,9 +77,8 @@ source $REAL_PATH/bin/activate
 
 pip install plivo
 
-#mkdir -p $REAL_PATH/etc/plivo &>/dev/null
-#wget $PLIVO_CONF_PATH
-#mv default.conf $REAL_PATH/etc/plivo/
+mkdir -p $REAL_PATH/etc/plivo &>/dev/null
+wget --no-check-certificate $PLIVO_CONF_PATH -O $REAL_PATH/etc/plivo/default.conf
 $REAL_PATH/bin/plivo-postinstall &>/dev/null
 
 
