@@ -136,8 +136,8 @@ class PlivoRestApi(object):
         return request_uuid
 
     @auth_protect
-    def calls(self):
-        """Making Outbound Calls
+    def call(self):
+        """Make Outbound Call
         Allow initiating outbound calls via the REST API. To make an
         outbound call, make an HTTP POST request to the resource URI.
 
@@ -228,7 +228,7 @@ class PlivoRestApi(object):
 
     @auth_protect
     def bulk_calls(self):
-        """Making Bulk Outbound Calls in one request
+        """Make Bulk Outbound Calls in one request
         Allow initiating bulk outbound calls via the REST API. To make a
         bulk outbound call, make an HTTP POST request to the resource URI.
 
