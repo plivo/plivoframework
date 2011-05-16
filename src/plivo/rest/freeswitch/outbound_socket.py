@@ -216,7 +216,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             except RESTRedirectException, redirect:
                 # Set Answer URL to Redirect URL
                 self.answer_url = redirect.get_url()
-                fetch_method = redirect.method()
+                fetch_method = redirect.get_method()
                 # Reset all the previous response and grammar
                 self.xml_response = ""
                 self.parsed_grammar = []
