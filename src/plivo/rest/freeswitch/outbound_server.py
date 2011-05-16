@@ -46,6 +46,8 @@ class PlivoOutboundServer(OutboundServer):
         fs_port = int(fs_port)
         self.default_answer_url = helpers.get_conf_value(self._config,
                                         'freeswitch', 'DEFAULT_ANSWER_URL')
+        self.default_hangup_url = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'DEFAULT_HANGUP_URL')
         #This is where we define the connection with the
         #Plivo XML grammar Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
@@ -61,8 +63,11 @@ class PlivoOutboundServer(OutboundServer):
     def do_handle(self, socket, address):
         request_id = self._get_request_id()
         self.log.info("(%d) New request from %s" % (request_id, str(address)))
-        self._handle_class(socket, address, self.log, self.default_answer_url,
-                           filter=self._filter, request_id=request_id)
+        self._handle_class(socket, address, self.log, 
+                           default_answer_url=self.default_answer_url,
+                           default_hangup_url=self.default_hangup_url,
+                           request_id=request_id,
+                           filter=self._filter)
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
     def create_logger(self):
