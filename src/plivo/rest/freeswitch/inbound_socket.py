@@ -127,9 +127,15 @@ class RESTInboundSocket(InboundEventSocket):
     def hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
         self.log.debug("Call: %s hungup, Reason %s, Request uuid %s"
                                         % (call_uuid, reason, request_uuid))
-        del self.call_request[request_uuid]
+        try:
+            del self.call_request[request_uuid]
+        except KeyError:
+            pass
         # Check if call cleans up if no user
-        del self.calls_ring_complete[call_uuid]
+        try:
+            del self.calls_ring_complete[call_uuid]
+        except KeyError:
+            pass
         self.log.debug("Call Cleaned up")
         if hangup_url:
             params = {'request_uuid': request_uuid, 'call_uuid': call_uuid,
@@ -170,7 +176,6 @@ class RESTInboundSocket(InboundEventSocket):
                 originate_str = "%s,originate_timeout=%s" \
                                         % (originate_str, gw_timeout_list[0])
 
-            answer_url = request_params[7]
             outbound_str = "'socket:%s async full' inline" \
                                                 % (self.fs_outbound_address)
             dial_str = "%s}%s/%s %s" \
@@ -180,7 +185,7 @@ class RESTInboundSocket(InboundEventSocket):
             self.bk_jobs[job_uuid] = request_uuid
             if not job_uuid:
                 self.log.error("Calls Failed -- JobUUID not received"
-                                                                % dial_str)
+                                                            % dial_str)
             # Reduce one from the call request param lists each time
             if gw_retry_list:
                 gw_tries_done += 1

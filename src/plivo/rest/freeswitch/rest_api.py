@@ -223,8 +223,9 @@ class PlivoRestApi(object):
                 msg = "Call Request Executed"
                 result = True
 
-        return flask.jsonify(Success=result, Message=msg,
-                                                    RequestUUID=request_uuid)
+        return flask.jsonify(Success=result, 
+                             Message=msg,
+                             RequestUUID=request_uuid)
 
     @auth_protect
     def bulk_calls(self):
@@ -362,7 +363,7 @@ class PlivoRestApi(object):
                 result = True
 
         return flask.jsonify(Success=result, Message=msg,
-                                        RequestUUID=str(request_uuid_list))
+                             RequestUUID=str(request_uuid_list))
 
     @auth_protect
     def hangup_call(self):
