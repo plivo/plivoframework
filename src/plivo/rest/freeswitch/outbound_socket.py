@@ -3,6 +3,7 @@
 
 from gevent import monkey
 monkey.patch_all()
+
 import traceback
 import urllib
 import urllib2
@@ -10,14 +11,16 @@ try:
     import xml.etree.cElementTree as etree
 except ImportError:
     from xml.etree.elementtree import ElementTree as etree
+
 import gevent
 import gevent.queue
+
 from plivo.core.freeswitch.eventtypes import Event
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
-from plivo.rest.freeswitch import verbs
+from plivo.rest.freeswitch import grammar
 from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
-                                    UnrecognizedVerbException, \
+                                    UnrecognizedGrammarException, \
                                     RESTRedirectException
 
 
@@ -27,7 +30,7 @@ MAX_REDIRECT = 10000
 class RequestLogger(object):
     """
     Class RequestLogger
-    
+
     This Class allows a quick way to log a message with request ID
     """
     def __init__(self, logger, request_id=0):
@@ -53,20 +56,19 @@ class RequestLogger(object):
 
 
 class PlivoOutboundEventSocket(OutboundEventSocket):
-    """
-    Class PlivoOutboundEventSocket
-    
-    An instance of this class is created every time an incoming call is received. 
+    """Class PlivoOutboundEventSocket
+
+    An instance of this class is created every time an incoming call is received.
     The instance requests for a XML grammar set to execute the call and acts as a
     bridge between Event_Socket and the web application
     """
-    
+
     def __init__(self, socket, address, log, default_answer_url, filter=None, request_id=0):
         self._request_id = request_id
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
         self.xml_response = ""
-        self.parsed_verbs = []
+        self.parsed_grammar = []
         self.lexed_xml_response = []
         self.answer_url = ""
         self.direction = ""
@@ -75,12 +77,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.default_answer_url = default_answer_url
         self.answered = False
         self._hangup_cause = ''
-        self.no_answer_verbs = ['Pause', 'Reject', 'Preanswer', 'Dial']
+        self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial']
         OutboundEventSocket.__init__(self, socket, address, filter)
 
     def _protocol_send(self, command, args=""):
-        """
-        Access parent method _protocol_send
+        """Access parent method _protocol_send
         """
         self.log.debug("Execute: %s args='%s'" % (command, args))
         response = super(PlivoOutboundEventSocket, self)._protocol_send(
@@ -89,8 +90,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
-        """
-        Access parent method _protocol_sendmsg
+        """Access parent method _protocol_sendmsg
         """
         self.log.debug("Execute: %s args=%s, uuid='%s', lock=%s, loops=%d" \
                       % (name, str(args), uuid, str(lock), loops))
@@ -199,8 +199,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.debug("Processing Call Done")
 
     def process_call(self):
-        """
-        Method to proceed on the call
+        """Method to proceed on the call
         This will fetch the XML, validate the response
         Parse the XML and Execute it
         """
@@ -216,9 +215,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             except RESTRedirectException, redirect:
                 # Set Answer URL to Redirect URL
                 self.answer_url = redirect.get_url()
-                # Reset all the previous response and verbs
+                # Reset all the previous response and grammar
                 self.xml_response = ""
-                self.parsed_verbs = []
+                self.parsed_grammar = []
                 self.lexed_xml_response = []
                 self.log.info("Redirecting to %s to fetch RESTXML" \
                                             % self.answer_url)
@@ -250,7 +249,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def lex_xml(self):
         """
-        Validate the XML document and make sure we recognize all Verbs
+        Validate the XML document and make sure we recognize all Grammar
         """
         #1. Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
@@ -265,59 +264,60 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if doc.tag != "Response":
             raise RESTFormatException("No Response Tag Present")
 
-        # 3. Make sure we recognize all the Verbs in the xml
+        # 3. Make sure we recognize all the Grammar in the xml
         for element in doc:
-            invalid_verbs = []
-            if not hasattr(verbs, element.tag):
-                invalid_verbs.append(element.tag)
+            invalid_grammar = []
+            if not hasattr(grammar, element.tag):
+                invalid_grammar.append(element.tag)
             else:
                 self.lexed_xml_response.append(element)
-            if invalid_verbs:
-                raise UnrecognizedVerbException("Unrecognized verbs: %s"
-                                                        % invalid_verbs)
+            if invalid_grammar:
+                raise UnrecognizedGrammarException("Unrecognized Grammar: %s"
+                                                        % invalid_grammar)
 
     def parse_xml(self):
         """
-        This method will parse the XML and add the Verbs into parsed_verbs
+        This method will parse the XML and add the Grammar into parsed_grammar
         """
-        # Check all Verb names
+        # Check all Grammar element names
         for element in self.lexed_xml_response:
-            verb = getattr(verbs, str(element.tag), None)
-            verb_instance = verb()
-            verb_instance.parse_verb(element, self.answer_url)
-            self.parsed_verbs.append(verb_instance)
-            # Validate, Parse & Store the nested children inside the main verb
-            self.validate_verb(element, verb_instance)
+            grammar_element = getattr(grammar, str(element.tag), None)
+            grammar_instance = grammar_element()
+            grammar_instance.parse_grammar(element, self.answer_url)
+            self.parsed_grammar.append(grammar_instance)
+            # Validate, Parse & Store the nested children
+            # inside the main grammar element
+            self.validate_grammar(element, grammar_instance)
 
-    def validate_verb(self, element, verb_instance):
+    def validate_grammar(self, element, grammar_instance):
         children = element.getchildren()
-        if children and not verb_instance.nestables:
+        if children and not grammar_instance.nestables:
             raise RESTFormatException("%s cannot have any children!"
-                                            % verb_instance.name)
+                                            % grammar_instance.name)
         for child in children:
-            if child.tag not in verb_instance.nestables:
+            if child.tag not in grammar_instance.nestables:
                 raise RESTFormatException("%s is not nestable inside %s"
-                                            % (child, verb_instance.name))
+                                            % (child, grammar_instance.name))
             else:
-                self.parse_children(child, verb_instance)
+                self.parse_children(child, grammar_instance)
 
     def parse_children(self, child_element, parent_instance):
-        child_verb = getattr(verbs, str(child_element.tag), None)
-        child_verb_instance = child_verb()
-        child_verb_instance.parse_verb(child_element, None)
-        parent_instance.children.append(child_verb_instance)
+        child_grammar_element = getattr(grammar, str(child_element.tag), None)
+        child_grammar_instance = child_grammar_element()
+        child_grammar_instance.parse_grammar(child_element, None)
+        parent_instance.children.append(child_grammar_instance)
 
     def execute_xml(self):
-        for verb in self.parsed_verbs:
-            if hasattr(verbs, "prepare"):
-                # :TODO Prepare verbs concurrently
-                verb.prepare()
+        for grammar_element in self.parsed_grammar:
+            if hasattr(grammar, "prepare"):
+                # :TODO Prepare grammar concurrently
+                grammar_element.prepare()
             # Check if it's an inbound call
             if self.direction == 'inbound':
-                # Don't answer the call if verb is a reject, pause or pre_answer
-                # Only execute the verbs
+                # Don't answer the call if grammar is of type no answer
+                # Only execute the grammar
                 if self.answered == False and \
-                    verb.name not in self.no_answer_verbs:
+                    grammar_element.name not in self.no_answer_grammar:
                     self.answer()
                     self.answered = True
-            verb.run(self)
+            grammar_element.run(self)

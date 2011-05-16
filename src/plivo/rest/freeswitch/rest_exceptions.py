@@ -10,7 +10,7 @@ class RESTSyntaxException(Exception):
     pass
 
 
-class UnrecognizedVerbException(Exception):
+class UnrecognizedGrammarException(Exception):
     pass
 
 
@@ -28,5 +28,3 @@ class RESTRedirectException(Exception):
 
     def get_url(self):
         return self.url
-
-

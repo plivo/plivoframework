@@ -5,6 +5,7 @@ import os.path
 from datetime import datetime
 import re
 import uuid
+
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
                                                         file_exists
 from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
@@ -14,7 +15,10 @@ from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
 
 RECOGNIZED_SOUND_FORMATS = ["audio/mpeg", "audio/wav", "audio/x-wav"]
 
-VERB_DEFAULT_PARAMS = {
+GRAMMAR_DEFAULT_PARAMS = {
+        "Conference": {
+                "room": "",
+        },
         "Dial": {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
                 "method": "POST",
@@ -25,7 +29,7 @@ VERB_DEFAULT_PARAMS = {
                 "confirmKey": "",
                 "dialMusic": ""
         },
-        "Gather": {
+        "GetDigits": {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
                 "method": "POST",
                 "timeout": 5,
@@ -46,13 +50,11 @@ VERB_DEFAULT_PARAMS = {
                 #"extraDialString": DYNAMIC! MUST BE SET IN METHOD,
                 "sendDigits": "",
         },
-        "Pause": {
+        "Wait": {
                 "length": 1
         },
         "Play": {
                 "loop": 1
-        },
-        "Conference": {
         },
         "Preanswer": {
         },
@@ -78,7 +80,7 @@ VERB_DEFAULT_PARAMS = {
         "Reject": {
                 "reason": "rejected"
         },
-        "Say": {
+        "Speak": {
                 "voice": "slt",
                 "language": "en",
                 "loop": 1,
@@ -92,8 +94,8 @@ VERB_DEFAULT_PARAMS = {
     }
 
 
-class Verb(object):
-    """Abstract Verb Class to be inherited by all Verbs
+class Grammar(object):
+    """Abstract Grammar Class to be inherited by all Grammar elements
     """
     def __init__(self):
         self.name = str(self.__class__.__name__)
@@ -102,7 +104,7 @@ class Verb(object):
         self.text = ''
         self.children = []
 
-    def parse_verb(self, element, uri=None):
+    def parse_grammar(self, element, uri=None):
         self.prepare_attributes(element)
         self.prepare_text(element)
 
@@ -117,11 +119,11 @@ class Verb(object):
         return item
 
     def prepare_attributes(self, element):
-        verb_dict = VERB_DEFAULT_PARAMS[self.name]
-        if element.attrib and not verb_dict:
+        grammar_dict = GRAMMAR_DEFAULT_PARAMS[self.name]
+        if element.attrib and not grammar_dict:
             raise RESTFormatException("%s does not require any attributes!"
                                                                 % self.name)
-        self.attributes = dict(verb_dict, **element.attrib)
+        self.attributes = dict(grammar_dict, **element.attrib)
 
     def prepare_text(self, element):
         text = element.text
@@ -134,7 +136,29 @@ class Verb(object):
         raise RESTRedirectException(url)
 
 
-class Dial(Verb):
+class Conference(Grammar):
+    """Go to a Conference Room
+
+    room: number or name of the conference room
+    """
+    def __init__(self):
+        Grammar.__init__(self)
+        self.room = ''
+
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
+        room = element.text.strip()
+        if not room:
+            raise RESTFormatException("Conference Room must be defined")
+        self.room = room
+
+    def run(self, outbound_socket):
+        outbound_socket.conference(str(self.room))
+        outbound_socket.log.info("Conference executed: %s"
+                                                    % str(self.room))
+
+
+class Dial(Grammar):
     """Dial another phone number and connect it to this call
 
     action: submit the result of the dial to this URL
@@ -150,7 +174,7 @@ class Dial(Verb):
     DEFAULT_TIMELIMIT = 14400
 
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.nestables = ['Number']
         self.method = ""
         self.action = ""
@@ -163,8 +187,8 @@ class Dial(Verb):
         self.confirm_key = ""
         self.dial_music = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         self.action = self.extract_attribute_value("action")
         self.caller_id = self.extract_attribute_value("callerId")
         self.time_limit = int(self.extract_attribute_value("timeLimit"))
@@ -311,8 +335,8 @@ class Dial(Verb):
             self.fetch_rest_xml(self.action)
 
 
-class Gather(Verb):
-    """Gather digits from the caller's keypad
+class GetDigits(Grammar):
+    """Get digits from the caller's keypad
 
     action: URL to which the digits entered will be sent
     method: submit to 'action' url using GET or POST
@@ -327,8 +351,8 @@ class Gather(Verb):
     """
 
     def __init__(self):
-        Verb.__init__(self)
-        self.nestables = ['Play', 'Say', 'Pause']
+        Grammar.__init__(self)
+        self.nestables = ['Speak', 'Play', 'Wait']
         self.num_digits = None
         self.timeout = None
         self.finish_on_key = None
@@ -340,8 +364,8 @@ class Gather(Verb):
         self.sound_files = []
         self.method = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         num_digits = int(self.extract_attribute_value("numDigits"))
         timeout = int(self.extract_attribute_value("timeout"))
         finish_on_key = self.extract_attribute_value("finishOnKey")
@@ -357,11 +381,11 @@ class Gather(Verb):
         self.method = method
 
         if num_digits < 1:
-            raise RESTFormatException("Gather 'numDigits' must be greater than 1")
+            raise RESTFormatException("GetDigits 'numDigits' must be greater than 1")
         if retries < 0:
-            raise RESTFormatException("Gather 'retries' must be greater than 0")
+            raise RESTFormatException("GetDigits 'retries' must be greater than 0")
         if timeout < 0:
-            raise RESTFormatException("Gather 'timeout' must be a positive integer")
+            raise RESTFormatException("GetDigits 'timeout' must be a positive integer")
         if play_beep == 'true':
             self.play_beep = True
         else:
@@ -378,7 +402,7 @@ class Gather(Verb):
     def prepare(self):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
-                # :TODO Prepare verbs concurrently
+                # :TODO Prepare Grammar concurrently
                 child_instance.prepare()
 
     def run(self, outbound_socket):
@@ -395,12 +419,12 @@ class Gather(Verb):
                     # Infinite Loop, so ignore other children
                     if loop == 99:
                         break
-            elif isinstance(child_instance, Pause):
+            elif isinstance(child_instance, Wait):
                 pause_secs = child_instance.length
                 pause_str = play_str = 'silence_stream://%s'\
                                                         % (pause_secs * 1000)
                 self.sound_files.append(pause_str)
-            elif isinstance(child_instance, Say):
+            elif isinstance(child_instance, Speak):
                 text = child_instance.text
                 loop = child_instance.loop_times
                 child_type = child_instance.type
@@ -417,10 +441,10 @@ class Gather(Verb):
                 for i in range(loop):
                     self.sound_files.append(say_str)
             else:
-                pass  # Ignore invalid nested Verbs
+                pass  # Ignore invalid nested Grammar
 
-        outbound_socket.log.info("Gather Started %s" % self.sound_files)
-        outbound_socket.log.info("Gather Play beep %s " % self.play_beep)
+        outbound_socket.log.info("GetDigits Started %s" % self.sound_files)
+        outbound_socket.log.info("GetDigits Play beep %s " % self.play_beep)
         outbound_socket.play_and_get_digits(max_digits=self.num_digits,
                             max_tries=self.retries, timeout=self.timeout,
                             terminators=self.finish_on_key,
@@ -436,21 +460,21 @@ class Gather(Verb):
             self.fetch_rest_xml(self.action)
 
 
-class Hangup(Verb):
+class Hangup(Grammar):
     """Hangup the call
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
 
     def run(self, outbound_socket):
         outbound_socket.hangup()
         outbound_socket.log.info("Hangup Done")
 
 
-class Number(Verb):
+class Number(Grammar):
     """Specify phone number in a nested Dial element.
 
     number: number to dial
@@ -463,7 +487,7 @@ class Number(Verb):
     extraDialString: extra dialstring to be added while dialing out to number
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.number = ""
         self.url = ""
         self.gateways = []
@@ -473,8 +497,8 @@ class Number(Verb):
         self.extra_dial_string = ""
         self.send_digits = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         self.number = element.text.strip()
         # don't allow "|" and "," in a number noun to avoid call injection
         self.number = re.split(',|\|', self.number)[0]
@@ -501,54 +525,31 @@ class Number(Verb):
             self.gateway_retries = gateway_retries.split(',')
 
 
-class Pause(Verb):
-    """Pause the call
+class Wait(Grammar):
+    """Wait for some time to further process the call
 
-    length: length of pause in seconds
+    length: length of wait time in seconds
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.length = 0
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         length = int(self.extract_attribute_value("length"))
         if length < 0:
-            raise RESTFormatException("Pause must be a positive integer")
+            raise RESTFormatException("Wait must be a positive integer")
         self.length = length
 
     def run(self, outbound_socket):
-        outbound_socket.log.info("Pause Started for %s seconds"
+        outbound_socket.log.info("Wait Started for %s seconds"
                                                             % self.length)
         outbound_socket.sleep(str(self.length * 1000))
-        outbound_socket.log.info("Pause Done after %s seconds"
+        outbound_socket.log.info("Wait Done after %s seconds"
                                                             % self.length)
 
 
-
-class Conference(Verb):
-    """
-    Got to a Conference Room
-
-    room: number or name of the conference room
-    """
-    def __init__(self):
-        Verb.__init__(self)
-        self.room = 'default'
-
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
-        room = element.text.strip()
-        if not room:
-            raise RESTFormatException("Room must be defined")
-        self.room = room
-
-    def run(self, outbound_socket):
-        outbound_socket.conference(str(self.room))
-        outbound_socket.log.info("Go to Conference Room : %s"
-                                                    % str(self.room))
-
-class Play(Verb):
+class Play(Grammar):
     """Play audio file at a URL
 
     url: url of audio file, MIME type on file must be set correctly
@@ -556,13 +557,13 @@ class Play(Verb):
     Currently only supports local path
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.audio_directory = ""
         self.loop_times = 1
         self.sound_file_path = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
 
         # Extract Loop attribute
         loop = int(self.extract_attribute_value("loop"))
@@ -605,17 +606,17 @@ class Play(Verb):
                 # Play sound infinitely
                 outbound_socket.endless_playback(self.sound_file_path)
                 # Log playback execute response
-                outbound_socket.log.info("Endless Playback started")
+                outbound_socket.log.info("Infinite Play started")
                 outbound_socket._action_queue.get()
             else:
                 for i in range(self.loop_times):
                     outbound_socket.playback(self.sound_file_path)
                     event = outbound_socket._action_queue.get()
                     # Log playback execute response
-                    outbound_socket.log.info("Playback finished once (%s)" \
+                    outbound_socket.log.info("Play finished once (%s)" \
                             % str(event.get_header('Application-Response')))
         else:
-            outbound_socket.log.info("Invalid Sound File - Ignoring Playback")
+            outbound_socket.log.info("Invalid Sound File - Ignoring Play")
 
     def is_infinite(self):
         if self.loop_times <= 0:
@@ -623,20 +624,20 @@ class Play(Verb):
         return False
 
 
-class Preanswer(Verb):
-    """Answer the call in Early Media Mode and execute nested verbs
+class Preanswer(Grammar):
+    """Answer the call in Early Media Mode and execute nested grammar
     """
     def __init__(self):
-        Verb.__init__(self)
-        self.nestables = ['Play', 'Say', 'Gather']
+        Grammar.__init__(self)
+        self.nestables = ['Play', 'Speak', 'GetDigits']
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
 
     def prepare(self):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
-                # :TODO Prepare verbs concurrently
+                # :TODO Prepare grammar concurrently
                 child_instance.prepare()
 
     def run(self, outbound_socket):
@@ -646,7 +647,7 @@ class Preanswer(Verb):
         outbound_socket.log.info("Preanswer Completed")
 
 
-class Record(Verb):
+class Record(Grammar):
     """Record audio from caller
 
     action: submit to this URL once recording finishes
@@ -659,7 +660,7 @@ class Record(Verb):
     finishOnKey: Stop recording on this key
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.silence_threshold = 500
         self.action = ""
         self.method = ""
@@ -671,8 +672,8 @@ class Record(Verb):
         self.format = ""
         self.prefix = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         max_length = self.extract_attribute_value("maxLength")
         timeout = self.extract_attribute_value("timeout")
         action = self.extract_attribute_value("action")
@@ -723,20 +724,20 @@ class Record(Verb):
         outbound_socket.stop_dtmf()
 
 
-class RecordSession(Verb):
+class RecordSession(Grammar):
     """Record call session
 
     format: file format
     filePath: complete file path to save the file to
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.file_path = ""
         self.format = ""
         self.prefix = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         self.file_path = self.extract_attribute_value("filePath")
         self.prefix = self.extract_attribute_value("prefix")
         if self.file_path:
@@ -754,18 +755,18 @@ class RecordSession(Verb):
         outbound_socket.log.info("RecordSession Executed")
 
 
-class Redirect(Verb):
+class Redirect(Grammar):
     """Redirect call flow to another URL
 
     url: redirect url
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.method = ""
         self.url = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
@@ -781,17 +782,18 @@ class Redirect(Verb):
         self.fetch_rest_xml(self.url)
 
 
-class Reject(Verb):
-    """Reject the call - This wont answer the call, and should be the first verb
+class Reject(Grammar):
+    """Reject the call
+    This wont answer the call, and should be the first grammar element
 
     reason: reject reason/code
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.reason = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         reason = self.extract_attribute_value("reason")
         if reason == 'rejected':
             self.reason = 'CALL_REJECTED'
@@ -807,14 +809,14 @@ class Reject(Verb):
                                                 % self.reason)
 
 
-class Say(Verb):
-    """Say text
+class Speak(Grammar):
+    """Speak text
 
     text: text to say
     voice: voice to be used based on engine
     language: language to use
     loop: number of times to say this text
-    engine: voice engine to be used for Say (flite, cepstral)
+    engine: voice engine to be used for Speak (flite, cepstral)
 
     Extended params - Currently uses Callie (Female) Voice
     type: NUMBER, ITEMS, PERSONS, MESSAGES, CURRENCY, TIME_MEASUREMENT,
@@ -835,7 +837,7 @@ class Say(Verb):
                    'NAME_PHONETIC', 'SHORT_DATE_TIME']
 
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.loop_times = 1
         self.language = ""
         self.sound_file_path = ""
@@ -844,11 +846,11 @@ class Say(Verb):
         self.method = ""
         self.type = ""
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         loop = int(self.extract_attribute_value("loop"))
         if loop < 0:
-            raise RESTFormatException("Say loop must be a positive integer")
+            raise RESTFormatException("Speak loop must be a positive integer")
         self.engine = self.extract_attribute_value("engine")
         self.language = self.extract_attribute_value("language")
         self.voice = self.extract_attribute_value("voice")
@@ -879,21 +881,21 @@ class Say(Verb):
                 outbound_socket.speak(say_args)
             event = outbound_socket._action_queue.get()
             # Log Speak execute response
-            outbound_socket.log.info("Say finished %s times - (%s)" \
-                        % ((i+1), str(event.get_header('Application-Response'))))
+            outbound_socket.log.info("Speak finished %s times - (%s)" \
+                    % ((i+1), str(event.get_header('Application-Response'))))
 
 
-class ScheduleHangup(Verb):
+class ScheduleHangup(Grammar):
     """Hangup the call after certain time
 
    time: time in seconds to hangup the call after
     """
     def __init__(self):
-        Verb.__init__(self)
+        Grammar.__init__(self)
         self.time = 0
 
-    def parse_verb(self, element, uri=None):
-        Verb.parse_verb(self, element, uri)
+    def parse_grammar(self, element, uri=None):
+        Grammar.parse_grammar(self, element, uri)
         self.time = self.extract_attribute_value("time")
 
     def run(self, outbound_socket):
@@ -904,16 +906,14 @@ class ScheduleHangup(Verb):
             return
         if self.time > 0:
             res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
-                                      % (self.time, outbound_socket.get_channel_unique_id()))
+                        % (self.time, outbound_socket.get_channel_unique_id()))
             if res.is_success():
                 outbound_socket.log.info("ScheduleHangup after %s secs" \
                                                                     % self.time)
                 return
             else:
-                outbound_socket.log.error("ScheduleHangup Failed: %s" % str(res.get_response()))
+                outbound_socket.log.error("ScheduleHangup Failed: %s"\
+                                                    % str(res.get_response()))
                 return
         outbound_socket.log.error("ScheduleHangup Failed: 'time' must be > 0 !")
         return
-
-
-
