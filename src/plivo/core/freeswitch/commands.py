@@ -405,11 +405,11 @@ class Commands(object):
             if play_beep:
                 play_str = 'tone_stream://%(300,200,700)'
             else:
-                play_str = 'silence_stream://200'
+                play_str = 'silence_stream://10'
         else:
             self.set("playback_delimiter=!")
-            play_str = "file_string://%s" % sound_files[0]
-            for i in range(1,len(sound_files)):
+            play_str = "file_string://silence_stream://10"
+            for i in range(0,len(sound_files)):
                 play_str = "%s!%s" % (play_str, sound_files[i])
             if play_beep:
                 beep = 'tone_stream://%(300,200,700)'
