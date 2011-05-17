@@ -141,15 +141,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                   'call_uuid': self.call_uuid,
                   'reason': self._hangup_cause
             }
-            encoded_params = urllib.urlencode(params)
-            request = urllib2.Request(hangup_url, encoded_params)
-            try:
-                self.xml_response = urllib2.urlopen(request).read()
-                self.log.info("Posted to %s with %s" % (hangup_url,
-                                                        params))
-            except Exception, e:
-                self.log.error("Post to %s with %s --Error: %s" \
-                                        % (hangup_url, params, e))
+            self.log.info("Posting hangup to %s" % hangup_url)
+            self.post_to_url(hangup_url, params)
 
     def on_channel_hangup_complete(self, event):
         if not self._hangup_cause:
@@ -283,9 +276,26 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         self.xml_response = http_obj.fetch_response(self.answer_url,
-                                                        self.params, method)
-        self.log.info("Requested to %s with %s" % (self.answer_url,
-                                                                self.params))
+                                                    self.params, method)
+        self.log.info("Requested RESTXML to %s with %s" \
+                                % (self.answer_url, self.params))
+
+    def post_to_url(self, url=None, params={}):
+        """
+        This method will do an http POST request to the Url
+        """
+        if not url:
+            return None
+        http_obj = HTTPRequest(self.auth_id, self.auth_token)
+        try:
+            data = http_obj.fetch_response(url, params, method='POST')
+            self.log.info("Posted to %s with %s --Result: %s"
+                                            % (url, params, data))
+            return data
+        except Exception, e:
+            self.log.error("Post to %s with %s --Error: %s"
+                                            % (url, params, e))
+        return None
 
     def lex_xml(self):
         """
