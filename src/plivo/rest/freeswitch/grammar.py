@@ -34,7 +34,7 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "method": "POST",
                 "timeout": 5,
                 "finishOnKey": '#',
-                "numDigits": 999,
+                "numDigits": 99,
                 "retries": 1,
                 "playBeep": 'false',
                 "validDigits": '0123456789*#',
@@ -348,6 +348,7 @@ class GetDigits(Grammar):
     validDigits: digits which are allowed to be pressed
     invalidDigitsSound: Sound played when invalid digit pressed
     """
+    DEFAULT_MAX_DIGITS = 99
 
     def __init__(self):
         Grammar.__init__(self)
@@ -366,6 +367,8 @@ class GetDigits(Grammar):
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
         num_digits = int(self.extract_attribute_value("numDigits"))
+        if num_digits > self.DEFAULT_MAX_DIGITS:
+            num_digits = self.DEFAULT_MAX_DIGITS
         timeout = int(self.extract_attribute_value("timeout"))
         finish_on_key = self.extract_attribute_value("finishOnKey")
         play_beep = self.extract_attribute_value("playBeep")
