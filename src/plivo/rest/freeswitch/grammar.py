@@ -630,7 +630,7 @@ class Preanswer(Grammar):
     """
     def __init__(self):
         Grammar.__init__(self)
-        self.nestables = ['Play', 'Speak', 'GetDigits']
+        self.nestables = ['Play', 'Speak', 'GetDigits', 'Wait']
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
