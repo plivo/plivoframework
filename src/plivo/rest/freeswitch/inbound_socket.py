@@ -142,21 +142,24 @@ class RESTInboundSocket(InboundEventSocket):
                                                             'reason': reason}
             self.post_to_url(hangup_url, params)
 
-    def post_to_url(self, url, params):
-        encoded_params = urllib.urlencode(params)
-        request = urllib2.Request(url, encoded_params)
+    def post_to_url(self, url=None, params={}):
+        # TODO Need a retry mechanism or a fallback url to try
+        # Need to build a pool and retry later the failing post_url
+        # URL can be temporary unavailable
+        # In last resort,log the errors in a different log file
+        # error-api.log
+        if not url:
+            return None
+        http_obj = HTTPRequest()
         try:
-            result = urllib2.urlopen(request).read()
+            data = http_obj.fetch_response(url, params, method='POST')
             self.log.info("Posted to %s with %s --Result: %s"
-                                                    % (url, params, result))
+                                            % (url, params, data))
+            return data
         except Exception, e:
             self.log.error("Post to %s with %s --Error: %s"
-                                                        % (url, params, e))
-            #TODO: Need a retry mechanism or a fallback url to try
-            # Need to build a pool and retry later the failing post_url
-            # URL can be temporary unavailable
-            # In last resort,log the errors in a different log file
-            # error-api.log
+                                            % (url, params, e))
+        return None
 
     def spawn_originate(self, request_uuid):
         request_params = self.call_request[request_uuid]

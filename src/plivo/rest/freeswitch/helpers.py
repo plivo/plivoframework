@@ -105,7 +105,7 @@ class HTTPRequest:
     """
     USER_AGENT = 'Plivo'
 
-    def __init__(self, auth_id ='', auth_token =''):
+    def __init__(self, auth_id='', auth_token=''):
         """initialize a object
 
         id: Plivo SID/ID
@@ -156,9 +156,9 @@ class HTTPRequest:
         return request
 
     def fetch_response(self, uri, params, method='POST'):
-        if method and method not in ['GET', 'POST']:
-            raise NotImplementedError('HTTP %s method not implemented'
-                                                                    % method)
+        if not method in ('GET', 'POST'):
+            raise NotImplementedError('HTTP %s method not implemented' \
+                                                            % method)
         request = self._prepare_http_request(uri, params, method)
         response = urllib2.urlopen(request).read()
         return response
