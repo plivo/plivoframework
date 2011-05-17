@@ -30,7 +30,7 @@ class InboundEventSocket(EventSocket):
         timer.start()
         try:
             # When auth/request is received,
-            # _authRequest method in BaseEventSocket will push this event to queue
+            # _authRequest method in EventSocket will push this event to queue
             # so we will just wait this event here.
             return self._response_queue.get()
         except Timeout:
@@ -44,11 +44,18 @@ class InboundEventSocket(EventSocket):
 
         Returns True on success or raises ConnectError exception on failure.
         '''
+        super(InboundEventSocket, self).connect()
         # Connects transport, if connection fails, raise ConnectError
         try:
             self.transport.connect()
         except Exception, e:
             raise ConnectError("Transport failure: %s" % str(e))
+
+        # Be sure queue response is empty before starting
+        for x in range(1000):
+            if self._response_queue.empty():
+                break
+            self._response_queue.get_nowait()
 
         # Starts handling events
         self.start_event_handler()
@@ -59,14 +66,14 @@ class InboundEventSocket(EventSocket):
         # We are ready now !
         # Authenticate or raise ConnectError
         auth_response = self.auth(self.password)
-        if not auth_response.is_success():
+        if not auth_response.is_reply_text_success():
             self.disconnect()
             raise ConnectError("Auth failure")
 
         # Sets event filter or raises ConnectError
         if self._filter:
             filter_response = self.eventplain(self._filter)
-            if not filter_response.is_success():
+            if not filter_response.is_reply_text_success():
                 self.disconnect()
                 raise ConnectError("Event filter failure")
 

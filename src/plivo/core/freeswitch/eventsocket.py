@@ -96,10 +96,10 @@ class EventSocket(Commands):
                     gevent.sleep(0.005)
             except (LimitExceededError, ConnectError, socket.error):
                 self.connected = False
-                return
+                break
             except GreenletExit, e:
                 self.connected = False
-                return
+                break
         return
 
     def read_event(self):
@@ -215,7 +215,7 @@ class EventSocket(Commands):
 
     def _unknown_event(self, event):
         '''
-        Receives unkown event type Callbacks.
+        Receives unknown event type Callbacks.
 
         Can be implemented in subclass to process unknown event types.
         '''
@@ -260,7 +260,7 @@ class EventSocket(Commands):
 
         Must be implemented by subclass.
         '''
-        pass
+        self._closing_state = False
 
     def disconnect(self):
         '''
@@ -273,6 +273,7 @@ class EventSocket(Commands):
         self._handler_thread.kill()
         # prevent any pending request to be stuck
         self._response_queue.put_nowait(Event())
+        self.connected = False
 
     def _send(self, cmd):
         if isinstance(cmd, types.UnicodeType):

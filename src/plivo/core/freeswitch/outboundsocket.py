@@ -35,6 +35,7 @@ class OutboundEventSocket(EventSocket):
             self.disconnect()
 
     def connect(self):
+        super(OutboundEventSocket, self).connect()
         # Starts event handler for this client/session.
         self.start_event_handler()
 

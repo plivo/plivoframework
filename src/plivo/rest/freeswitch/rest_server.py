@@ -195,6 +195,8 @@ class PlivoRestServer(PlivoRestApi):
                     self.log.info("Trying to connect to FreeSWITCH at: %s"
                                                     % self.fs_inbound_address)
                     self._rest_inbound_socket.connect()
+                    # reset retries when connection is a success
+                    retries = 1
                     self.log.info("Connected to FreeSWITCH")
                     self._rest_inbound_socket.serve_forever()
                 except ConnectError, e:
