@@ -103,6 +103,8 @@ class HTTPUrlRequest(urllib2.Request):
 class HTTPRequest:
     """Helper class for preparing HTTP requests.
     """
+    USER_AGENT = 'Plivo'
+
     def __init__(self, auth_id ='', auth_token =''):
         """initialize a object
 
@@ -133,9 +135,11 @@ class HTTPRequest:
 
         if method and method == 'GET':
             uri = self._build_get_uri(uri, params)
-            request = HTTPUrlRequest(uri)
+            request = HTTPUrlRequest(uri, 
+                             headers={'User-Agent': self.USER_AGENT})
         else:
-            request = HTTPUrlRequest(uri, urllib.urlencode(params))
+            request = HTTPUrlRequest(uri, urllib.urlencode(params),
+                             headers={'User-Agent': self.USER_AGENT})
             if method and (method == 'DELETE' or method == 'PUT'):
                 request.http_method = method
 
