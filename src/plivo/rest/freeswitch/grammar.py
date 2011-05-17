@@ -453,9 +453,9 @@ class GetDigits(Grammar):
                             play_beep=self.play_beep)
         event = outbound_socket._action_queue.get()
         digits = outbound_socket.get_var('pagd_input')
-        outbound_socket.params.update({'Digits': digits})
         if digits is not None and self.action:
             # Call Parent Class Function
+            outbound_socket.params.update({'Digits': digits})
             self.fetch_rest_xml(self.action, self.method)
 
 
