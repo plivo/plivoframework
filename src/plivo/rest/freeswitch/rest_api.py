@@ -223,7 +223,7 @@ class PlivoRestApi(object):
                 msg = "Call Request Executed"
                 result = True
 
-        return flask.jsonify(Success=result, 
+        return flask.jsonify(Success=result,
                              Message=msg,
                              RequestUUID=request_uuid)
 
@@ -349,7 +349,7 @@ class PlivoRestApi(object):
                         except IndexError:
                             hangup_on_ring = ""
 
-                        request_uuid = self.prepare_request(caller_id, to,
+                        request_uuid = self._prepare_request(caller_id, to,
                                     extra_dial_string, gw_str_list[i],
                                     gw_codecs, gw_timeouts, gw_retries,
                                     answer_url, hangup_url, ring_url,
