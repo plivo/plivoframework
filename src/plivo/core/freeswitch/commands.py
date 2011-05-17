@@ -408,9 +408,9 @@ class Commands(object):
                 play_str = 'silence_stream://10'
         else:
             self.set("playback_delimiter=!")
-            play_str = "file_string://silence_stream://10"
-            for i in range(0,len(sound_files)):
-                play_str = "%s!%s" % (play_str, sound_files[i])
+            play_str = "file_string://silence_stream://1"
+            for sound_file in sound_files:
+                play_str = "%s!%s" % (play_str, sound_file)
             if play_beep:
                 beep = 'tone_stream://%(300,200,700)'
                 play_str = "%s!%s" % (play_str, beep)
