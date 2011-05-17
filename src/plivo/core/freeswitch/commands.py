@@ -401,19 +401,11 @@ class Commands(object):
         """
         Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_play_and_get_digits
         """
-
         if not sound_files:
             if play_beep:
                 play_str = 'tone_stream://%(300,200,700)'
             else:
                 play_str = 'silence_stream://200'
-        elif len(sound_files) == 1:
-            play_str = sound_files[0]
-            if play_beep:
-                beep = 'tone_stream://%(300,200,700)'
-                self.set("playback_delimiter=!")
-                self.set("playback_sleep_val=%s" % pause)
-                play_str = "file_string://%s!%s" % (play_str, beep)
         else:
             self.set("playback_delimiter=!")
             play_str = "file_string://%s" % sound_files[0]
@@ -421,7 +413,7 @@ class Commands(object):
                 play_str = "%s!%s" % (play_str, sound_files[i])
             if play_beep:
                 beep = 'tone_stream://%(300,200,700)'
-                play_str = "file_string://%s!%s" % (play_str, beep)
+                play_str = "%s!%s" % (play_str, beep)
 
         if not invalid_file:
             invalid_file='silence_stream://150'

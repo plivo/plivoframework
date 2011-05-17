@@ -342,8 +342,7 @@ class GetDigits(Grammar):
     method: submit to 'action' url using GET or POST
     numDigits: how many digits to gather before returning
     timeout: wait for this many seconds before retry or returning
-    finish_on_key: key that triggers the end of caller input
-    pause: number of seconds to pause in between multiple say or play
+    finishOnKey: key that triggers the end of caller input
     tries: number of tries to execute all says and plays one by one
     playBeep: play a after all plays and says finish
     validDigits: digits which are allowed to be pressed
@@ -478,7 +477,7 @@ class Number(Grammar):
     """Specify phone number in a nested Dial element.
 
     number: number to dial
-    send_digits: key to press after connecting to the number
+    sendDigits: key to press after connecting to the number
     url: url to be called to fetch the XML for actions upon call answer
     gateways: gateway string separated by comma to dialout the number
     gatewayCodecs: codecs for each gatway separated by comma
@@ -554,7 +553,6 @@ class Play(Grammar):
 
     url: url of audio file, MIME type on file must be set correctly
     loop: number of time to play the audio - loop = 0 means infinite
-    Currently only supports local path
     """
     def __init__(self):
         Grammar.__init__(self)
@@ -652,7 +650,7 @@ class Record(Grammar):
 
     action: submit to this URL once recording finishes
     method: submit to 'action' url using GET or POST
-    max_length: maximum number of seconds to record
+    maxLength: maximum number of seconds to record
     timeout: seconds of silence before considering the recording complete
     playBeep: play a beep before recording (true/false)
     format: file format
