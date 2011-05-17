@@ -3,6 +3,7 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 import sys
+import os.path
 import optparse
 from plivo.rest.freeswitch.outbound_server import PlivoOutboundServer
 
@@ -41,6 +42,9 @@ if __name__ == '__main__':
     else:
         parser.print_help()
         sys.exit(0)
+    if not os.path.isfile(configfile):
+        print "Config file %s not found !" % configfile
+        sys.exit(1)
     rest_server = PlivoOutboundServer(configfile, daemon=daemon, pidfile=pidfile)
     rest_server.start()
     sys.exit(0)

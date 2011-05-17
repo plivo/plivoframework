@@ -6,6 +6,7 @@
 
 
 PLIVO_CONF_PATH=https://github.com/miglu/plivo/raw/master/src/config/default.conf
+PLIVO_GIT_REPO=git://github.com/miglu/plivo.git
 
 #####################################################
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
@@ -75,7 +76,7 @@ easy_install pip
 virtualenv --no-site-packages $REAL_PATH
 source $REAL_PATH/bin/activate
 
-pip install plivo
+pip install -e git+${PLIVO_GIT_REPO}#egg=plivo
 
 mkdir -p $REAL_PATH/etc/plivo &>/dev/null
 wget --no-check-certificate $PLIVO_CONF_PATH -O $REAL_PATH/etc/plivo/default.conf
