@@ -251,6 +251,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.lex_xml()
                 self.parse_xml()
                 self.execute_xml()
+                self.log.info("End of RESTXML")
+                return
             except RESTRedirectException, redirect:
                 # Set Answer URL to Redirect URL
                 self.answer_url = redirect.get_url()
