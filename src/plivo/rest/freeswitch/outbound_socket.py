@@ -229,12 +229,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         This will fetch the XML, validate the response
         Parse the XML and Execute it
         """
+        fetch_method = 'POST'
         for x in range(MAX_REDIRECT):
             try:
                 if self.has_hangup():
                     self.log.warn("Channel has hung up, breaking Processing Call")
                     return
-                self.fetch_xml(method='POST')
+                self.fetch_xml(method=fetch_method)
                 if not self.xml_response:
                     self.log.warn("No XML Response")
                     return
@@ -247,6 +248,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 # Set Answer URL to Redirect URL
                 self.answer_url = redirect.get_url()
                 fetch_method = redirect.get_method()
+                if not fetch_method:
+                    fetch_method = 'POST'
                 # Reset all the previous response and grammar
                 self.xml_response = ""
                 self.parsed_grammar = []
@@ -256,14 +259,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 gevent.sleep(0.010)
                 continue
             except Exception, e:
+                self.log.error("Processing Call Failure !")
                 # If error occurs during xml parsing
                 # log exception and break
                 self.log.error(str(e))
                 [ self.log.error(line) for line in \
                             traceback.format_exc().splitlines() ]
-                self.log.error("XML error")
                 return
-        self.log.warn("Max Redirect reached !")
+        self.log.warn("Max Redirect Reached !")
 
     def fetch_xml(self, method='POST'):
         """
@@ -271,6 +274,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         The url result expected is an XML content which will be stored in
         xml_response
         """
+        self.log.info("Fetching %s RESTXML from %s with %s" \
+                                % (method, self.answer_url, self.params))
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         self.xml_response = http_obj.fetch_response(self.answer_url,
                                                     self.params, method)

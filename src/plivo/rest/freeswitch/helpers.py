@@ -118,7 +118,7 @@ class HTTPRequest:
         self.opener = None
 
     def _build_get_uri(self, uri, params):
-        if params and len(params) > 0:
+        if params:
             if uri.find('?') > 0:
                 if uri[-1] != '&':
                     uri += '&'
@@ -145,9 +145,8 @@ class HTTPRequest:
 
         # append the POST variables sorted by key to the uri
         s = uri
-        if len(params) > 0:
-            for k, v in sorted(params.items()):
-                s += k + v
+        for k, v in sorted(params.items()):
+            s += k + v
 
         # compute signature and compare signatures
         signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
@@ -165,10 +164,11 @@ class HTTPRequest:
         for arg in args:
             try:
                 k, v = arg.split('=')
-                params.update({k:v})
+                params[k] = v
             except ValueError:
                 pass
 
         request = self._prepare_http_request(uri, params, method)
         response = urllib2.urlopen(request).read()
         return response
+

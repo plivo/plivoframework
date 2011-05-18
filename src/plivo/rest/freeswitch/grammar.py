@@ -429,7 +429,7 @@ class GetDigits(Grammar):
             elif isinstance(child_instance, Speak):
                 text = child_instance.text
                 loop = child_instance.loop_times
-                child_type = child_instance.type
+                child_type = child_instance.item_type
                 method = child_instance.method
                 if child_type and method:
                     language = child_instance.language
@@ -769,7 +769,7 @@ class Redirect(Grammar):
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
         method = self.extract_attribute_value("method")
-        if method != 'GET' and method != 'POST':
+        if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
         url = element.text.strip()
@@ -816,7 +816,7 @@ class Speak(Grammar):
     text: text to say
     voice: voice to be used based on engine
     language: language to use
-    loop: number of times to say this text
+    loop: number of times to say this text (0 for unlimited)
     engine: voice engine to be used for Speak (flite, cepstral)
 
     Extended params - Currently uses Callie (Female) Voice
@@ -840,43 +840,43 @@ class Speak(Grammar):
     def __init__(self):
         Grammar.__init__(self)
         self.loop_times = 1
-        self.language = ""
+        self.language = "en"
         self.sound_file_path = ""
         self.engine = ""
         self.voice = ""
-        self.method = ""
-        self.type = ""
+        self.method = "POST"
+        self.item_type = ""
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
-        loop = int(self.extract_attribute_value("loop"))
-        if loop < 0:
-            raise RESTFormatException("Speak loop must be a positive integer")
+        try:
+            loop = int(self.extract_attribute_value("loop"))
+        except ValueError:
+            loop = 1
+        if loop <= 0:
+            self.loop_times = 999
+        else:
+            self.loop_times = loop
         self.engine = self.extract_attribute_value("engine")
         self.language = self.extract_attribute_value("language")
         self.voice = self.extract_attribute_value("voice")
         item_type = self.extract_attribute_value("type")
         if item_type and (item_type in self.valid_types):
-            self.type = item_type
-
+            self.item_type = item_type
         method = self.extract_attribute_value("method")
         if method and (method in self.valid_methods):
             self.method = method
 
-        if loop == 0:
-            self.loop_times = 999
-        else:
-            self.loop_times = loop
-
     def run(self, outbound_socket):
-        if self.type and self.method:
+        if self.item_type and self.method:
                 say_args = "%s %s %s %s" \
-                        % (self.language, self.type, self.method, self.text)
+                        % (self.language, self.item_type, 
+                           self.method, self.text)
         else:
-            say_args = "%s|%s|%s" %(self.engine, self.voice, self.text)
+            say_args = "%s|%s|%s" % (self.engine, self.voice, self.text)
 
         for i in range(self.loop_times):
-            if self.type and self.method:
+            if self.item_type and self.method:
                 outbound_socket.say(say_args)
             else:
                 outbound_socket.speak(say_args)
@@ -884,6 +884,7 @@ class Speak(Grammar):
             # Log Speak execute response
             outbound_socket.log.info("Speak finished %s times - (%s)" \
                     % ((i+1), str(event.get_header('Application-Response'))))
+        outbound_socket.log.info("Speak finished")
 
 
 class ScheduleHangup(Grammar):
