@@ -135,13 +135,13 @@ class HTTPRequest:
 
         if method and method == 'GET':
             uri = self._build_get_uri(uri, params)
-            request = HTTPUrlRequest(uri, 
-                             headers={'User-Agent': self.USER_AGENT})
+            request = HTTPUrlRequest(uri)
         else:
-            request = HTTPUrlRequest(uri, urllib.urlencode(params),
-                             headers={'User-Agent': self.USER_AGENT})
+            request = HTTPUrlRequest(uri, urllib.urlencode(params))
             if method and (method == 'DELETE' or method == 'PUT'):
                 request.http_method = method
+
+        request.add_header('User-Agent', self.USER_AGENT)
 
         # append the POST variables sorted by key to the uri
         s = uri
