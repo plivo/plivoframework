@@ -285,8 +285,10 @@ class PlivoRestApi(object):
         to_str = get_post_param(request, 'To')
         gw_str = get_post_param(request, 'Gateways')
         answer_url = get_post_param(request, 'AnswerUrl')
+        delimiter = get_post_param(request, 'Delimiter')
 
-        if not caller_id or not to_str or not gw_str or not answer_url:
+        if not caller_id or not to_str or not gw_str or not answer_url or\
+            not delimiter:
             msg = "Mandatory Parameters Missing"
         elif not is_valid_url(answer_url):
             msg = "Answer URL is not Valid"
@@ -300,7 +302,6 @@ class PlivoRestApi(object):
             else:
                 extra_dial_string = get_post_param(request,
                                                         'OriginateDialString')
-                delimiter = get_post_param(request, 'Delimiter')
                 # Is a string of strings
                 gw_codecs_str = get_post_param(request, 'GatewayCodecs')
                 gw_timeouts_str = get_post_param(request, 'GatewayTimeouts')
