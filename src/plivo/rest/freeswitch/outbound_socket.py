@@ -61,13 +61,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     The instance requests for a XML grammar set to execute the call and acts as a
     bridge between Event_Socket and the web application
     """
-    def __init__(self, socket, address, log, 
-                 default_answer_url=None, 
+    def __init__(self, socket, address, log,
+                 default_answer_url=None,
                  default_hangup_url=None,
                  auth_id="",
                  auth_token="",
                  request_id=0,
-                 filter=None): 
+                 filter=None):
         self._request_id = request_id
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
@@ -137,10 +137,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         elif self.default_hangup_url:
             hangup_url = self.default_hangup_url
         if hangup_url:
-            params = {
-                  'call_uuid': self.call_uuid,
-                  'reason': self._hangup_cause
-            }
+            self.params.update({'hangupCause': self._hangup_cause})
             self.log.info("Posting hangup to %s" % hangup_url)
             self.post_to_url(hangup_url, params)
 
