@@ -5,7 +5,7 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 
-PLIVO_CONF_PATH=https://github.com/miglu/plivo/raw/master/src/config/default.conf
+PLIVO_CONF_PATH=https://github.com/plivo/plivo/raw/master/src/config/default.conf
 
 #####################################################
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin

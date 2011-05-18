@@ -8,16 +8,16 @@ else:
 
 
 author = "Plivo Team"
-author_email = "contact@plivo.org"
+author_email = "hello@plivo.org"
 maintainer = "Plivo Team"
-maintainer_email = "contact@plivo.org"
+maintainer_email = "hello@plivo.org"
 license = "MPL 1.1"
 
 setup_args = {
       'name':'plivo',
       'version':'0.1.0',
       'description':'Plivo - Rapid Communication Application Development Framework',
-      'url':'http://github.com/miglu/Plivo',
+      'url':'http://github.com/plivo/plivo',
       'author':author,
       'author_email':author_email,
       'maintainer':maintainer,

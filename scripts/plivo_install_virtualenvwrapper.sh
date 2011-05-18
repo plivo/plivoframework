@@ -4,7 +4,7 @@
 # and Debian based distros (Debian 5.0 , Ubuntu 10.04 and above)
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-PLIVO_CONF_PATH=https://github.com/miglu/plivo/blob/master/src/config/default.conf
+PLIVO_CONF_PATH=https://github.com/plivo/plivo/blob/master/src/config/default.conf
 VIRTUALENV_PATH=~/.virtualenvs
 
 #####################################################
