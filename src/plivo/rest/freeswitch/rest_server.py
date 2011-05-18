@@ -63,16 +63,26 @@ class PlivoRestServer(PlivoRestApi):
         fs_port = int(fs_port)
         fs_password = helpers.get_conf_value(self._config,
                                                 'freeswitch', 'FS_PASSWORD')
-        self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port,
-                                                    fs_password, filter='ALL',
-                                                    log=self.log)
+        # get auth id and auth token
+        self.auth_id = helpers.get_conf_value(self._config,
+                                        'rest_server', 'AUTH_ID')
+        self.auth_token = helpers.get_conf_value(self._config,
+                                        'rest_server', 'AUTH_TOKEN')
+        # get outbound socket host/port
         fs_out_address = helpers.get_conf_value(self._config,
                                         'freeswitch', 'FS_OUTBOUND_ADDRESS')
         fs_out_host, fs_out_port  = fs_out_address.split(':', 1)
         # if outbound host is 0.0.0.0, send to 127.0.0.1
         if fs_out_host == '0.0.0.0':
             fs_out_address = '127.0.0.1:%s' % fs_out_port
-        self._rest_inbound_socket.fs_outbound_address = fs_out_address
+        # create inbound socket instance
+        self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port,
+                                                    fs_password, 
+                                                    outbound_address=fs_out_address,
+                                                    auth_id=self.auth_id,
+                                                    auth_token=self.auth_token,
+                                                    filter='ALL',
+                                                    log=self.log)
         # expose api functions to flask app
         for path, func_desc in urls.URLS.iteritems():
             func, methods = func_desc
@@ -152,7 +162,8 @@ class PlivoRestServer(PlivoRestApi):
             group = grp.getgrgid(gid)[0]
         # daemonize now
         plivo.utils.daemonize.daemon(user, group, path='/',
-                                     pidfile=self._pidfile, other_groups=())
+                                     pidfile=self._pidfile, 
+                                     other_groups=())
 
     def sig_term(self, *args):
         """if we receive a term signal, we will shutdown properly
@@ -192,12 +203,13 @@ class PlivoRestServer(PlivoRestApi):
         try:
             while self._run:
                 try:
-                    self.log.info("Trying to connect to FreeSWITCH at: %s"
-                                                    % self.fs_inbound_address)
+                    self.log.info("Trying to connect to FreeSWITCH at: %s" \
+                                            % self.fs_inbound_address)
                     self._rest_inbound_socket.connect()
                     # reset retries when connection is a success
                     retries = 1
                     self.log.info("Connected to FreeSWITCH")
+                    # serve forever
                     self._rest_inbound_socket.serve_forever()
                 except ConnectError, e:
                     if self._run is False:

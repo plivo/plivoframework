@@ -154,7 +154,7 @@ class HTTPRequest:
         request.add_header("HTTP_X_PLIVO_SIGNATURE", "%s" % signature)
         return request
 
-    def fetch_response(self, uri, params, method='POST'):
+    def fetch_response(self, uri, params={}, method='POST'):
         if not method in ('GET', 'POST'):
             raise NotImplementedError('HTTP %s method not implemented' \
                                                             % method)

@@ -132,8 +132,8 @@ class Grammar(object):
         else:
             self.text = text.strip()
 
-    def fetch_rest_xml(self, url, method='POST'):
-        raise RESTRedirectException(url, method)
+    def fetch_rest_xml(self, url, params={}, method='POST'):
+        raise RESTRedirectException(url, params, method)
 
 
 class Conference(Grammar):
@@ -332,7 +332,7 @@ class Dial(Grammar):
         outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
         # Call url action
         if self.action and is_valid_url(self.action):
-            self.fetch_rest_xml(self.action, self.method)
+            self.fetch_rest_xml(self.action, method=self.method)
 
 
 class GetDigits(Grammar):
@@ -468,8 +468,8 @@ class GetDigits(Grammar):
         digits = outbound_socket.get_var('pagd_input')
         if digits is not None and self.action:
             # Call Parent Class Function
-            outbound_socket.params.update({'Digits': digits})
-            self.fetch_rest_xml(self.action, self.method)
+            params = {'Digits': digits}
+            self.fetch_rest_xml(self.action, params, self.method)
 
 
 class Hangup(Grammar):
@@ -790,7 +790,7 @@ class Redirect(Grammar):
         self.url = url
 
     def run(self, outbound_socket):
-        self.fetch_rest_xml(self.url, self.method)
+        self.fetch_rest_xml(self.url, method=self.method)
 
 
 class Reject(Grammar):

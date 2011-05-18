@@ -74,10 +74,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.xml_response = ""
         self.parsed_grammar = []
         self.lexed_xml_response = []
-        self.answer_url = ""
+        self.target_url = ""
         self.hangup_url = ""
         self.direction = ""
-        self.params = None
+        self.session_params = None
         self._action_queue = gevent.queue.Queue()
         self.default_answer_url = default_answer_url
         self.default_hangup_url = default_hangup_url
@@ -137,7 +137,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         elif self.default_hangup_url:
             hangup_url = self.default_hangup_url
         if hangup_url:
-            self.params.update({'hangupCause': self._hangup_cause})
+            self.session_params['hangup_cause'] = self._hangup_cause
             self.log.info("Posting hangup to %s" % hangup_url)
             self.post_to_url(hangup_url, params)
 
@@ -183,21 +183,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
             aleg_request_uuid = channel.get_header('variable_request_uuid')
-            self.answer_url = channel.get_header('variable_answer_url')
+            self.target_url = channel.get_header('variable_answer_url')
             sched_hangup_id = channel.get_header('variable_sched_hangup_id')
             # Don't post hangup in outbound direction
             self.default_hangup_url = None
             self.hangup_url = None
         else:
-            # Look for an answer url in order below :
+            # Look for target url in order below :
             #  get transfer_url from channel variable
             #  get answer_url from channel variable
             #  get default answer_url
-            self.answer_url = self.get_var('transfer_url')
-            if not self.answer_url:
-                self.answer_url = self.get_var('answer_url')
-            if not self.answer_url:
-                self.answer_url = self.default_answer_url
+            self.target_url = self.get_var('transfer_url')
+            if not self.target_url:
+                self.target_url = self.get_var('answer_url')
+            if not self.target_url:
+                self.target_url = self.default_answer_url
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('sched_hangup_id')
             # Look for hangup_url
@@ -207,7 +207,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             sched_hangup_id = ""
 
         # Post to ANSWER URL and get XML Response
-        self.params = {
+        self.session_params = {
                   'call_uuid': self.call_uuid,
                   'called_no': called_no,
                   'from_no': from_no,
@@ -230,12 +230,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         Parse the XML and Execute it
         """
         fetch_method = 'POST'
+        params = {}
         for x in range(MAX_REDIRECT):
             try:
                 if self.has_hangup():
                     self.log.warn("Channel has hung up, breaking Processing Call")
                     return
-                self.fetch_xml(method=fetch_method)
+                self.fetch_xml(params=params, method=fetch_method)
                 if not self.xml_response:
                     self.log.warn("No XML Response")
                     return
@@ -245,9 +246,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.info("End of RESTXML")
                 return
             except RESTRedirectException, redirect:
-                # Set Answer URL to Redirect URL
-                self.answer_url = redirect.get_url()
+                # Set target URL to Redirect URL
+                # Set method to Redirect method
+                # Set additional params to Redirect params
+                self.target_url = redirect.get_url()
                 fetch_method = redirect.get_method()
+                params = redirect.get_params()
                 if not fetch_method:
                     fetch_method = 'POST'
                 # Reset all the previous response and grammar
@@ -255,7 +259,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.parsed_grammar = []
                 self.lexed_xml_response = []
                 self.log.info("Redirecting to %s to fetch RESTXML" \
-                                            % self.answer_url)
+                                            % self.target_url)
                 gevent.sleep(0.010)
                 continue
             except Exception, e:
@@ -268,34 +272,37 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 return
         self.log.warn("Max Redirect Reached !")
 
-    def fetch_xml(self, method='POST'):
+    def fetch_xml(self, params={}, method='POST'):
         """
         This method will retrieve the xml from the answer_url
         The url result expected is an XML content which will be stored in
         xml_response
         """
+        # auto add session parameters 
+        params.update(self.session_params)
         self.log.info("Fetching %s RESTXML from %s with %s" \
-                                % (method, self.answer_url, self.params))
+                                % (method, self.target_url, params))
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
-        self.xml_response = http_obj.fetch_response(self.answer_url,
-                                                    self.params, method)
+        self.xml_response = http_obj.fetch_response(self.target_url,
+                                                    params, method)
         self.log.info("Requested RESTXML to %s with %s" \
-                                % (self.answer_url, self.params))
+                                % (self.target_url, params))
 
-    def post_to_url(self, url=None, params={}):
+    def post_to_url(self, url=None, params={}, method='POST'):
         """
-        This method will do an http POST request to the Url
+        This method will do an http POST or GET request to the Url
         """
         if not url:
             return None
+        params = params.update(self.session_params)
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         try:
-            data = http_obj.fetch_response(url, params, method='POST')
-            self.log.info("Posted to %s with %s --Result: %s"
+            data = http_obj.fetch_response(url, params, method)
+            self.log.info("Posted to %s with %s -- Result: %s"
                                             % (url, params, data))
             return data
         except Exception, e:
-            self.log.error("Post to %s with %s --Error: %s"
+            self.log.error("Post to %s with %s -- Error: %s"
                                             % (url, params, e))
         return None
 
@@ -309,7 +316,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             #convert the string into an Element instance
             doc = etree.fromstring(xml_str)
         except Exception, e:
-            raise RESTSyntaxException("Invalid RESTXML Response Syntax: %s"
+            raise RESTSyntaxException("Invalid RESTXML Response Syntax: %s" \
                         % str(e))
 
         # Make sure the document has a <Response> root
@@ -335,7 +342,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         for element in self.lexed_xml_response:
             grammar_element = getattr(grammar, str(element.tag), None)
             grammar_instance = grammar_element()
-            grammar_instance.parse_grammar(element, self.answer_url)
+            grammar_instance.parse_grammar(element, self.target_url)
             self.parsed_grammar.append(grammar_instance)
             # Validate, Parse & Store the nested children
             # inside the main grammar element

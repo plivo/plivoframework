@@ -18,10 +18,15 @@ class RESTInboundSocket(InboundEventSocket):
     ...
     ...
     """
-    def __init__(self, host, port, password, filter="ALL", log=None):
+    def __init__(self, host, port, password, 
+                 outbound_address='', 
+                 auth_id='', auth_token='', 
+                 filter="ALL", log=None):
         InboundEventSocket.__init__(self, host, port, password, filter)
-        self.fs_outbound_address = ""
+        self.fs_outbound_address = outbound_address
         self.log = log
+        self.auth_id = auth_id
+        self.auth_token = auth_token
         # Mapping of Key: job-uuid - Value: request_id
         self.bk_jobs = {}
         # Transfer jobs: call_uuid - Value: where to transfer
@@ -142,22 +147,17 @@ class RESTInboundSocket(InboundEventSocket):
                                                             'reason': reason}
             self.post_to_url(hangup_url, params)
 
-    def post_to_url(self, url=None, params={}):
-        # TODO Need a retry mechanism or a fallback url to try
-        # Need to build a pool and retry later the failing post_url
-        # URL can be temporary unavailable
-        # In last resort,log the errors in a different log file
-        # error-api.log
+    def post_to_url(self, url=None, params={}, method='POST'):
         if not url:
             return None
-        http_obj = HTTPRequest()
+        http_obj = HTTPRequest(self.auth_id, self.auth_token)
         try:
-            data = http_obj.fetch_response(url, params, method='POST')
-            self.log.info("Posted to %s with %s --Result: %s"
+            data = http_obj.fetch_response(url, params, method)
+            self.log.info("Posted to %s with %s -- Result: %s"
                                             % (url, params, data))
             return data
         except Exception, e:
-            self.log.error("Post to %s with %s --Error: %s"
+            self.log.error("Post to %s with %s -- Error: %s"
                                             % (url, params, e))
         return None
 
