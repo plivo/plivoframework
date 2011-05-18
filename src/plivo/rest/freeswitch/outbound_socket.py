@@ -77,7 +77,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.target_url = ""
         self.hangup_url = ""
         self.direction = ""
-        self.session_params = None
+        self.session_params = {}
         self._action_queue = gevent.queue.Queue()
         self.default_answer_url = default_answer_url
         self.default_hangup_url = default_hangup_url
@@ -139,7 +139,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if hangup_url:
             self.session_params['hangup_cause'] = self._hangup_cause
             self.log.info("Posting hangup to %s" % hangup_url)
-            self.post_to_url(hangup_url, params)
+            self.post_to_url(hangup_url)
 
     def on_channel_hangup_complete(self, event):
         if not self._hangup_cause:
@@ -293,16 +293,17 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         This method will do an http POST or GET request to the Url
         """
         if not url:
+            self.log.warn("Cannot post, no url !")
             return None
-        params = params.update(self.session_params)
+        params.update(self.session_params)
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         try:
             data = http_obj.fetch_response(url, params, method)
-            self.log.info("Posted to %s with %s -- Result: %s"
+            self.log.info("Posted to %s with %s -- Result: %s" \
                                             % (url, params, data))
             return data
         except Exception, e:
-            self.log.error("Post to %s with %s -- Error: %s"
+            self.log.error("Post to %s with %s -- Error: %s" \
                                             % (url, params, e))
         return None
 
@@ -380,3 +381,4 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.answer()
                     self.answered = True
             grammar_element.run(self)
+
