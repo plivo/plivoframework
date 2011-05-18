@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+def postinstall():
+    import sys
+    prefix = sys.prefix
+    if prefix == '/usr':
+        etc_prefix = '/etc'
+    else:
+        etc_prefix = prefix + '/etc'
+    # set plivo script
+    f = open(prefix + '/bin/plivo', 'r')
+    buff = f.read()
+    f.close()
+    new_buff = buff.replace('PREFIX=@PREFIX@', 'PREFIX='+prefix)
+    f = open(prefix + '/bin/plivo', 'w')
+    f.write(new_buff)
+    f.close()
+    # set plivo conf
+    f = open(etc_prefix + '/plivo/default.conf', 'r')
+    buff = f.read()
+    f.close()
+    new_buff = buff.replace('@PREFIX@', prefix)
+    f = open(etc_prefix + '/plivo/default.conf', 'w')
+    f.write(new_buff)
+    f.close()
+    
+
+if __name__ == '__main__':
+    postinstall()
+    print "Plivo postinstall done"

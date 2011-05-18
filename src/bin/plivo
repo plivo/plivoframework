@@ -1,0 +1,171 @@
+#!/bin/bash
+
+#####################################################
+PREFIX=@PREFIX@
+
+if [ "$PREFIX" = "@PREFIX@" ]; then
+	echo "ERROR: run bin/plivo-postinstall to setup Plivo !"
+        exit 1
+fi
+
+if [ "$PREFIX" = "/usr" ]; then
+	CONFIG_DIR=/etc/plivo
+	PID_PREFIX=/tmp
+else
+	CONFIG_DIR=$PREFIX/etc/plivo
+	PID_PREFIX=$PREFIX/tmp
+fi
+
+EXEC_PREFIX=$PREFIX/bin
+VENV_ON=$PREFIX/bin/activate
+VENV_OFF=deactivate
+REST_SERVER=$EXEC_PREFIX/plivo-rest
+OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound
+#####################################################
+
+
+do_help()
+{
+	echo
+	echo "$(basename $0) (start|stop|restart|status|list) [CONFIGNAME]"
+	echo "	[CONFIGNAME] plivo instance to manage (optional)"
+	echo
+	exit 1;
+}
+
+
+do_start()
+{
+	rest_already_running="false"
+	outbound_already_running="false"
+	$VENV_OFF &>/dev/null
+	source $VENV_ON
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$REST_NAME already running"
+		rest_already_running="true"
+	else
+		$REST_SERVER -d -c $CONFIG_FILE -p $rest_pidfile
+	fi
+	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$OUTBOUND_NAME already running"
+		outbound_already_running="true"
+	else
+		$OUTBOUND_SERVER -d -c $CONFIG_FILE -p $outbound_pidfile
+	fi
+	if [ "$rest_already_running" = "true" ] && [ "$outbound_already_running" = "true" ]; then
+		$VENV_OFF &>/dev/null
+		exit 0
+	fi
+	sleep 1s
+	if [ "$rest_already_running" = "false" ]; then
+		kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
+			&& echo "$REST_NAME started" || echo "$REST_NAME start failed"
+	fi
+	if [ "$outbound_already_running" = "false" ]; then
+		kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
+			&& echo "$OUTBOUND_NAME started" || echo "$OUTBOUND_NAME start failed"
+	fi
+	$VENV_OFF &>/dev/null
+}
+
+
+do_stop()
+{
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -TERM $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$REST_NAME stopped"
+		rm -f $rest_pidfile
+	else
+		echo "$REST_NAME stopping failed"
+	fi
+	kill -TERM $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$OUTBOUND_NAME stopped"
+		rm -f $outbound_pidfile
+	else
+		echo "$OUTBOUND_NAME stopping failed"
+	fi
+}
+
+
+do_status()
+{
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
+		&& echo "$REST_NAME running" || echo "$REST_NAME not running"
+	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
+		&& echo "$OUTBOUND_NAME running" || echo "$OUTBOUND_NAME not running"
+}
+
+
+
+# main #
+
+[ -x $REST_SERVER ] || do_help
+[ -x $OUTBOUND_SERVER ] || do_help
+
+mkdir -p $PID_PREFIX 2>/dev/null
+
+
+CONFIG_NAME=$2
+
+
+if [ $CONFIG_NAME ]; then
+	CONFIG_LIST=$CONFIG_DIR/$CONFIG_NAME.conf
+	if [ ! -f $CONFIG_DIR/$CONFIG_NAME.conf ]; then
+		echo "ERROR Plivo - No config file found for $CONFIG_NAME"
+		exit 1
+	fi
+else
+	CONFIG_LIST=$(ls $CONFIG_DIR/*.conf 2>/dev/null)
+	if [ -z $CONFIG_LIST ]; then
+		echo "ERROR Plivo - No config file found in $CONFIG_DIR"
+		exit 1
+	fi
+fi
+
+
+for CONFIG_FILE in $CONFIG_LIST
+do
+	NAME=$(basename $CONFIG_FILE .conf)
+	REST_NAME="Plivo-Rest [$NAME]"
+	OUTBOUND_NAME="Plivo-Outbound [$NAME]"
+
+	case $1 in
+	start)
+		do_start
+	;;
+
+	stop)
+		do_stop
+	;;
+
+	restart)
+		do_stop
+		sleep 0.5s
+		do_start
+	;;
+
+	status)
+		do_status
+	;;
+	list)
+		echo "Plivo config list:"
+		for CONFIG_FILE in $(ls $CONFIG_DIR/*.conf 2>/dev/null); do
+			NAME=$(basename $CONFIG_FILE .conf)
+			echo " - $NAME"
+		done
+		echo
+	;;
+	*)
+		do_help
+	;;
+	esac
+done

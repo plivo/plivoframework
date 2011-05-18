@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
+import sys
+import os.path
+import optparse
+from plivo.rest.freeswitch.rest_server import PlivoRestServer
+
+
+def opt():
+    parser = optparse.OptionParser()
+    parser.add_option("-c", "--config", action="store", type="string",
+                      dest="filename", help="set config file to FILE", metavar="FILE",
+                      default="./plivo_rest.conf")
+
+    parser.add_option("-f", "--foreground",
+                      action="store_true", dest="foreground", default=False,
+                      help="run foreground")
+
+    parser.add_option("-d", "--daemon",
+                      action="store_true", dest="daemon", default=False,
+                      help="run as daemon")
+
+    parser.add_option("-p", "--pidfile", action="store", type="string",
+                      dest="pidfile", help="set pid file PIDFILE", metavar="PIDFILE",
+                      default="/tmp/plivo_outbound.pid")
+
+    (options, args) = parser.parse_args()
+    return (parser, options, args)
+
+
+
+if __name__ == '__main__':
+    parser, options, args = opt()
+    configfile = options.filename
+    pidfile = options.pidfile
+    if options.foreground:
+        daemon = False
+    elif options.daemon:
+        daemon = True
+    else:
+        daemon = False
+    if not os.path.isfile(configfile):
+        print "Config file %s not found !" % configfile
+        sys.exit(1)
+    rest_server = PlivoRestServer(configfile, daemon=daemon, pidfile=pidfile)
+    rest_server.start()
+    sys.exit(0)
