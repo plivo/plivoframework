@@ -163,8 +163,11 @@ class HTTPRequest:
         query = urlparse.urlsplit(uri)[3]
         args = query.split('&')
         for arg in args:
-            k, v = arg.split('=')
-            params.update({k:v})
+            try:
+                k, v = arg.split('=')
+                params.update({k:v})
+            except ValueError:
+                pass
 
         request = self._prepare_http_request(uri, params, method)
         response = urllib2.urlopen(request).read()
