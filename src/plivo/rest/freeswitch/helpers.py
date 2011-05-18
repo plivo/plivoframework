@@ -159,6 +159,13 @@ class HTTPRequest:
         if not method in ('GET', 'POST'):
             raise NotImplementedError('HTTP %s method not implemented' \
                                                             % method)
+        # Read all params in the query string and include them in params
+        query = urlparse.urlsplit(uri)[3]
+        args = query.split('&')
+        for arg in args:
+            k, v = arg.split('=')
+            params.update({k:v})
+
         request = self._prepare_http_request(uri, params, method)
         response = urllib2.urlopen(request).read()
         return response
