@@ -349,6 +349,7 @@ class GetDigits(Grammar):
     invalidDigitsSound: Sound played when invalid digit pressed
     """
     DEFAULT_MAX_DIGITS = 99
+    DEFAULT_TIMEOUT = 5
 
     def __init__(self):
         Grammar.__init__(self)
@@ -369,25 +370,34 @@ class GetDigits(Grammar):
         num_digits = int(self.extract_attribute_value("numDigits"))
         if num_digits > self.DEFAULT_MAX_DIGITS:
             num_digits = self.DEFAULT_MAX_DIGITS
-        timeout = int(self.extract_attribute_value("timeout"))
+        if num_digits < 1:
+            raise RESTFormatException("GetDigits 'numDigits' must be greater than 0")
+        try:
+            timeout = int(self.extract_attribute_value("timeout"))
+        except ValueError:
+            timeout = self.DEFAULT_TIMEOUT * 1000
+        if timeout < 0:
+            raise RESTFormatException("GetDigits 'timeout' must be a positive integer")
+
         finish_on_key = self.extract_attribute_value("finishOnKey")
         play_beep = self.extract_attribute_value("playBeep")
         self.invalid_digits_sound = \
                             self.extract_attribute_value("invalidDigitsSound")
         self.valid_digits = self.extract_attribute_value("validDigits")
         action = self.extract_attribute_value("action")
-        retries = int(self.extract_attribute_value("retries"))
+
+        try:
+            retries = int(self.extract_attribute_value("retries"))
+        except ValueError:
+            retries = 1
+        if retries < 0:
+            raise RESTFormatException("GetDigits 'retries' must be greater than 0")
+
         method = self.extract_attribute_value("method")
         if method != 'GET' and method != 'POST':
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
 
-        if num_digits < 1:
-            raise RESTFormatException("GetDigits 'numDigits' must be greater than 1")
-        if retries < 0:
-            raise RESTFormatException("GetDigits 'retries' must be greater than 0")
-        if timeout < 0:
-            raise RESTFormatException("GetDigits 'timeout' must be a positive integer")
         if play_beep == 'true':
             self.play_beep = True
         else:
@@ -397,7 +407,7 @@ class GetDigits(Grammar):
         else:
             self.action = uri
         self.num_digits = num_digits
-        self.timeout = (timeout * 1000)
+        self.timeout = timeout * 1000
         self.finish_on_key = finish_on_key
         self.retries = retries
 
