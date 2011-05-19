@@ -70,9 +70,9 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "prefix": ""
         },
         "RecordSession": {
-                        "filePath": "/usr/local/freeswitch/recordings/",
-                        "format": "mp3",
-                        "prefix": ""
+                "filePath": "/usr/local/freeswitch/recordings/",
+                "format": "mp3",
+                "prefix": ""
         },
         "Redirect": {
                 "method": "POST"
@@ -208,7 +208,6 @@ class Dial(Grammar):
         self.method = method
 
     def create_number(self, number_instance):
-        #TODO what about url ?
         num_gw = []
         # skip number object without gateway or number
         if not number_instance.gateways or not number_instance.number:
@@ -456,7 +455,8 @@ class GetDigits(Grammar):
                 pass  # Ignore invalid nested Grammar
 
         outbound_socket.log.info("GetDigits Started %s" % self.sound_files)
-        outbound_socket.log.info("GetDigits Play beep %s " % self.play_beep)
+        if self.play_beep:
+            outbound_socket.log.debug("GetDigits will play a beep")
         outbound_socket.play_and_get_digits(max_digits=self.num_digits,
                             max_tries=self.retries, timeout=self.timeout,
                             terminators=self.finish_on_key,
@@ -467,7 +467,7 @@ class GetDigits(Grammar):
         event = outbound_socket._action_queue.get()
         digits = outbound_socket.get_var('pagd_input')
         if digits is not None and self.action:
-            # Call Parent Class Function
+            # Redirect
             params = {'Digits': digits}
             self.fetch_rest_xml(self.action, params, self.method)
 

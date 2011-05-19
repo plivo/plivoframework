@@ -182,9 +182,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if self.direction == 'outbound':
             # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
-            aleg_request_uuid = channel.get_header('variable_request_uuid')
-            self.target_url = channel.get_header('variable_answer_url')
-            sched_hangup_id = channel.get_header('variable_sched_hangup_id')
+            aleg_request_uuid = channel.get_header('variable_plivo_request_uuid')
+            self.target_url = channel.get_header('variable_plivo_answer_url')
+            sched_hangup_id = channel.get_header('variable_plivo_sched_hangup_id')
             # Don't post hangup in outbound direction
             self.default_hangup_url = None
             self.hangup_url = None
@@ -193,15 +193,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             #  get transfer_url from channel variable
             #  get answer_url from channel variable
             #  get default answer_url
-            self.target_url = self.get_var('transfer_url')
+            self.target_url = self.get_var('plivo_transfer_url')
             if not self.target_url:
-                self.target_url = self.get_var('answer_url')
+                self.target_url = self.get_var('plivo_answer_url')
             if not self.target_url:
                 self.target_url = self.default_answer_url
             # Look for a sched_hangup_id
-            sched_hangup_id = self.get_var('sched_hangup_id')
+            sched_hangup_id = self.get_var('plivo_sched_hangup_id')
             # Look for hangup_url
-            self.hangup_url = self.get_var('hangup_url')
+            self.hangup_url = self.get_var('plivo_hangup_url')
 
         if not sched_hangup_id:
             sched_hangup_id = ""

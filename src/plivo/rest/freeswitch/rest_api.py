@@ -98,8 +98,8 @@ class PlivoRestApi(object):
 
         request_uuid = str(uuid.uuid1())
         args_list = []
-        args_list.append("request_uuid=%s" % request_uuid)
-        args_list.append("answer_url=%s" % answer_url)
+        args_list.append("plivo_request_uuid=%s" % request_uuid)
+        args_list.append("plivo_answer_url=%s" % answer_url)
         args_list.append("origination_caller_id_number=%s" % caller_id)
         if extra_dial_string:
              args_list.append(extra_dial_string)
@@ -118,9 +118,9 @@ class PlivoRestApi(object):
             time_limit = 0
         if time_limit > 0:
             sched_hangup_id = str(uuid.uuid1())
-            args_list.append("api_on_answer='sched_api %s +%d hupall ALLOTTED_TIMEOUT request_uuid %s'" \
+            args_list.append("api_on_answer='sched_api %s +%d hupall ALLOTTED_TIMEOUT plivo_request_uuid %s'" \
                                                 % (sched_hangup_id, time_limit, request_uuid))
-            args_list.append("sched_hangup_id=%s" % sched_hangup_id)
+            args_list.append("plivo_sched_hangup_id=%s" % sched_hangup_id)
 
         args_str = ','.join(args_list)
         originate_str = ''.join(["originate {", args_str])

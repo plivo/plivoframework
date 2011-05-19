@@ -69,7 +69,7 @@ class RESTInboundSocket(InboundEventSocket):
         """
         Capture Channel Hangup
         """
-        request_uuid = ev['variable_request_uuid']
+        request_uuid = ev['variable_plivo_request_uuid']
         call_uuid = ev['Unique-ID']
         reason = ev['Hangup-Cause']
         request_params = self.call_request[request_uuid]
@@ -209,7 +209,7 @@ class RESTInboundSocket(InboundEventSocket):
                                         for request_uuid in request_uuid_list]
 
     def transfer_call(self, new_xml_url, call_uuid):
-        self.set_var("transfer_url", new_xml_url, uuid=call_uuid)
+        self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
         outbound_str = "socket:%s async full" \
                         % (self.fs_outbound_address)
         self.xfer_jobs[call_uuid] = outbound_str
@@ -234,7 +234,7 @@ class RESTInboundSocket(InboundEventSocket):
             args = "NORMAL_CLEARING uuid %s" % call_uuid
         else:  # Use request uuid
             callid = "RequestUUID %s" % request_uuid
-            args = "NORMAL_CLEARING request_uuid %s" % request_uuid
+            args = "NORMAL_CLEARING plivo_request_uuid %s" % request_uuid
         bg_api_response = self.bgapi("hupall %s" % args)
         job_uuid = bg_api_response.get_job_uuid()
         if not job_uuid:

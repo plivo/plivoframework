@@ -108,8 +108,8 @@ class HTTPRequest:
     def __init__(self, auth_id='', auth_token=''):
         """initialize a object
 
-        id: Plivo SID/ID
-        token: Plivo token
+        auth_id: Plivo SID/ID
+        auth_token: Plivo token
 
         returns a HTTPRequest object
         """
