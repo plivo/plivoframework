@@ -361,9 +361,13 @@ class PlivoRestApi(object):
                         i += 1
                         request_uuid_list.append(request_uuid)
 
-                        self._rest_inbound_socket.bulk_originate(request_uuid_list)
+                    # now do the calls !
+                    if self._rest_inbound_socket.bulk_originate(request_uuid_list):
                         msg = "Bulk Call Requests Executed"
                         result = True
+                    else:
+                        msg = "Bulk Call Requests Failed"
+                        request_uuid_list = []
 
         return flask.jsonify(Success=result, Message=msg,
                              RequestUUID=str(request_uuid_list))

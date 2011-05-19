@@ -189,7 +189,7 @@ class RESTInboundSocket(InboundEventSocket):
             job_uuid = bg_api_response.get_job_uuid()
             self.bk_jobs[job_uuid] = request_uuid
             if not job_uuid:
-                self.log.error("Calls Failed -- JobUUID not received"
+                self.log.error("Call Failed -- JobUUID not received"
                                                             % dial_str)
             # Reduce one from the call request param lists each time
             if gw_retry_list:
@@ -206,9 +206,13 @@ class RESTInboundSocket(InboundEventSocket):
 
     def bulk_originate(self, request_uuid_list):
         if request_uuid_list:
+            self.log.info("Bulk Calls for RequestUUIDs %s" % str(request_uuid_list))
             job_pool = pool.Pool(len(request_uuid_list))
-            [job_pool.spawn(self.spawn_originate, request_uuid)
-                                        for request_uuid in request_uuid_list]
+            [ job_pool.spawn(self.spawn_originate, request_uuid)
+                                        for request_uuid in request_uuid_list ]
+            return True
+        self.log.error("Bulk Calls Failed -- No RequestUUID !")
+        return False
 
     def transfer_call(self, new_xml_url, call_uuid):
         self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
