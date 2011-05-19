@@ -26,6 +26,10 @@ from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
 MAX_REDIRECT = 10000
 
 
+
+class Hangup(Exception): pass
+
+
 class RequestLogger(object):
     """
     Class RequestLogger
@@ -95,6 +99,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         response = super(PlivoOutboundEventSocket, self)._protocol_send(
                                                                 command, args)
         self.log.debug("Response: %s" % str(response))
+        if self.has_hangup():
+            raise Hangup()
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
@@ -105,6 +111,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         response = super(PlivoOutboundEventSocket, self)._protocol_sendmsg(
                                                 name, args, uuid, lock, loops)
         self.log.debug("Response: %s" % str(response))
+        if self.has_hangup():
+            raise Hangup()
         return response
 
     # Commands like `playback`, `record` etc. return +OK "immediately".
@@ -139,7 +147,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if hangup_url:
             self.session_params['hangup_cause'] = self._hangup_cause
             self.log.info("Posting hangup to %s" % hangup_url)
-            self.post_to_url(hangup_url)
+            gevent.spawn(self.post_to_url, hangup_url)
 
     def on_channel_hangup_complete(self, event):
         if not self._hangup_cause:
@@ -218,11 +226,22 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         }
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
-            self.unset("sched_hangup_id")
+            self.unset("plivo_sched_hangup_id")
         # Run application
-        self.log.debug("Processing Call")
-        self.process_call()
-        self.log.debug("Processing Call Done")
+        self.log.info("Processing Call")
+        try:
+            self.process_call()
+            return
+        except Hangup:
+            self.log.warn("Channel has hung up, breaking Processing Call")
+        except Exception, e:
+            self.log.error("Processing Call Failure !")
+            # If error occurs during xml parsing
+            # log exception and break
+            self.log.error(str(e))
+            [ self.log.error(line) for line in \
+                        traceback.format_exc().splitlines() ]
+        self.log.info("Processing Call Ended")
 
     def process_call(self):
         """Method to proceed on the call
@@ -234,8 +253,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         for x in range(MAX_REDIRECT):
             try:
                 if self.has_hangup():
-                    self.log.warn("Channel has hung up, breaking Processing Call")
-                    return
+                    raise Hangup()
                 self.fetch_xml(params=params, method=fetch_method)
                 if not self.xml_response:
                     self.log.warn("No XML Response")
@@ -246,6 +264,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.info("End of RESTXML")
                 return
             except RESTRedirectException, redirect:
+                if self.has_hangup():
+                    raise Hangup()
                 # Set target URL to Redirect URL
                 # Set method to Redirect method
                 # Set additional params to Redirect params
@@ -262,14 +282,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                             % self.target_url)
                 gevent.sleep(0.010)
                 continue
-            except Exception, e:
-                self.log.error("Processing Call Failure !")
-                # If error occurs during xml parsing
-                # log exception and break
-                self.log.error(str(e))
-                [ self.log.error(line) for line in \
-                            traceback.format_exc().splitlines() ]
-                return
         self.log.warn("Max Redirect Reached !")
 
     def fetch_xml(self, params={}, method='POST'):

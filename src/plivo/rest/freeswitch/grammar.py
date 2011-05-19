@@ -892,9 +892,9 @@ class Speak(Grammar):
                 outbound_socket.speak(say_args)
             event = outbound_socket._action_queue.get()
             # Log Speak execute response
-            outbound_socket.log.info("Speak finished %s times - (%s)" \
+            outbound_socket.log.info("Speak %s times - (%s)" \
                     % ((i+1), str(event.get_header('Application-Response'))))
-        outbound_socket.log.info("Speak finished")
+        outbound_socket.log.info("Speak Done")
 
 
 class ScheduleHangup(Grammar):

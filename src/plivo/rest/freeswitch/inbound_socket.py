@@ -7,9 +7,11 @@ monkey.patch_all()
 import urllib
 import urllib2
 
+import gevent
 from gevent import pool
 
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
+from plivo.rest.freeswitch.helpers import HTTPRequest
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -63,7 +65,7 @@ class RESTInboundSocket(InboundEventSocket):
                     self.log.debug("Request: %s cannot be completed as %s"
                                                     % (request_uuid, info))
                     params = {'request_uuid': request_uuid, 'reason': info}
-                    self.post_to_url(hangup_url, params)
+                    gevent.spawn(self.post_to_url, hangup_url, params)
 
     def on_channel_hangup(self, ev):
         """
@@ -113,7 +115,7 @@ class RESTInboundSocket(InboundEventSocket):
             caller_id = ev['Caller-Caller-ID-Number']
             try:
                 call_state = self.calls_ring_complete[call_uuid]
-            except LookupError:
+            except KeyError:
                 call_state = False
             if not call_state:
                 if to:
@@ -127,7 +129,7 @@ class RESTInboundSocket(InboundEventSocket):
                         "Call Ringing for: %s  with request id %s"
                                                         % (to, request_uuid))
                         params = {'to': to, 'request_uuid': request_uuid}
-                        self.post_to_url(ring_url, params)
+                        gevent.spawn(self.post_to_url, ring_url, params)
 
     def hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
         self.log.debug("Call: %s hungup, Reason %s, Request uuid %s"
