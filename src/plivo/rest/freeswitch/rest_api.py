@@ -321,8 +321,16 @@ class PlivoRestApi(object):
                 time_limit_list = time_limit_str.split(delimiter)
                 hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
 
-                if len(to_str_list) != len(gw_str_list):
-                    msg = "Gateway length does not match with number length"
+                if len(to_str_list) < 2:
+                    msg = "BulkCall should be used for atleast 2 numbers"
+                elif len(to_str_list) != len(gw_str_list) or \
+                      len(to_str_list) != len(gw_codecs_str_list) or \
+                      len(to_str_list) != len(gw_timeouts_str_list) or \
+                      len(to_str_list) != len(gw_retries_str_list) or \
+                      len(to_str_list) != len(send_digits_list) or \
+                      len(to_str_list) != len(time_limit_list) or \
+                      len(to_str_list) != len(hangup_on_ring_list):
+                    msg = "'To' parameter length, not same as other Parameters"
                 else:
                     for to in to_str_list:
                         try:
@@ -531,7 +539,7 @@ class PlivoRestApi(object):
         if not sched_id:
             msg = "Id Parameter must be present"
         else:
-            self._rest_inbound_socket.api("sched_del %s" % sched_id)
+            res = self._rest_inbound_socket.api("sched_del %s" % sched_id)
             if res.is_success():
                 msg = "Scheduled Hangup Canceled"
                 result = True
