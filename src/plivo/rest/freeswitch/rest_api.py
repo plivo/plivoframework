@@ -33,8 +33,8 @@ class PlivoRestApi(object):
         if not allowed_ips:
             return True
         ip_list = allowed_ips.split(',')
-        for ip in ip_list:
-            if str(ip) == str(request.remote_addr):
+        for ip in allowed_ips.split(','):
+            if ip.strip() == request.remote_addr.strip():
                 return True
         raise Unauthorized("IP Auth Failed")
 
