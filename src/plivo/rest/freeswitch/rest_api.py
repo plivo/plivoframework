@@ -323,14 +323,8 @@ class PlivoRestApi(object):
 
                 if len(to_str_list) < 2:
                     msg = "BulkCall should be used for atleast 2 numbers"
-                elif len(to_str_list) != len(gw_str_list) or \
-                      len(to_str_list) != len(gw_codecs_str_list) or \
-                      len(to_str_list) != len(gw_timeouts_str_list) or \
-                      len(to_str_list) != len(gw_retries_str_list) or \
-                      len(to_str_list) != len(send_digits_list) or \
-                      len(to_str_list) != len(time_limit_list) or \
-                      len(to_str_list) != len(hangup_on_ring_list):
-                    msg = "'To' parameter length, not same as other Parameters"
+                elif len(to_str_list) != len(gw_str_list):
+                    msg = "'To' parameter length does not match 'GW' Length"
                 else:
                     for to in to_str_list:
                         try:
@@ -367,9 +361,9 @@ class PlivoRestApi(object):
                         i += 1
                         request_uuid_list.append(request_uuid)
 
-                self._rest_inbound_socket.bulk_originate(request_uuid_list)
-                msg = "Bulk Call Requests Executed"
-                result = True
+                        self._rest_inbound_socket.bulk_originate(request_uuid_list)
+                        msg = "Bulk Call Requests Executed"
+                        result = True
 
         return flask.jsonify(Success=result, Message=msg,
                              RequestUUID=str(request_uuid_list))
