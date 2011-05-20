@@ -25,7 +25,7 @@ URLS = {
         # API to hangup a single call
         '/' + PLIVO_VERSION + '/HangupCall/': (PlivoRestApi.hangup_call, ['POST']),
         # API to transfer a single call
-        '/' + PLIVO_VERSION + '/TransferCall/': (PlivoRestApi.hangup_call, ['POST']),
+        '/' + PLIVO_VERSION + '/TransferCall/': (PlivoRestApi.transfer_call, ['POST']),
         # API to hangup all calls
         '/' + PLIVO_VERSION + '/HangupAllCalls/': (PlivoRestApi.hangup_all_calls, ['POST']),
         # API to schedule hangup on a single call

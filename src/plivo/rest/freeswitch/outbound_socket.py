@@ -191,7 +191,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
             aleg_request_uuid = channel.get_header('variable_plivo_request_uuid')
-            self.target_url = channel.get_header('variable_plivo_answer_url')
+            # Look for target url in order below :
+            #  get transfer_url from channel variable
+            #  get answer_url from channel variable
+            xfer_url = channel.get_header('variable_plivo_transfer_url')
+            answer_url = channel.get_header('variable_plivo_answer_url')
+            if xfer_url:
+                self.target_url = xfer_url
+                self.log.info("Using Call TransferUrl %s" % self.target_url)
+            elif answer_url:
+                self.target_url = answer_url
+                self.log.info("Using Call AnswerUrl %s" % self.target_url)
+            else:
+                self.log.error("Aborting -- No Call Url found !")
+                return
+            # Look for a sched_hangup_id
             sched_hangup_id = channel.get_header('variable_plivo_sched_hangup_id')
             # Don't post hangup in outbound direction
             self.default_hangup_url = None
@@ -201,11 +215,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             #  get transfer_url from channel variable
             #  get answer_url from channel variable
             #  get default answer_url
-            self.target_url = self.get_var('plivo_transfer_url')
-            if not self.target_url:
-                self.target_url = self.get_var('plivo_answer_url')
-            if not self.target_url:
-                self.target_url = self.default_answer_url
+            xfer_url = self.get_var('plivo_transfer_url')
+            answer_url = self.get_var('plivo_answer_url')
+            default_answer_url = self.default_answer_url
+            if xfer_url:
+                self.target_url = xfer_url
+                self.log.info("Using Call TransferUrl %s" % self.target_url)
+            elif answer_url:
+                self.target_url = answer_url
+                self.log.info("Using Call AnswerUrl %s" % self.target_url)
+            elif default_answer_url:
+                self.target_url = default_answer_url
+                self.log.info("Using Call DefaultAnswerUrl %s" % self.target_url)
+            else:
+                self.log.error("Aborting -- No Call Url found !")
+                return
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
             # Look for hangup_url

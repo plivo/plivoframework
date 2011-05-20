@@ -502,8 +502,8 @@ class PlivoRestApi(object):
             msg = "URL is not Valid"
             return flask.jsonify(Success=result, Message=msg)
         msg = "Call UUID must be present with URL"
-        res = self._rest_inbound_socket.transfer_call(new_xml_url, status,
-                                                      call_uuid, request_uuid)
+        res = self._rest_inbound_socket.transfer_call(new_xml_url,
+                                                      call_uuid)
         if res:
             msg = "Transfer Call Executed"
             result = True
