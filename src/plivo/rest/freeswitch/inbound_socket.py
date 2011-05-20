@@ -79,7 +79,8 @@ class RESTInboundSocket(InboundEventSocket):
                     self.set_hangup_complete(self, request_uuid, call_uuid, 
                                              reason, ev, hangup_url)
                     return
-                # If there are gateways to try again, spawn originate 
+                # If there are gateways and call request ring_flag is False 
+                #  try again: spawn originate 
                 elif call_req.gateways:
                     self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
                                                     % (request_uuid, reason))
