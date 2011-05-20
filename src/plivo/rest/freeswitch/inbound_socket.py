@@ -29,19 +29,12 @@ class RESTInboundSocket(InboundEventSocket):
         self.log = log
         self.auth_id = auth_id
         self.auth_token = auth_token
-        # Mapping of Key: job-uuid - Value: request_id
+        # Mapping of Key: job-uuid - Value: request_uuid
         self.bk_jobs = {}
         # Transfer jobs: call_uuid - Value: where to transfer
         self.xfer_jobs = {}
-        # Mapping of Key to-callerid vs request id to indicate ringing
-        self.ring_map = {}
-        # Track When Calls rang
-        self.calls_ring_complete = {}
-        # Call Requests Key: request_uuid - Value
-        # 0 - originate_str, 1 - tonumber, 2 - gw_try_number, 3 - gw_list,
-        # 4 - gw_codec_list, 5 - gw_timeout_list, 6 - gw_retry_list,
-        # 7 - answer_url, 8 - hangup_url, 9 - ring_url
-        self.call_request = {}
+        # Call Requests 
+        self.call_requests = {}
 
     def on_background_job(self, ev):
         """
@@ -49,48 +42,93 @@ class RESTInboundSocket(InboundEventSocket):
         Capture background job only for originate,
         and ignore all other jobs
         """
-        job_uuid = ev['Job-UUID']
         job_cmd = ev['Job-Command']
-        if job_cmd == "originate":
-            status, info = ev.get_body().split()
+        job_uuid = ev['Job-UUID']
+        if job_cmd == "originate" and job_uuid:
+            try:
+                status, reason = ev.get_body().split(' ', 1)
+            except ValueError:
+                return
             request_uuid = self.bk_jobs.pop(job_uuid, None)
-            # Handle failiure case of originate - USER_NOT_REGISTERED
+            # Handle failure case of originate - USER_NOT_REGISTERED
             # This case does not raise a on_channel_hangup event.
             # All other failiures will be captured by on_channel_hangup
-            if status != '+OK':
-                if info == 'USER_NOT_REGISTERED' and request_uuid:
-                    #TODO: Need to check if there are some other edge cases
-                    request_params = self.call_request[request_uuid]
-                    hangup_url = request_params[8]
-                    self.log.debug("Request: %s cannot be completed as %s"
-                                                    % (request_uuid, info))
-                    params = {'request_uuid': request_uuid, 'reason': info}
-                    gevent.spawn(self.post_to_url, hangup_url, params)
+            if not request_uuid:
+                self.log.debug("No RequestUUID found !")
+                return
+            try:
+                call_req = self.call_requests[request_uuid]
+            except KeyError:
+                return
+            status = status.strip()
+            reason = reason.strip()
+            if status[:4] == '-ERR':
+                # In case ring was done, just warn
+                # releasing call request will be done in hangup event
+                if call_req.ring_flag is True:
+                    self.log.warn("Call Rang for RequestUUID %s but Failed (%s)" \
+                                                    % (request_uuid, reason))
+                    return
+                # If no more gateways, release call request
+                elif not call_req.gateways:
+                    self.log.warn("Call Failed for RequestUUID %s but No More Gateways (%s)" \
+                                                    % (request_uuid, reason))
+                    # set an empty call_uuid
+                    call_uuid = ''
+                    hangup_url = call_req.hangup_url
+                    self.set_hangup_complete(self, request_uuid, call_uuid, 
+                                             reason, ev, hangup_url)
+                    return
+                # If there are gateways to try again, spawn originate 
+                elif call_req.gateways:
+                    self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
+                                                    % (request_uuid, reason))
+                    self.spawn_originate(request_uuid)
+
+    def on_channel_originate(self, ev):
+        request_uuid = ev['variable_plivo_request_uuid']
+        answer_state = ev['Answer-State']
+        direction = ev['Call-Direction']
+        to = ev['Caller-Destination-Number']
+        if request_uuid and answer_state == 'ringing' and direction == 'outbound':
+            try:
+                call_req = self.call_requests[request_uuid]
+                call_req.gateways = [] # clear gateways to avoid retry
+            except (KeyError, AttributeError):
+                return
+            ring_url = call_req.ring_url
+            # set ring flag to true
+            call_req.ring_flag = True
+            self.log.info("Call Ringing for %s with RequestUUID  %s" \
+                            % (to, request_uuid))
+            params = {'to': to, 'request_uuid': request_uuid}
+            gevent.spawn(self.post_to_url, ring_url, params)
 
     def on_channel_hangup(self, ev):
         """
         Capture Channel Hangup
         """
         request_uuid = ev['variable_plivo_request_uuid']
+        if not request_uuid:
+            return
         call_uuid = ev['Unique-ID']
         reason = ev['Hangup-Cause']
-        request_params = self.call_request[request_uuid]
-        hangup_url = request_params[8]
-        if reason == 'NORMAL_CLEARING':
-            self.hangup_complete(request_uuid, call_uuid, reason, ev,
-                                                                hangup_url)
+        try:
+            call_req = self.call_requests[request_uuid]
+        except KeyError:
+            self.log.warn("CallRequest not found for RequestUUID %s" \
+                            % request_uuid)
+            return
+        # If there are gateways to try again, spawn originate 
+        if call_req.gateways:
+            self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
+                            % (request_uuid, reason))
+            self.spawn_originate(request_uuid)
+        # Else clean call request
         else:
-            try:
-                call_rang = self.calls_ring_complete[call_uuid]
-            except LookupError:
-                call_rang = False
-            gw_list = request_params[3]
-            if gw_list and not call_rang:
-                self.log.debug("Originate Failed - Retrying")
-                self.spawn_originate(request_uuid)
-            else:
-                self.hangup_complete(request_uuid, call_uuid, reason, ev,
-                                                                hangup_url)
+            hangup_url = call_req.hangup_url
+            self.set_hangup_complete(request_uuid, call_uuid, reason, ev,
+                                                        hangup_url)
 
     def on_channel_state(self, ev):
         if ev['Channel-State'] == 'CS_RESET':
@@ -108,49 +146,24 @@ class RESTInboundSocket(InboundEventSocket):
         elif ev['Channel-State'] == 'CS_HANGUP':
             call_uuid = ev['Unique-ID']
             self.xfer_jobs.pop(call_uuid, None)
-        elif ev['Answer-State'] == 'ringing' and \
-            ev['Call-Direction'] == 'outbound':
-            call_uuid = ev['Unique-ID']
-            to = ev['Caller-Destination-Number']
-            caller_id = ev['Caller-Caller-ID-Number']
-            try:
-                call_state = self.calls_ring_complete[call_uuid]
-            except KeyError:
-                call_state = False
-            if not call_state:
-                if to:
-                    self.calls_ring_complete[call_uuid] = True
-                    keystring = "%s-%s" % (to, caller_id)
-                    request_uuid = self.ring_map.pop(keystring, None)
-                    if request_uuid:
-                        request_params = self.call_request[request_uuid]
-                        ring_url = request_params[9]
-                        self.log.info( \
-                        "Call Ringing for: %s  with request id %s"
-                                                        % (to, request_uuid))
-                        params = {'to': to, 'request_uuid': request_uuid}
-                        gevent.spawn(self.post_to_url, ring_url, params)
 
-    def hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
-        self.log.debug("Call: %s hungup, Reason %s, Request uuid %s"
+    def set_hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
+        self.log.info("Call %s Completed, Reason %s, Request uuid %s"
                                         % (call_uuid, reason, request_uuid))
         try:
-            del self.call_request[request_uuid]
-        except KeyError:
+            self.call_requests[request_uuid] = None
+            del self.call_requests[request_uuid]
+        except KeyError, AttributeError:
             pass
-        # Check if call cleans up if no user
-        try:
-            del self.calls_ring_complete[call_uuid]
-        except KeyError:
-            pass
-        self.log.debug("Call Cleaned up")
+        self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
         if hangup_url:
             params = {'request_uuid': request_uuid, 'call_uuid': call_uuid,
                                                             'reason': reason}
-            self.post_to_url(hangup_url, params)
+            gevent.spawn(self.post_to_url, hangup_url, params)
 
     def post_to_url(self, url=None, params={}, method='POST'):
         if not url:
+            self.log.warn("Cannot post No url found !")
             return None
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         try:
@@ -164,45 +177,40 @@ class RESTInboundSocket(InboundEventSocket):
         return None
 
     def spawn_originate(self, request_uuid):
-        request_params = self.call_request[request_uuid]
-        originate_str = request_params[0]
-        to = request_params[1]
-        gw_tries_done = request_params[2]
-        gw_list = request_params[3]
-        gw_codec_list = request_params[4]
-        gw_timeout_list = request_params[5]
-        gw_retry_list = request_params[6]
+        try:
+            call_req = self.call_requests[request_uuid]
+        except KeyError:
+            self.log.warn("CallRequest not found for RequestUUID %s" % request_uuid)
+            return
+        try:
+            gw = call_req.gateways.pop(0)
+        except IndexError:
+            self.log.warn("No more gateway to call for RequestUUID %s" % request_uuid)
+            try:
+                self.call_requests[request_uuid] = None
+                del self.call_requests[request_uuid]
+            except KeyError:
+                pass
+            return
 
-        if gw_list:
-            if gw_codec_list:
-                originate_str = "%s,absolute_codec_string=%s" \
-                                        % (originate_str, gw_codec_list[0])
-            if gw_timeout_list:
-                originate_str = "%s,originate_timeout=%s" \
-                                        % (originate_str, gw_timeout_list[0])
+        _options = []
+        if gw.codecs:
+            _options.append("absolute_codec_string=%s" % gw.codecs)
+        if gw.timeout:
+            _options.append("originate_timeout=%s" % gw.timeout)
+        options = ','.join(_options)
+        outbound_str = "'socket:%s async full' inline" \
+                        % self.fs_outbound_address
 
-            outbound_str = "'socket:%s async full' inline" \
-                                                % (self.fs_outbound_address)
-            dial_str = "%s}%s/%s %s" \
-                            % (originate_str, gw_list[0], to, outbound_str)
-            bg_api_response = self.bgapi(dial_str)
-            job_uuid = bg_api_response.get_job_uuid()
-            self.bk_jobs[job_uuid] = request_uuid
-            if not job_uuid:
-                self.log.error("Call Failed -- JobUUID not received"
-                                                            % dial_str)
-            # Reduce one from the call request param lists each time
-            if gw_retry_list:
-                gw_tries_done += 1
-                if gw_tries_done > int(gw_retry_list[0]):
-                    gw_tries_done = 0
-                    request_params[3] = gw_list[1:]
-                    request_params[4] = gw_codec_list[1:]
-                    request_params[5] = gw_timeout_list[1:]
-                    request_params[6] = gw_retry_list[1:]
+        dial_str = "originate {%s,%s}%s/%s %s" \
+            % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
 
-            request_params[2] = gw_tries_done
-            self.call_request[request_uuid] = request_params
+        bg_api_response = self.bgapi(dial_str)
+        job_uuid = bg_api_response.get_job_uuid()
+        self.bk_jobs[job_uuid] = request_uuid
+        if not job_uuid:
+            self.log.error("Call Failed for RequestUUID %s -- JobUUID not received" \
+                                                            % request_uuid)
 
     def bulk_originate(self, request_uuid_list):
         if request_uuid_list:

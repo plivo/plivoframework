@@ -21,6 +21,30 @@ def auth_protect(decorated_func):
     return wrapper
 
 
+
+class Gateway(object):
+    def __init__(self, request_uuid, to, gw, codecs, 
+                 timeout, extra_dial_string):
+        self.request_uuid = request_uuid
+        self.to = to
+        self.gw = gw
+        self.codecs = codecs
+        self.timeout = timeout
+        self.extra_dial_string = extra_dial_string
+
+
+class CallRequest(object):
+    def __init__(self, request_uuid, gateways,  
+                 answer_url, ring_url, hangup_url):
+        self.request_uuid = request_uuid
+        self.gateways = gateways
+        self.answer_url = answer_url
+        self.ring_url = ring_url
+        self.hangup_url = hangup_url
+        self.ring_flag = False
+
+
+
 class PlivoRestApi(object):
     _config = None
     _rest_inbound_socket = None
@@ -75,10 +99,10 @@ class PlivoRestApi(object):
         """
         return message
 
-    def _prepare_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
-                        gw_timeouts, gw_retries, answer_url, hangup_url,
-                        ring_url, send_digits, time_limit, hangup_on_ring):
-
+    def _prepare_call_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
+                                gw_timeouts, gw_retries, send_digits, time_limit, 
+                                hangup_on_ring, answer_url, ring_url, hangup_url):
+        gateways = []
         gw_retry_list = []
         gw_codec_list = []
         gw_timeout_list = []
@@ -96,44 +120,69 @@ class PlivoRestApi(object):
         if gw_retries:
             gw_retry_list = gw_retries.split(',')
 
+        # create a new request uuid
         request_uuid = str(uuid.uuid1())
+        # append args
         args_list = []
         args_list.append("plivo_request_uuid=%s" % request_uuid)
         args_list.append("plivo_answer_url=%s" % answer_url)
         args_list.append("origination_caller_id_number=%s" % caller_id)
+
+        # set extra_dial_string
         if extra_dial_string:
              args_list.append(extra_dial_string)
-        if hangup_on_ring != '':
-            if hangup_on_ring == '0':
-                args_list.append("execute_on_ring='hangup ORIGINATOR_CANCEL'")
-            else:
-                args_list.append("execute_on_ring='sched_hangup +%s ORIGINATOR_CANCEL'" \
+
+        # set hangup_on_ring
+        try:
+            hangup_on_ring = int(hangup_on_ring)
+        except ValueError:
+            hangup_on_ring = -1
+        if hangup_on_ring == 0:
+            args_list.append("execute_on_ring='hangup ORIGINATOR_CANCEL'")
+        elif hangup_on_ring > 0:
+                args_list.append("execute_on_ring='sched_hangup +%d ORIGINATOR_CANCEL'" \
                                                                 % hangup_on_ring)
+
+        # set send_digits
         if send_digits:
             args_list.append("execute_on_answer='send_dtmf %s'" \
                                                 % send_digits)
+
+        # set time_limit
         try:
             time_limit = int(time_limit)
         except ValueError:
-            time_limit = 0
+            time_limit = -1
         if time_limit > 0:
+            # create sched_hangup_id
             sched_hangup_id = str(uuid.uuid1())
             args_list.append("api_on_answer='sched_api %s +%d hupall ALLOTTED_TIMEOUT plivo_request_uuid %s'" \
                                                 % (sched_hangup_id, time_limit, request_uuid))
             args_list.append("plivo_sched_hangup_id=%s" % sched_hangup_id)
 
+        # build originate string
         args_str = ','.join(args_list)
-        originate_str = ''.join(["originate {", args_str])
+        #originate_str = "originate {%s" % args_str
 
-        gw_try_number = 0
-        request_params = [originate_str, to, gw_try_number, gw_list,
-                          gw_codec_list, gw_timeout_list, gw_retry_list,
-                          answer_url, hangup_url, ring_url]
-        self._rest_inbound_socket.call_request[request_uuid] = request_params
-        keystring = "%s-%s" % (to, caller_id)
-        self._rest_inbound_socket.ring_map[keystring] = request_uuid
+        for gw in gw_list:
+            try:
+                codecs = gw_codec_list.pop(0)
+            except (ValueError, IndexError):
+                codecs = ''
+            try:
+                retry = int(gw_retry_list.pop(0))
+            except (ValueError, IndexError):
+                retry = 1
+            try:
+                timeout = int(gw_timeout_list.pop(0))
+            except (ValueError, IndexError):
+                timeout = 60
+            for i in range(retry): 
+                gateway = Gateway(request_uuid, to, gw, codecs, timeout, args_str)
+                gateways.append(gateway)
 
-        return request_uuid
+        call_req = CallRequest(request_uuid, gateways, answer_url, ring_url, hangup_url)
+        return call_req
 
     @auth_protect
     def call(self):
@@ -214,11 +263,14 @@ class PlivoRestApi(object):
                 time_limit = get_post_param(request, 'TimeLimit')
                 hangup_on_ring = get_post_param(request, 'HangupOnRing')
 
-                request_uuid = self._prepare_request(caller_id, to,
-                            extra_dial_string, gw, gw_codecs, gw_timeouts,
-                            gw_retries, answer_url, hangup_url, ring_url,
-                            send_digits, time_limit, hangup_on_ring)
-
+                call_req = self._prepare_call_request(
+                                    caller_id, to, extra_dial_string,
+                                    gw, gw_codecs, gw_timeouts, gw_retries,
+                                    send_digits, time_limit, hangup_on_ring,
+                                    answer_url, ring_url, hangup_url)
+                
+                request_uuid = call_req.request_uuid
+                self._rest_inbound_socket.call_requests[request_uuid] = call_req
                 self._rest_inbound_socket.spawn_originate(request_uuid)
                 msg = "Call Request Executed"
                 result = True
@@ -281,6 +333,9 @@ class PlivoRestApi(object):
         result = False
         request_uuid = ""
 
+        request_uuid_list = []
+        i = 0
+
         caller_id = get_post_param(request, 'From')
         to_str = get_post_param(request, 'To')
         gw_str = get_post_param(request, 'Gateways')
@@ -309,8 +364,6 @@ class PlivoRestApi(object):
                 send_digits_str = get_post_param(request, 'SendDigits')
                 time_limit_str = get_post_param(request, 'TimeLimit')
                 hangup_on_ring_str = get_post_param(request, 'HangupOnRing')
-                request_uuid_list = []
-                i = 0
 
                 to_str_list = to_str.split(delimiter)
                 gw_str_list = gw_str.split(delimiter)
@@ -322,7 +375,7 @@ class PlivoRestApi(object):
                 hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
 
                 if len(to_str_list) < 2:
-                    msg = "BulkCall should be used for atleast 2 numbers"
+                    msg = "BulkCalls should be used for at least 2 numbers"
                 elif len(to_str_list) != len(gw_str_list):
                     msg = "'To' parameter length does not match 'GW' Length"
                 else:
@@ -352,25 +405,26 @@ class PlivoRestApi(object):
                         except IndexError:
                             hangup_on_ring = ""
 
-                        request_uuid = self._prepare_request(caller_id, to,
-                                    extra_dial_string, gw_str_list[i],
-                                    gw_codecs, gw_timeouts, gw_retries,
-                                    answer_url, hangup_url, ring_url,
-                                    send_digits, time_limit, hangup_on_ring)
-
-                        i += 1
+                        call_req = self._prepare_call_request(
+                                    caller_id, to, extra_dial_string,
+                                    gw_str_list[i], gw_codecs, gw_timeouts, gw_retries,
+                                    send_digits, time_limit, hangup_on_ring,
+                                    answer_url, ring_url, hangup_url)
+                        request_uuid = call_req.request_uuid
                         request_uuid_list.append(request_uuid)
+                        self._rest_inbound_socket.call_requests[request_uuid] = call_req
+                        i += 1
 
                     # now do the calls !
                     if self._rest_inbound_socket.bulk_originate(request_uuid_list):
-                        msg = "Bulk Call Requests Executed"
+                        msg = "BulkCalls Requests Executed"
                         result = True
                     else:
-                        msg = "Bulk Call Requests Failed"
+                        msg = "BulkCalls Requests Failed"
                         request_uuid_list = []
 
         return flask.jsonify(Success=result, Message=msg,
-                             RequestUUID=str(request_uuid_list))
+                             RequestUUID=request_uuid_list)
 
     @auth_protect
     def hangup_call(self):
