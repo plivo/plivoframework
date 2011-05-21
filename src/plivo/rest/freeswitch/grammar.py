@@ -548,17 +548,31 @@ class Wait(Grammar):
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
-        length = int(self.extract_attribute_value("length"))
+        try:
+            length = int(self.extract_attribute_value("length"))
+        except ValueError:
+            raise RESTFormatException("Wait length must be an integer")
+        transfer = self.extract_attribute_value("transferEnabled")
+        if transfer == 'true':
+            self.transfer = True
+        else:
+            self.transfer = False
         if length < 0:
-            raise RESTFormatException("Wait must be a positive integer")
+            raise RESTFormatException("Wait length must be a positive integer")
         self.length = length
 
     def run(self, outbound_socket):
-        outbound_socket.log.info("Wait Started for %s seconds"
-                                                            % self.length)
-        outbound_socket.sleep(str(self.length * 1000))
-        outbound_socket.log.info("Wait Done after %s seconds"
-                                                            % self.length)
+        outbound_socket.log.info("Wait Started for %d seconds" \
+                                                    % self.length)
+        if self.transfer:
+            outbound_socket.log.warn("Wait with transfer enabled")
+            pause_str = 'silence_stream://%s'\
+                                    % str(self.length * 1000)
+            outbound_socket.playback(pause_str)
+        else:
+            outbound_socket.sleep(str(self.length * 1000))
+        event = outbound_socket._action_queue.get()
+        outbound_socket.log.info("Wait Done")
 
 
 class Play(Grammar):

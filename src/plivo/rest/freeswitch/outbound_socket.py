@@ -133,6 +133,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             event.get_header('Application') == 'play_and_get_digits' or \
             event.get_header('Application') == 'bridge' or \
             event.get_header('Application') == 'say' or \
+            event.get_header('Application') == 'sleep' or \
             event.get_header('Application') == 'speak':
             self._action_queue.put(event)
 
