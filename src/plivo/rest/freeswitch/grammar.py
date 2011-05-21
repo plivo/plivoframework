@@ -5,6 +5,8 @@ import os.path
 from datetime import datetime
 import re
 import uuid
+import gevent
+import gevent.timeout
 
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
                                                         file_exists
@@ -548,17 +550,30 @@ class Wait(Grammar):
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
-        length = int(self.extract_attribute_value("length"))
+        try:
+            length = int(self.extract_attribute_value("length"))
+        except ValueError:
+            raise RESTFormatException("Wait length must be an integer")
         if length < 0:
-            raise RESTFormatException("Wait must be a positive integer")
+            raise RESTFormatException("Wait length must be a positive integer")
         self.length = length
 
     def run(self, outbound_socket):
-        outbound_socket.log.info("Wait Started for %s seconds"
-                                                            % self.length)
-        outbound_socket.sleep(str(self.length * 1000))
-        outbound_socket.log.info("Wait Done after %s seconds"
-                                                            % self.length)
+        outbound_socket.log.info("Wait Started for %d seconds" \
+                                                    % self.length)
+        timer = gevent.timeout.Timeout(self.length, False)
+        try:
+            timer.start()
+            try:
+                while not outbound_socket.has_hangup():
+                    gevent.sleep(0.1)    
+                outbound_socket.log.info("Wait break after hangup")
+            except gevent.timeout.Timeout:
+                outbound_socket.log.info("Wait break after %d seconds" \
+                                                        % self.length)
+        finally:
+            timer.cancel()
+        outbound_socket.log.info("Wait Done")
 
 
 class Play(Grammar):
