@@ -6,3 +6,4 @@ src/dist*
 src/build*
 src/*egg*
 .idea
+docs/_build/*
