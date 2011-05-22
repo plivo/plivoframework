@@ -20,6 +20,6 @@ See `Plivo Documentation <http://www.plivo.org/documentation/>`_ for more inform
 License
 ~~~~~~~~
 
-Copyright (c) 2011 Plivo Team <contact@plivo.org>
+Copyright (c) 2011 Plivo Team <hello@plivo.org>
 
 Plivo is distributed under the terms of the Mozilla Public License Version 1.1, see `LICENSE`.
