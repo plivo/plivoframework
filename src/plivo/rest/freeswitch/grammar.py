@@ -149,24 +149,70 @@ class Grammar(object):
 
 class Conference(Grammar):
     """Go to a Conference Room
+    room name is body text of Conference element.
 
-    room: number or name of the conference room
+    waitAloneSound: sound to play while alone in conference
+    muted: enter conference muted
+    startConferenceOnEnter: the conference start when this member joins
+    endConferenceOnExit: close conference after this user leaves
+    maxMembers: max members in conference (0 for no limit)
     """
     def __init__(self):
         Grammar.__init__(self)
         self.room = ''
+        self.moh_sound = None
+        self.muted = False
+        self.start_on_enter = True
+        self.end_on_exit = False
+        self.max_members = 200
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
-        room = element.text.strip()
+        room = self.text
         if not room:
             raise RESTFormatException("Conference Room must be defined")
-        self.room = room
+        self.room = room + '@plivo'
+        self.moh_sound = self.extract_attribute_value("waitAloneSound", None)
+        self.muted = self.extract_attribute_value("muted", 'false') \
+                        == 'true'
+        self.start_on_enter = self.extract_attribute_value("startConferenceOnEnter", 'true') \
+                                == 'true'
+        self.end_on_exit = self.extract_attribute_value("endConferenceOnExit", 'false') \
+                                == 'true'
+        try:
+            self.max_members = int(self.extract_attribute_value("maxMembers", 200))
+        except ValueError:
+            self.max_members = 200
 
     def execute(self, outbound_socket):
+        flags = []
+        outbound_socket.set("conference_controls=none")
+        if self.moh_sound:
+            outbound_socket.set("conference_moh_sound=%s" % self.moh_sound)
+        else:
+            outbound_socket.unset("conference_moh_sound")
+        if self.max_members > 0:
+            outbound_socket.set("max-members=%d" % self.max_members)
+        else:
+            outbound_socket.unset("max-members")
+        if self.muted:
+            flags.append("muted")
+        if self.start_on_enter:
+            flags.append("moderator")
+            flags.append("wait-mod")
+        if self.end_on_exit:
+            flags.append("endconf")
+        flags_opt = ','.join(flags)
+        if flags_opt:
+            outbound_socket.set("conference_member_flags=%s" % flags_opt)
+        else:
+            outbound_socket.unset("conference_moh_sound")
+        outbound_socket.log.info("Entering Conference: Room %s (flags %s)" \
+                                        % (str(self.room), flags_opt))
         outbound_socket.conference(str(self.room))
-        outbound_socket.log.info("Conference Executed: %s" \
-                                            % str(self.room))
+        event = outbound_socket._action_queue.get()
+        outbound_socket.log.info("Leaving Conference: Room %s" \
+                                        % str(self.room))
 
 
 class Dial(Grammar):

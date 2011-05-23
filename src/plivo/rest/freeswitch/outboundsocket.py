@@ -72,6 +72,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         'say',
                         'sleep',
                         'speak',
+                        'conference',
                        )
 
     def __init__(self, socket, address, log,
