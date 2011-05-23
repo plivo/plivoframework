@@ -103,7 +103,13 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.info("Call Ringing for %s with RequestUUID  %s" \
                             % (to, request_uuid))
             if ring_url:
-                params = {'To': to, 'RequestUUID': request_uuid}
+                params = {
+                        'To': to,
+                        'RequestUUID': request_uuid,
+                        'Direction': 'outbound',
+                        'CallStatus': 'ringing',
+                        'From': ev['Caller-Caller-ID-Number']
+                    }
                 gevent.spawn(self.post_to_url, ring_url, params)
 
     def on_channel_hangup(self, ev):
@@ -159,8 +165,16 @@ class RESTInboundSocket(InboundEventSocket):
             pass
         self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
         if hangup_url:
-            params = {'RequestUUID': request_uuid, 'CallUUID': call_uuid,
-                                                            'HangupCause': reason}
+            to = ev['Caller-Destination-Number']
+            params = {
+                    'RequestUUID': request_uuid,
+                    'CallUUID': call_uuid,
+                    'HangupCause': reason,
+                    'Direction': 'outbound',
+                    'To': to,
+                    'CallStatus': 'completed',
+                    'From': ev['Caller-Caller-ID-Number']
+                }
             gevent.spawn(self.post_to_url, hangup_url, params)
 
     def post_to_url(self, url=None, params={}, method='POST'):

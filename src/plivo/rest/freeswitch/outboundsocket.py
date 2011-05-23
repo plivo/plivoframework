@@ -94,7 +94,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.session_params = {}
         self._action_queue = gevent.queue.Queue()
         self.default_answer_url = default_answer_url
-        self.default_hangup_url = default_hangup_url
+        # default hangup_url is answer_url
+        if self.default_hangup_url:
+            self.default_hangup_url = default_hangup_url
+        else:
+            self.default_hangup_url = self.default_answer_url
         self.answered = False
         self._hangup_cause = ''
         self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial']
@@ -151,6 +155,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             hangup_url = self.default_hangup_url
         if hangup_url:
             self.session_params['HangupCause'] = self._hangup_cause
+            self.session_params['CallStatus'] = 'completed'
             self.log.info("Posting hangup to %s" % hangup_url)
             gevent.spawn(self.post_to_url, hangup_url)
 
@@ -215,6 +220,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Don't post hangup in outbound direction
             self.default_hangup_url = None
             self.hangup_url = None
+            call_state = 'answered'
         else:
             # Look for target url in order below :
             #  get transfer_url from channel variable
@@ -239,6 +245,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
             # Look for hangup_url
             self.hangup_url = self.get_var('plivo_hangup_url')
+            call_state = 'ringing'
 
         if not sched_hangup_id:
             sched_hangup_id = ""
@@ -249,10 +256,16 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                   'To': called_no,
                   'From': from_no,
                   'Direction': self.direction,
-                  'ALegUUID': aleg_uuid,
-                  'ALegRequestUUID': aleg_request_uuid,
-                  'ScheduledHangupId': sched_hangup_id
+                  'CallStatus' : call_state
         }
+        # Add Params if present
+        if aleg_uuid:
+            self.session_params['ALegUUID'] = aleg_uuid
+        if aleg_request_uuid:
+            self.session_params['ALegRequestUUID'] = aleg_request_uuid
+        if sched_hangup_id:
+            self.session_params['ScheduledHangupId'] = sched_hangup_id
+
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
             self.unset("plivo_sched_hangup_id")
