@@ -151,7 +151,7 @@ class HTTPRequest:
         # compute signature and compare signatures
         signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
                                                             digest()).strip()
-        request.add_header("HTTP_X_PLIVO_SIGNATURE", "%s" % signature)
+        request.add_header("X_PLIVO_SIGNATURE", "%s" % signature)
         return request
 
     def fetch_response(self, uri, params={}, method='POST'):
