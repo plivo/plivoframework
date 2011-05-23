@@ -19,7 +19,7 @@ URLS = {
         # API Index
         '/': (PlivoRestApi.index, ['GET']),
         # API to originate several calls simultaneously
-        '/' + PLIVO_VERSION + '/BulkCalls/': (PlivoRestApi.bulk_calls, ['POST']),
+        '/' + PLIVO_VERSION + '/BulkCall/': (PlivoRestApi.bulk_call, ['POST']),
         # API to originate a single call
         '/' + PLIVO_VERSION + '/Call/': (PlivoRestApi.call, ['POST']),
         # API to hangup a single call
