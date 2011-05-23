@@ -23,8 +23,8 @@ class RESTInboundSocket(InboundEventSocket):
     def __init__(self, host, port, password,
                  outbound_address='',
                  auth_id='', auth_token='',
-                 filter="ALL", log=None,
-                 default_http_method = "POST"):
+                 filter='ALL', log=None,
+                 default_http_method='POST'):
         InboundEventSocket.__init__(self, host, port, password, filter)
         self.fs_outbound_address = outbound_address
         self.log = log
@@ -210,8 +210,7 @@ class RESTInboundSocket(InboundEventSocket):
                 }
             gevent.spawn(self.send_to_url, hangup_url, params)
 
-    def send_to_url(self, url=None, params={},
-                                            method=self.default_http_method):
+    def send_to_url(self, url=None, params={}, method=self.default_http_method):
         if not url:
             self.log.warn("Cannot post No url found !")
             return None
