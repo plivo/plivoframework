@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details
 
-from rest_api import PlivoRestApi
+from plivo.rest.freeswitch.api import PlivoRestApi
 
 """
 We defined here the different Urls available by the Plivo WSGIServer

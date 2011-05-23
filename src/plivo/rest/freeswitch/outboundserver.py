@@ -13,7 +13,7 @@ import sys
 import gevent
 
 from plivo.core.freeswitch.outboundsocket import OutboundServer
-from plivo.rest.freeswitch.outbound_socket import PlivoOutboundEventSocket
+from plivo.rest.freeswitch.outboundsocket import PlivoOutboundEventSocket
 from plivo.rest.freeswitch import helpers
 import plivo.utils.daemonize
 from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger

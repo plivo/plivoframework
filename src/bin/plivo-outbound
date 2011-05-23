@@ -5,7 +5,7 @@
 import sys
 import os.path
 import optparse
-from plivo.rest.freeswitch.outbound_server import PlivoOutboundServer
+from plivo.rest.freeswitch.outboundserver import PlivoOutboundServer
 
 
 def opt():

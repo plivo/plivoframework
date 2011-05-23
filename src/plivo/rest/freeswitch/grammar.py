@@ -8,9 +8,10 @@ import uuid
 
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
                                                         file_exists
-from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
-                                                RESTAttributeException, \
-                                                RESTRedirectException
+from plivo.rest.freeswitch.exceptions import RESTFormatException, \
+                                            RESTAttributeException, \
+                                            RESTRedirectException, \
+                                            RESTNoExecuteException
 
 
 RECOGNIZED_SOUND_FORMATS = ["audio/mpeg", "audio/wav", "audio/x-wav"]
@@ -111,7 +112,11 @@ class Grammar(object):
     def run(self, outbound_socket):
         outbound_socket.log.info("[%s] %s %s" \
             % (self.name, self.text, self.attributes))
-        result = self.execute(outbound_socket)
+        execute = getattr(self, 'execute')
+        if not execute:
+            outbound_socket.log.error("[%s] cannot be executed !" % self.name)
+            raise RESTExecuteException("%s cannot be executed !" % self.name)
+        result = execute(outbound_socket)
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
         else:
@@ -555,6 +560,7 @@ class Number(Grammar):
             self.gateway_timeouts = gateway_timeouts.split(',')
         if gateway_retries:
             self.gateway_retries = gateway_retries.split(',')
+
 
 
 class Wait(Grammar):

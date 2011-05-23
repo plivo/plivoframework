@@ -15,8 +15,8 @@ import gevent
 from gevent.wsgi import WSGIServer
 
 from plivo.core.errors import ConnectError
-from plivo.rest.freeswitch.rest_api import PlivoRestApi
-from plivo.rest.freeswitch.inbound_socket import RESTInboundSocket
+from plivo.rest.freeswitch.api import PlivoRestApi
+from plivo.rest.freeswitch.inboundsocket import RESTInboundSocket
 from plivo.rest.freeswitch import urls, helpers
 import plivo.utils.daemonize
 from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger

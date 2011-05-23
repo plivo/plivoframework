@@ -17,7 +17,7 @@ from plivo.core.freeswitch.eventtypes import Event
 from plivo.rest.freeswitch.helpers import HTTPRequest
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import grammar
-from plivo.rest.freeswitch.rest_exceptions import RESTFormatException, \
+from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
                                     UnrecognizedGrammarException, \
                                     RESTRedirectException

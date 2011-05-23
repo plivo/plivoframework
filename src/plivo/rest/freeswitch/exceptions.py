@@ -22,6 +22,10 @@ class RESTDownloadException(Exception):
     pass
 
 
+class RESTNoExecuteException(Exception):
+    pass
+
+
 class RESTRedirectException(Exception):
     def __init__(self, url=None, params={}, method=None):
         self.url = url
