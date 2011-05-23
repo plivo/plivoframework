@@ -109,7 +109,13 @@ class Grammar(object):
         self.prepare_text(element)
 
     def run(self, outbound_socket):
-        pass
+        outbound_socket.log.info("[%s] %s %s" \
+            % (self.name, self.text, self.attributes))
+        result = self.execute(outbound_socket)
+        if not result:
+            outbound_socket.log.info("[%s] Done" % self.name)
+        else:
+            outbound_socket.log.info("[%s] Done -- Result %s" % (self.name, result))
 
     def extract_attribute_value(self, item, default=None):
         try:
@@ -152,10 +158,10 @@ class Conference(Grammar):
             raise RESTFormatException("Conference Room must be defined")
         self.room = room
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         outbound_socket.conference(str(self.room))
-        outbound_socket.log.info("Conference executed: %s"
-                                                    % str(self.room))
+        outbound_socket.log.info("Conference Executed: %s" \
+                                            % str(self.room))
 
 
 class Dial(Grammar):
@@ -261,7 +267,7 @@ class Dial(Grammar):
         result = ','.join(num_gw)
         return result
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         dial_options = []
         numbers = []
         # Set timeout
@@ -278,6 +284,9 @@ class Dial(Grammar):
                 if not dial_num:
                     continue
                 numbers.append(dial_num)
+        if not numbers:
+            outbound_socket.log.error("Dial Aborted, No Number to dial !")
+            return
         # Create dialstring
         self.dial_str = '{'
         self.dial_str += ','.join(dial_options)
@@ -428,7 +437,7 @@ class GetDigits(Grammar):
                 # :TODO Prepare Grammar concurrently
                 child_instance.prepare()
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         for child_instance in self.children:
             if isinstance(child_instance, Play):
                 sound_file = child_instance.sound_file_path
@@ -493,9 +502,8 @@ class Hangup(Grammar):
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         outbound_socket.hangup()
-        outbound_socket.log.info("Hangup Done")
 
 
 class Number(Grammar):
@@ -573,7 +581,7 @@ class Wait(Grammar):
             raise RESTFormatException("Wait length must be a positive integer")
         self.length = length
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         outbound_socket.log.info("Wait Started for %d seconds" \
                                                     % self.length)
         if self.transfer:
@@ -584,7 +592,6 @@ class Wait(Grammar):
         else:
             outbound_socket.sleep(str(self.length * 1000))
         event = outbound_socket._action_queue.get()
-        outbound_socket.log.info("Wait Done")
 
 
 class Play(Grammar):
@@ -639,7 +646,7 @@ class Play(Grammar):
         # Create MD5 hash to identify the with filename for caching
         pass
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         if self.sound_file_path:
             if self.is_infinite():
                 # Play sound infinitely
@@ -679,7 +686,7 @@ class Preanswer(Grammar):
                 # :TODO Prepare grammar concurrently
                 child_instance.prepare()
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         for child_instance in self.children:
             if hasattr(child_instance, "run"):
                 child_instance.run(outbound_socket)
@@ -741,7 +748,8 @@ class Record(Grammar):
         # :TODO Validate Finish on Key
         self.finish_on_key = finish_on_key
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
+        Grammar.run(self, outbound_socket)
         filename = "%s%s-%s" % (self.prefix,
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
@@ -759,7 +767,6 @@ class Record(Grammar):
                             self.silence_threshold, self.timeout,
                             self.finish_on_key)
         event = outbound_socket._action_queue.get()
-        outbound_socket.log.info("Record Done")
         outbound_socket.stop_dtmf()
 
 
@@ -783,7 +790,7 @@ class RecordSession(Grammar):
             self.file_path = os.path.normpath(self.file_path) + os.sep
         self.format = self.extract_attribute_value("format")
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         outbound_socket.set("RECORD_STEREO=true")
         outbound_socket.set("media_bug_answer_req=true")
         filename = "%s%s-%s" % (self.prefix,
@@ -817,7 +824,7 @@ class Redirect(Grammar):
             raise RESTFormatException("Redirect URL not valid!")
         self.url = url
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         self.fetch_rest_xml(self.url, method=self.method)
 
 
@@ -842,10 +849,9 @@ class Reject(Grammar):
             raise RESTAttributeException("Reject Wrong Attribute Value for %s"
                                                                 % self.name)
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         outbound_socket.hangup(self.reason)
-        outbound_socket.log.info("Reject Done with reason: %s" \
-                                                % self.reason)
+        return self.reason
 
 
 class Speak(Grammar):
@@ -906,7 +912,7 @@ class Speak(Grammar):
         if method and (method in self.valid_methods):
             self.method = method
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         if self.item_type and self.method:
                 say_args = "%s %s %s %s" \
                         % (self.language, self.item_type, 
@@ -923,7 +929,6 @@ class Speak(Grammar):
             # Log Speak execute response
             outbound_socket.log.info("Speak %s times - (%s)" \
                     % ((i+1), str(event.get_header('Application-Response'))))
-        outbound_socket.log.info("Speak Done")
 
 
 class ScheduleHangup(Grammar):
@@ -939,7 +944,7 @@ class ScheduleHangup(Grammar):
         Grammar.parse_grammar(self, element, uri)
         self.time = self.extract_attribute_value("time", 0)
 
-    def run(self, outbound_socket):
+    def execute(self, outbound_socket):
         try:
             self.time = int(self.time)
         except ValueError:
