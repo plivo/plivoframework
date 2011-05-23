@@ -23,7 +23,7 @@ def auth_protect(decorated_func):
 
 
 class Gateway(object):
-    def __init__(self, request_uuid, to, gw, codecs, 
+    def __init__(self, request_uuid, to, gw, codecs,
                  timeout, extra_dial_string):
         self.request_uuid = request_uuid
         self.to = to
@@ -34,7 +34,7 @@ class Gateway(object):
 
 
 class CallRequest(object):
-    def __init__(self, request_uuid, gateways,  
+    def __init__(self, request_uuid, gateways,
                  answer_url, ring_url, hangup_url):
         self.request_uuid = request_uuid
         self.gateways = gateways
@@ -102,7 +102,7 @@ class PlivoRestApi(object):
         return message
 
     def _prepare_call_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
-                                gw_timeouts, gw_retries, send_digits, time_limit, 
+                                gw_timeouts, gw_retries, send_digits, time_limit,
                                 hangup_on_ring, answer_url, ring_url, hangup_url):
         gateways = []
         gw_retry_list = []
@@ -179,7 +179,7 @@ class PlivoRestApi(object):
                 timeout = int(gw_timeout_list.pop(0))
             except (ValueError, IndexError):
                 timeout = 60
-            for i in range(retry): 
+            for i in range(retry):
                 gateway = Gateway(request_uuid, to, gw, codecs, timeout, args_str)
                 gateways.append(gateway)
 
@@ -275,7 +275,7 @@ class PlivoRestApi(object):
                                     gw, gw_codecs, gw_timeouts, gw_retries,
                                     send_digits, time_limit, hangup_on_ring,
                                     answer_url, ring_url, hangup_url)
-                
+
                 request_uuid = call_req.request_uuid
                 self._rest_inbound_socket.call_requests[request_uuid] = call_req
                 self._rest_inbound_socket.spawn_originate(request_uuid)
@@ -287,7 +287,7 @@ class PlivoRestApi(object):
                              RequestUUID=request_uuid)
 
     @auth_protect
-    def bulk_calls(self):
+    def bulk_call(self):
         """Make Bulk Outbound Calls in one request
         Allow initiating bulk outbound calls via the REST API. To make a
         bulk outbound call, make an HTTP POST request to the resource URI.

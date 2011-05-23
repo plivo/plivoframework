@@ -52,9 +52,6 @@ class PlivoOutboundServer(OutboundServer):
                                         'rest_server', 'AUTH_TOKEN')
         self.default_hangup_url = helpers.get_conf_value(self._config,
                                         'freeswitch', 'DEFAULT_HANGUP_URL')
-        # default hangup_url is answer_url
-        if not self.default_hangup_url:
-            self.default_hangup_url = self.default_answer_url
         # This is where we define the connection with the
         # Plivo XML grammar Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
@@ -70,10 +67,10 @@ class PlivoOutboundServer(OutboundServer):
     def do_handle(self, socket, address):
         request_id = self._get_request_id()
         self.log.info("(%d) New request from %s" % (request_id, str(address)))
-        self._handle_class(socket, address, self.log, 
+        self._handle_class(socket, address, self.log,
                            default_answer_url=self.default_answer_url,
                            default_hangup_url=self.default_hangup_url,
-                           auth_id=self.auth_id, 
+                           auth_id=self.auth_id,
                            auth_token=self.auth_token,
                            request_id=request_id,
                            filter=self._filter)
