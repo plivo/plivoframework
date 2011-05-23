@@ -78,6 +78,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def __init__(self, socket, address, log,
                  default_answer_url=None,
                  default_hangup_url=None,
+                 default_http_method = "POST",
                  auth_id="",
                  auth_token="",
                  request_id=0,
@@ -99,6 +100,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.default_hangup_url = default_hangup_url
         else:
             self.default_hangup_url = self.default_answer_url
+        self.default_http_method = default_http_method
         self.answered = False
         self._hangup_cause = ''
         self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial']
@@ -156,8 +158,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if hangup_url:
             self.session_params['HangupCause'] = self._hangup_cause
             self.session_params['CallStatus'] = 'completed'
-            self.log.info("Posting hangup to %s" % hangup_url)
-            gevent.spawn(self.post_to_url, hangup_url)
+            self.log.info("Sending hangup to %s" % hangup_url)
+            gevent.spawn(self.send_to_url, hangup_url)
 
     def on_channel_hangup_complete(self, event):
         if not self._hangup_cause:
@@ -220,7 +222,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Don't post hangup in outbound direction
             self.default_hangup_url = None
             self.hangup_url = None
-            call_state = 'answered'
+            call_state = 'in-progress'
         else:
             # Look for target url in order below :
             #  get transfer_url from channel variable
@@ -290,13 +292,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         This will fetch the XML, validate the response
         Parse the XML and Execute it
         """
-        fetch_method = 'POST'
         params = {}
         for x in range(MAX_REDIRECT):
             try:
                 if self.has_hangup():
                     raise Hangup()
-                self.fetch_xml(params=params, method=fetch_method)
+                self.fetch_xml(params=params)
                 if not self.xml_response:
                     self.log.warn("No XML Response")
                     return
@@ -326,28 +327,24 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 continue
         self.log.warn("Max Redirect Reached !")
 
-    def fetch_xml(self, params={}, method='POST'):
+    def fetch_xml(self, params={}, method=default_http_method):
         """
         This method will retrieve the xml from the answer_url
         The url result expected is an XML content which will be stored in
         xml_response
         """
-        # auto add session parameters
-        params.update(self.session_params)
         self.log.info("Fetching %s RESTXML from %s with %s" \
                                 % (method, self.target_url, params))
-        http_obj = HTTPRequest(self.auth_id, self.auth_token)
-        self.xml_response = http_obj.fetch_response(self.target_url,
-                                                    params, method)
+        self.xml_response = self.send_to_url(self.target_url, params, method)
         self.log.info("Requested RESTXML to %s with %s" \
                                 % (self.target_url, params))
 
-    def post_to_url(self, url=None, params={}, method='POST'):
+    def send_to_url(self, url=None, params={}, method=default_http_method):
         """
         This method will do an http POST or GET request to the Url
         """
         if not url:
-            self.log.warn("Cannot post, no url !")
+            self.log.warn("Cannot send, no url !")
             return None
         params.update(self.session_params)
         http_obj = HTTPRequest(self.auth_id, self.auth_token)

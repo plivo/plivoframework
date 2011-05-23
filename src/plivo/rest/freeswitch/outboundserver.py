@@ -52,6 +52,12 @@ class PlivoOutboundServer(OutboundServer):
                                         'rest_server', 'AUTH_TOKEN')
         self.default_hangup_url = helpers.get_conf_value(self._config,
                                         'freeswitch', 'DEFAULT_HANGUP_URL')
+        self.default_http_method = helpers.get_conf_value(self._config,
+                                        'rest_server', 'DEFAULT_HTTP_METHOD')
+        if not self.default_http_method or \
+                            self.default_http_method not in ('GET', 'POST'):
+            self.default_http_method = 'POST'
+
         # This is where we define the connection with the
         # Plivo XML grammar Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
@@ -70,10 +76,12 @@ class PlivoOutboundServer(OutboundServer):
         self._handle_class(socket, address, self.log,
                            default_answer_url=self.default_answer_url,
                            default_hangup_url=self.default_hangup_url,
+                           default_http_method = self.default_http_method,
                            auth_id=self.auth_id,
                            auth_token=self.auth_token,
                            request_id=request_id,
-                           filter=self._filter)
+                           filter=self._filter
+                           )
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
     def create_logger(self):

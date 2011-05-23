@@ -75,14 +75,19 @@ class PlivoRestServer(PlivoRestApi):
         # if outbound host is 0.0.0.0, send to 127.0.0.1
         if fs_out_host == '0.0.0.0':
             fs_out_address = '127.0.0.1:%s' % fs_out_port
+
+        default_http_method = helpers.get_conf_value(self._config,
+                                        'rest_server', 'DEFAULT_HTTP_METHOD')
+        if not default_http_method or \
+                            default_http_method not in ('GET', 'POST'):
+            self.default_http_method = 'POST'
         # create inbound socket instance
         self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port,
-                                                    fs_password, 
-                                                    outbound_address=fs_out_address,
-                                                    auth_id=self.auth_id,
-                                                    auth_token=self.auth_token,
-                                                    filter='ALL',
-                                                    log=self.log)
+                            fs_password, outbound_address=fs_out_address,
+                            auth_id=self.auth_id,
+                            auth_token=self.auth_token,
+                            filter='ALL', log=self.log,
+                            default_http_method = self.default_http_method)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
             func, methods = func_desc
@@ -162,7 +167,7 @@ class PlivoRestServer(PlivoRestApi):
             group = grp.getgrgid(gid)[0]
         # daemonize now
         plivo.utils.daemonize.daemon(user, group, path='/',
-                                     pidfile=self._pidfile, 
+                                     pidfile=self._pidfile,
                                      other_groups=())
 
     def sig_term(self, *args):
