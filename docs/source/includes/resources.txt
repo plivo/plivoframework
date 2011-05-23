@@ -1,0 +1,79 @@
+.. _getting-help:
+
+Getting Help
+============
+
+.. _mailing-list:
+
+Mailing list
+------------
+
+For discussions about the usage, support of Plivo,
+please join the `plivo-user-mailinglist`_ mailing list. 
+
+For discussions about the development and future of Plivo,
+please join the `plivo-dev-mailinglist`_ mailing list. 
+
+.. _`plivo-user-mailinglist`: http://groups.google.com/group/plivo-users
+.. _`plivo-dev-mailinglist`: http://groups.google.com/group/plivo-developers
+
+
+.. _bug-tracker:
+
+Bug tracker
+===========
+
+If you need to notify us about a bug or annoyances please report them
+to our issue tracker at https://github.com/plivo/plivo/issues/
+
+
+.. _news:
+
+News
+====
+
+You can find us more about Plivo by :
+
+ * following us on Twitter : http://twitter.com/#!/2plivo
+ * Subscribing to our blog feed : http://www.plivo.org/feed/
+ 
+ 
+.. _community-plivo:
+ 
+Community
+=========
+
+Most discussion about Plivo takes place on the IRC channel #plivo on Freenode 
+and the plivo-users and plivo-developers mailing list on Google Groups.
+
+
+.. _contributing-short:
+
+Contributing
+============
+
+Development of `plivo` happens at Github: https://github.com/plivo/plivo
+
+The `plivo` organization is located here http://www.plivo.org and 
+https://github.com/plivo/plivo
+
+You are highly encouraged to participate in the development
+of `plivo`. If you don't like Github (for some reason) you're welcome
+to send regular patches.
+
+Be sure to also read the `Contributing to Plivo`_ section in the
+documentation.
+
+.. _`Contributing to Plivo`: http://ask.github.com/plivo/contributing.html
+
+
+.. _license:
+
+License
+=======
+
+This software is licensed under the `MPL`. See the :file:`LICENSE`
+file in the top distribution directory for the full license text.
+https://github.com/plivo/plivo/blob/master/LICENSE
+
+.. # vim: syntax=rst expandtab tabstop=4 shiftwidth=4 shiftround
