@@ -153,8 +153,8 @@ class Conference(Grammar):
 
     waitAloneSound: sound to play while alone in conference
     muted: enter conference muted
-    moderator: enter as moderator
-    closeOnExit: close conference after this user leaves
+    startConferenceOnEnter: the conference start when this member joins
+    endConferenceOnExit: close conference after this user leaves
     maxMembers: max members in conference (0 for no limit)
     """
     def __init__(self):
@@ -162,8 +162,8 @@ class Conference(Grammar):
         self.room = ''
         self.moh_sound = None
         self.muted = False
-        self.is_moderator = False
-        self.close_on_exit = False
+        self.start_on_enter = True
+        self.end_on_exit = False
         self.max_members = 200
 
     def parse_grammar(self, element, uri=None):
@@ -173,9 +173,12 @@ class Conference(Grammar):
             raise RESTFormatException("Conference Room must be defined")
         self.room = room + '@plivo'
         self.moh_sound = self.extract_attribute_value("waitAloneSound", None)
-        self.muted = self.extract_attribute_value("muted", False)
-        self.is_moderator = self.extract_attribute_value("moderator", False)
-        self.close_on_exit = self.extract_attribute_value("closeOnExit", False)
+        self.muted = self.extract_attribute_value("muted", 'false') \
+                        == 'true'
+        self.start_on_enter = self.extract_attribute_value("startConferenceOnEnter", 'true') \
+                                == 'true'
+        self.end_on_exit = self.extract_attribute_value("endConferenceOnExit", 'false') \
+                                == 'true'
         try:
             self.max_members = int(self.extract_attribute_value("maxMembers", 200))
         except ValueError:
@@ -194,9 +197,9 @@ class Conference(Grammar):
             outbound_socket.unset("max-members")
         if self.muted:
             flags.append("muted")
-        if self.is_moderator:
-            flags.append("moderator")
-        if self.close_on_exit:
+        if self.start_on_enter:
+            flags.append("wait-mod")
+        if self.end_on_exit:
             flags.append("endconf")
         flags_opt = ','.join(flags)
         if flags_opt:
