@@ -87,13 +87,15 @@ class PlivoRestApi(object):
 
     def index(self):
         message = """
-        Plivo REST<br>
+        Welcome to Plivo - http://www.plivo.org/<br>
         <br>
-        Plivo is an Open Source Communication Framework that enables to
-        create Voice applications using REST Apis <br>
+        Plivo is a Communication Framework to rapidly build Voice based apps,
+        to make and receive calls, using your existing web development skills
+        and infrastructure.<br>
         <br>
-        For Documentation check http://www.plivo.org/documentation/ <br>
-        ~~~~~~~~~~~~~~~<br>
+        <br>
+        For further information please visit our website :
+        http://www.plivo.org/ <br>
         <br>
         <br>
         """
@@ -202,28 +204,33 @@ class PlivoRestApi(object):
 
         Gateways: Comma separated string of gateways to dial the call out
 
-        AnswerUrl: The URL that should be requested for XML when the call
-        connects. Similiar to the URL for your inbound calls.
-
-
-        Optional Parameters - You may POST the following parameters:
-
-        HangUpUrl: URL that Plivo will notify to, with POST params when
-        calls ends
-
-        RingUrl: URL that Plivo will notify to, with POST params when
-        calls starts ringing
-
-        OriginateDialString: Additional Originate dialstring to be executed
-        while making the outbound call
-
         GatewayCodecs: Comma separated string of codecs for gateways
 
         GatewayTimeouts: Comma separated string of timeouts for gateways
 
         GatewayRetries: Comma separated string of retries for gateways
 
-        SendDigits: A string of keys to dial after connecting to the number.
+        AnswerUrl: The URL that should be requested for XML when the call
+        connects
+
+        TimeLimit: Define the max time of the call
+
+        Optional Parameters - You may POST the following parameters:
+
+        [HangUpUrl]: URL that Plivo will notify to, with POST params when
+        calls ends
+
+        [RingUrl]: URL that Plivo will notify to, with POST params when
+        calls starts ringing
+
+        [HangupOnRing]: If Set to 0 we will hangup as soon as the number ring,
+        if set to value X we will wait X seconds when start ringing and then
+        hang up
+
+        [OriginateDialString]: Additional Originate dialstring to be executed
+        while making the outbound call
+
+        [SendDigits]: A string of keys to dial after connecting to the number.
         Valid digits in the string include: any digit (0-9), '#' and '*'.
         Very useful, if you want to connect to a company phone number,
         and wanted to dial extension 1234 and then the pound key,
@@ -297,28 +304,33 @@ class PlivoRestApi(object):
 
         Gateways: Comma separated string of gateways to dial the call out
 
-        AnswerUrl: The URL that should be requested for XML when the call
-        connects. Similiar to the URL for your inbound calls.
-
-
-        Optional Parameters - You may POST the following parameters:
-
-        HangUpUrl: URL that Plivo will notify to, with POST params when
-        calls ends
-
-        RingUrl:URL that Plivo will notify to, with POST params when
-        calls starts ringing
-
-        OriginateDialString: Additional Originate dialstring to be executed
-        while making the outbound call
-
         GatewayCodecs: Comma separated string of codecs for gateways
 
         GatewayTimeouts: Comma separated string of timeouts for gateways
 
         GatewayRetries: Comma separated string of retries for gateways
 
-        SendDigits: A string of keys to dial after connecting to the number.
+        AnswerUrl: The URL that should be requested for XML when the call
+        connects. Similar to the URL for your inbound calls
+
+        TimeLimit: Define the max time of the calls
+
+        Optional Parameters - You may POST the following parameters:
+
+        [HangUpUrl]: URL that Plivo will notify to, with POST params when
+        calls ends
+
+        [RingUrl]: URL that Plivo will notify to, with POST params when
+        calls starts ringing
+
+        [HangupOnRing]: If Set to 0 we will hangup as soon as the number ring,
+        if set to value X we will wait X seconds when start ringing and then
+        hang up
+
+        [OriginateDialString]: Additional Originate dialstring to be executed
+        while making the outbound call
+
+        [SendDigits]: A string of keys to dial after connecting to the number.
         Valid digits in the string include: any digit (0-9), '#' and '*'.
         Very useful, if you want to connect to a company phone number,
         and wanted to dial extension 1234 and then the pound key,

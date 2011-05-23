@@ -4,13 +4,14 @@
 from plivo.rest.freeswitch.api import PlivoRestApi
 
 """
-We defined here the different Urls available by the Plivo WSGIServer
+We are defining here the different Urls available on our Plivo WSGIServer
 
-Each API needs to refer to a specific version number in order to provide
-a versionning on each API method.
+Each API refers to a specific version number which needs to be added
+before each API method.
 
-For instance /v0.1/Calls and /v0.2/Calls might not offer the same parameters
-to initiate calls
+For instance /v0.1/Call and /v0.2/Call refer to be different version of the API and
+so what provide different options to initiate calls.
+Refer to the API documentation in order to see the changes made
 """
 
 PLIVO_VERSION = 'v0.1';

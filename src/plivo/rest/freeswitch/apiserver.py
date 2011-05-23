@@ -83,12 +83,12 @@ class PlivoRestServer(PlivoRestApi):
                                                     auth_token=self.auth_token,
                                                     filter='ALL',
                                                     log=self.log)
-        # expose api functions to flask app
+        # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
             func, methods = func_desc
             fn = getattr(self, func.__name__)
             self.app.add_url_rule(path, func.__name__, fn, methods=methods)
-        # create wsgi server
+        # create WSGI Server
         self.http_address = helpers.get_conf_value(self._config,
                                             'rest_server', 'HTTP_ADDRESS')
         http_host, http_port = self.http_address.split(':', 1)
@@ -199,7 +199,7 @@ class PlivoRestServer(PlivoRestApi):
         # start http server
         self.http_proc = gevent.spawn(self.http_server.serve_forever)
         self.log.info("RESTServer started at: 'http://%s'" % self.http_address)
-        # start inbound socket
+        # Start inbound socket
         try:
             while self._run:
                 try:
