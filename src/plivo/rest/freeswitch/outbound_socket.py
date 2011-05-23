@@ -65,14 +65,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     The instance requests for a XML grammar set to execute the call and acts as a
     bridge between Event_Socket and the web application
     """
-    ACTIONS = ('playback',
-               'record',
-               'play_and_get_digits',
-               'bridge',
-               'say',
-               'sleep',
-               'speak',
-              )
+    WAIT_FOR_ACTIONS = ('playback',
+                        'record',
+                        'play_and_get_digits',
+                        'bridge',
+                        'say',
+                        'sleep',
+                        'speak',
+                       )
 
     def __init__(self, socket, address, log,
                  default_answer_url=None,
@@ -137,7 +137,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     #
     # However, other events will still come, like for instance, DTMF.
     def on_channel_execute_complete(self, event):
-        if event['Application'] in self.ACTIONS:
+        if event['Application'] in self.WAIT_FOR_ACTIONS:
             self._action_queue.put(event)
 
     def on_channel_hangup(self, event):
