@@ -156,6 +156,10 @@ class Conference(Grammar):
     startConferenceOnEnter: the conference start when this member joins
     endConferenceOnExit: close conference after this user leaves
     maxMembers: max members in conference (0 for no limit)
+    beep: if 0, disabled 
+          if 1, play one beep when a member enters/leaves
+          if 2 play two beeps when a member enters/leaves
+          (default 0)
     """
     def __init__(self):
         Grammar.__init__(self)
@@ -165,6 +169,7 @@ class Conference(Grammar):
         self.start_on_enter = True
         self.end_on_exit = False
         self.max_members = 200
+        self.play_beep = 0
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
@@ -183,6 +188,10 @@ class Conference(Grammar):
             self.max_members = int(self.extract_attribute_value("maxMembers", 200))
         except ValueError:
             self.max_members = 200
+        try:
+            self.play_beep = int(self.extract_attribute_value("endConferenceOnExit", 0))
+        except ValueError:
+            self.play_beep = 0
 
     def execute(self, outbound_socket):
         flags = []
@@ -191,6 +200,15 @@ class Conference(Grammar):
             outbound_socket.set("conference_moh_sound=%s" % self.moh_sound)
         else:
             outbound_socket.unset("conference_moh_sound")
+        if self.play_beep == 1:
+            outbound_socket.set("conference_enter_sound='tone_stream://%(300,200,700)'")
+            outbound_socket.set("conference_exit_sound='tone_stream://%(300,200,700)'")
+        elif self.play_beep == 2:
+            outbound_socket.set("conference_enter_sound='tone_stream://L=2;%(300,200,700)'")
+            outbound_socket.set("conference_exit_sound='tone_stream://L=2;%(300,200,700)'")
+        else:
+            outbound_socket.unset("conference_enter_sound")
+            outbound_socket.unset("conference_exit_sound")
         if self.max_members > 0:
             outbound_socket.set("max-members=%d" % self.max_members)
         else:
@@ -199,6 +217,7 @@ class Conference(Grammar):
             flags.append("muted")
         if self.start_on_enter:
             flags.append("moderator")
+        else:
             flags.append("wait-mod")
         if self.end_on_exit:
             flags.append("endconf")
@@ -451,7 +470,7 @@ class GetDigits(Grammar):
             raise RESTFormatException("GetDigits 'timeout' must be a positive integer")
 
         finish_on_key = self.extract_attribute_value("finishOnKey")
-        play_beep = self.extract_attribute_value("playBeep")
+        self.play_beep = self.extract_attribute_value("playBeep", 'false') == 'true'
         self.invalid_digits_sound = \
                             self.extract_attribute_value("invalidDigitsSound")
         self.valid_digits = self.extract_attribute_value("validDigits")
@@ -469,10 +488,6 @@ class GetDigits(Grammar):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
 
-        if play_beep == 'true':
-            self.play_beep = True
-        else:
-            self.play_beep = False
         if action and is_valid_url(action):
             self.action = action
         else:
