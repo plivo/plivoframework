@@ -211,7 +211,7 @@ class Dial(Grammar):
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
                                                                     == 'true'
         method = self.extract_attribute_value("method")
-        if method != 'GET' and method != 'POST':
+        if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
 
@@ -262,7 +262,6 @@ class Dial(Grammar):
         return result
 
     def run(self, outbound_socket):
-        outbound_socket.log.info("Dial Started")
         dial_options = []
         numbers = []
         # Set timeout
@@ -315,6 +314,7 @@ class Dial(Grammar):
             outbound_socket.set(confirm_music_str)
             outbound_socket.set(confirm_key_str)
         # Start dial
+        outbound_socket.log.info("Dial Started %s" % self.dial_str)
         outbound_socket.bridge(self.dial_str)
         event = outbound_socket._action_queue.get()
         reason = None
@@ -724,7 +724,7 @@ class Record(Grammar):
         self.format = self.extract_attribute_value("format")
         self.prefix = self.extract_attribute_value("prefix")
         method = self.extract_attribute_value("method")
-        if method != 'GET' and method != 'POST':
+        if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
 
