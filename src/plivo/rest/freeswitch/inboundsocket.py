@@ -180,7 +180,10 @@ class RESTInboundSocket(InboundEventSocket):
             gevent.spawn(self.send_to_url, hangup_url, params)
 
     def send_to_url(self, url=None, params={},
-                                            method=self.default_http_method):
+                                            method=None):
+        if method is None:
+            method = self.default_http_method
+
         if not url:
             self.log.warn("Cannot post No url found !")
             return None

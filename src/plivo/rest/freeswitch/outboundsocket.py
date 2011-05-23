@@ -327,7 +327,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 continue
         self.log.warn("Max Redirect Reached !")
 
-    def fetch_xml(self, params={}, method=default_http_method):
+    def fetch_xml(self, params={}, method=None):
         """
         This method will retrieve the xml from the answer_url
         The url result expected is an XML content which will be stored in
@@ -339,10 +339,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.info("Requested RESTXML to %s with %s" \
                                 % (self.target_url, params))
 
-    def send_to_url(self, url=None, params={}, method=default_http_method):
+    def send_to_url(self, url=None, params={}, method=None):
         """
         This method will do an http POST or GET request to the Url
         """
+        if method is None:
+            method = self.default_http_method
+
         if not url:
             self.log.warn("Cannot send, no url !")
             return None
