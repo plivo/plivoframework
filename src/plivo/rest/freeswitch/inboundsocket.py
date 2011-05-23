@@ -23,7 +23,8 @@ class RESTInboundSocket(InboundEventSocket):
     def __init__(self, host, port, password,
                  outbound_address='',
                  auth_id='', auth_token='',
-                 filter="ALL", log=None):
+                 filter="ALL", log=None,
+                 default_http_method = "POST"):
         InboundEventSocket.__init__(self, host, port, password, filter)
         self.fs_outbound_address = outbound_address
         self.log = log
@@ -35,6 +36,7 @@ class RESTInboundSocket(InboundEventSocket):
         self.xfer_jobs = {}
         # Call Requests
         self.call_requests = {}
+        self.default_http_method = default_http_method
 
     def on_background_job(self, ev):
         """
@@ -110,7 +112,7 @@ class RESTInboundSocket(InboundEventSocket):
                         'CallStatus': 'ringing',
                         'From': ev['Caller-Caller-ID-Number']
                     }
-                gevent.spawn(self.post_to_url, ring_url, params)
+                gevent.spawn(self.send_to_url, ring_url, params)
 
     def on_channel_hangup(self, ev):
         """
@@ -175,9 +177,10 @@ class RESTInboundSocket(InboundEventSocket):
                     'CallStatus': 'completed',
                     'From': ev['Caller-Caller-ID-Number']
                 }
-            gevent.spawn(self.post_to_url, hangup_url, params)
+            gevent.spawn(self.send_to_url, hangup_url, params)
 
-    def post_to_url(self, url=None, params={}, method='POST'):
+    def send_to_url(self, url=None, params={},
+                                            method=self.default_http_method):
         if not url:
             self.log.warn("Cannot post No url found !")
             return None
