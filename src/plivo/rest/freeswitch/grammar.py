@@ -151,7 +151,7 @@ class Conference(Grammar):
     """Go to a Conference Room
     room name is body text of Conference element.
 
-    waitAloneSound: sound to play while alone in conference
+    waitSound: sound to play while alone in conference
     muted: enter conference muted
     startConferenceOnEnter: the conference start when this member joins
     endConferenceOnExit: close conference after this user leaves
@@ -177,7 +177,7 @@ class Conference(Grammar):
         if not room:
             raise RESTFormatException("Conference Room must be defined")
         self.room = room + '@plivo'
-        self.moh_sound = self.extract_attribute_value("waitAloneSound", None)
+        self.moh_sound = self.extract_attribute_value("waitSound", None)
         self.muted = self.extract_attribute_value("muted", 'false') \
                         == 'true'
         self.start_on_enter = self.extract_attribute_value("startConferenceOnEnter", 'true') \
