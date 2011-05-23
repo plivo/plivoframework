@@ -111,11 +111,11 @@ class Grammar(object):
     def run(self, outbound_socket):
         pass
 
-    def extract_attribute_value(self, item):
+    def extract_attribute_value(self, item, default=None):
         try:
             item = self.attributes[item]
         except KeyError:
-            item = None
+            item = default
         return item
 
     def prepare_attributes(self, element):
@@ -191,10 +191,18 @@ class Dial(Grammar):
         Grammar.parse_grammar(self, element, uri)
         self.action = self.extract_attribute_value("action")
         self.caller_id = self.extract_attribute_value("callerId")
-        self.time_limit = int(self.extract_attribute_value("timeLimit"))
+        try:
+            self.time_limit = int(self.extract_attribute_value("timeLimit", 
+                                  self.DEFAULT_TIMELIMIT))
+        except ValueError:
+            self.time_limit = self.DEFAULT_TIMELIMIT
         if self.time_limit <= 0:
             self.time_limit = self.DEFAULT_TIMELIMIT
-        self.timeout = int(self.extract_attribute_value("timeout"))
+        try:
+            self.timeout = int(self.extract_attribute_value("timeout", 
+                               self.DEFAULT_TIMEOUT))
+        except ValueError:
+            self.timeout = self.DEFAULT_TIMEOUT
         if self.timeout <= 0:
             self.timeout = self.DEFAULT_TIMEOUT
         self.confirm_sound = self.extract_attribute_value("confirmSound")
@@ -228,16 +236,16 @@ class Dial(Grammar):
             except IndexError:
                 pass
             try:
-                gw_timeout = int(number_instance.gateway_timeouts[count])
+                gw_timeout = int(number_instance.gateway_timeouts[count], 0)
                 if gw_timeout > 0:
                     num_options.append('leg_timeout=%d' % gw_timeout)
-            except IndexError, ValueError:
+            except (IndexError, ValueError):
                 pass
             try:
-                gw_retries = int(number_instance.gateway_retries[count])
+                gw_retries = int(number_instance.gateway_retries[count], 1)
                 if gw_retries <= 0:
                     gw_retries = 1
-            except IndexError, ValueError:
+            except (IndexError, ValueError):
                 gw_retries = 1
             extra_dial_string = number_instance.extra_dial_string
             if extra_dial_string:
@@ -366,13 +374,17 @@ class GetDigits(Grammar):
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
-        num_digits = int(self.extract_attribute_value("numDigits"))
+        try:
+            num_digits = int(self.extract_attribute_value("numDigits", 
+                             self.DEFAULT_MAX_DIGITS))
+        except ValueError:
+            num_digits = self.DEFAULT_MAX_DIGITS
         if num_digits > self.DEFAULT_MAX_DIGITS:
             num_digits = self.DEFAULT_MAX_DIGITS
         if num_digits < 1:
             raise RESTFormatException("GetDigits 'numDigits' must be greater than 0")
         try:
-            timeout = int(self.extract_attribute_value("timeout"))
+            timeout = int(self.extract_attribute_value("timeout", self.DEFAULT_TIMEOUT))
         except ValueError:
             timeout = self.DEFAULT_TIMEOUT * 1000
         if timeout < 0:
@@ -386,14 +398,14 @@ class GetDigits(Grammar):
         action = self.extract_attribute_value("action")
 
         try:
-            retries = int(self.extract_attribute_value("retries"))
+            retries = int(self.extract_attribute_value("retries", 1))
         except ValueError:
             retries = 1
         if retries < 0:
             raise RESTFormatException("GetDigits 'retries' must be greater than 0")
 
         method = self.extract_attribute_value("method")
-        if method != 'GET' and method != 'POST':
+        if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
 
@@ -549,7 +561,7 @@ class Wait(Grammar):
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
         try:
-            length = int(self.extract_attribute_value("length"))
+            length = int(self.extract_attribute_value("length", 0))
         except ValueError:
             raise RESTFormatException("Wait length must be an integer")
         transfer = self.extract_attribute_value("transferEnabled")
@@ -591,7 +603,10 @@ class Play(Grammar):
         Grammar.parse_grammar(self, element, uri)
 
         # Extract Loop attribute
-        loop = int(self.extract_attribute_value("loop"))
+        try:
+            loop = int(self.extract_attribute_value("loop", 1))
+        except ValueError:
+            loop = 1
         if loop < 0:
             raise RESTFormatException("Play loop must be a positive integer")
         self.loop_times = loop
@@ -607,8 +622,7 @@ class Play(Grammar):
         else:
             if url_exists(audio_path):
                 if audio_path[-4:].lower() != '.mp3':
-                    error_msg = "Only mp3 files allowed for remote file play"
-                    print error_msg
+                    raise RESTFormatException("Only mp3 files allowed for remote file play")
                 if audio_path[:7].lower() == "http://":
                     audio_path = audio_path[7:]
                 elif audio_path[:8].lower() == "https://":
@@ -860,6 +874,7 @@ class Speak(Grammar):
                    'TELEPHONE_EXTENSION', 'URL', 'IP_ADDRESS', 'EMAIL_ADDRESS',
                    'POSTAL_ADDRESS', 'ACCOUNT_NUMBER', 'NAME_SPELLED',
                    'NAME_PHONETIC', 'SHORT_DATE_TIME']
+    DEFAULT_LOOP = 1
 
     def __init__(self):
         Grammar.__init__(self)
@@ -874,9 +889,9 @@ class Speak(Grammar):
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
         try:
-            loop = int(self.extract_attribute_value("loop"))
+            loop = int(self.extract_attribute_value("loop", self.DEFAULT_LOOP))
         except ValueError:
-            loop = 1
+            loop = self.DEFAULT_LOOP
         if loop <= 0:
             self.loop_times = 999
         else:
@@ -922,7 +937,7 @@ class ScheduleHangup(Grammar):
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
-        self.time = self.extract_attribute_value("time")
+        self.time = self.extract_attribute_value("time", 0)
 
     def run(self, outbound_socket):
         try:
