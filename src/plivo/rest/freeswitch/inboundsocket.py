@@ -20,9 +20,9 @@ class RESTInboundSocket(InboundEventSocket):
     ...
     ...
     """
-    def __init__(self, host, port, password, 
-                 outbound_address='', 
-                 auth_id='', auth_token='', 
+    def __init__(self, host, port, password,
+                 outbound_address='',
+                 auth_id='', auth_token='',
                  filter="ALL", log=None):
         InboundEventSocket.__init__(self, host, port, password, filter)
         self.fs_outbound_address = outbound_address
@@ -33,7 +33,7 @@ class RESTInboundSocket(InboundEventSocket):
         self.bk_jobs = {}
         # Transfer jobs: call_uuid - Value: where to transfer
         self.xfer_jobs = {}
-        # Call Requests 
+        # Call Requests
         self.call_requests = {}
 
     def on_background_job(self, ev):
@@ -76,11 +76,11 @@ class RESTInboundSocket(InboundEventSocket):
                     # set an empty call_uuid
                     call_uuid = ''
                     hangup_url = call_req.hangup_url
-                    self.set_hangup_complete(self, request_uuid, call_uuid, 
+                    self.set_hangup_complete(self, request_uuid, call_uuid,
                                              reason, ev, hangup_url)
                     return
-                # If there are gateways and call request ring_flag is False 
-                #  try again: spawn originate 
+                # If there are gateways and call request ring_flag is False
+                #  try again: spawn originate
                 elif call_req.gateways:
                     self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
                                                     % (request_uuid, reason))
@@ -102,8 +102,9 @@ class RESTInboundSocket(InboundEventSocket):
             call_req.ring_flag = True
             self.log.info("Call Ringing for %s with RequestUUID  %s" \
                             % (to, request_uuid))
-            params = {'to': to, 'request_uuid': request_uuid}
-            gevent.spawn(self.post_to_url, ring_url, params)
+            if ring_url:
+                params = {'To': to, 'RequestUUID': request_uuid}
+                gevent.spawn(self.post_to_url, ring_url, params)
 
     def on_channel_hangup(self, ev):
         """
@@ -120,7 +121,7 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.warn("CallRequest not found for RequestUUID %s" \
                             % request_uuid)
             return
-        # If there are gateways to try again, spawn originate 
+        # If there are gateways to try again, spawn originate
         if call_req.gateways:
             self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
                             % (request_uuid, reason))
@@ -158,8 +159,8 @@ class RESTInboundSocket(InboundEventSocket):
             pass
         self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
         if hangup_url:
-            params = {'request_uuid': request_uuid, 'call_uuid': call_uuid,
-                                                            'reason': reason}
+            params = {'RequestUUID': request_uuid, 'CallUUID': call_uuid,
+                                                            'HangupCause': reason}
             gevent.spawn(self.post_to_url, hangup_url, params)
 
     def post_to_url(self, url=None, params={}, method='POST'):
@@ -265,5 +266,3 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.error("Hangup All Calls Failed -- JobUUID not received")
             return
         self.log.info("Executed Hangup for all calls")
-
-
