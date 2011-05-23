@@ -44,7 +44,7 @@ class RESTInboundSocket(InboundEventSocket):
         """
         job_cmd = ev['Job-Command']
         job_uuid = ev['Job-UUID']
-        if job_cmd == "originate" and job_uuid:
+        if job_cmd == 'originate' and job_uuid:
             try:
                 status, reason = ev.get_body().split(' ', 1)
             except ValueError:
@@ -52,7 +52,7 @@ class RESTInboundSocket(InboundEventSocket):
             request_uuid = self.bk_jobs.pop(job_uuid, None)
             # Handle failure case of originate - USER_NOT_REGISTERED
             # This case does not raise a on_channel_hangup event.
-            # All other failiures will be captured by on_channel_hangup
+            # All other failures will be captured by on_channel_hangup
             if not request_uuid:
                 self.log.debug("No RequestUUID found !")
                 return
@@ -86,11 +86,42 @@ class RESTInboundSocket(InboundEventSocket):
                                                     % (request_uuid, reason))
                     self.spawn_originate(request_uuid)
 
+    def on_channel_callstate(self, ev):
+        """
+        Channel Call State should be used to notify if the user phone is ringing
+        """
+        #Unfortunately the following variable is empty
+        #idea using the Caller-Unique-ID to cross check
+        request_uuid = ev['variable_plivo_request_uuid']
+        channel_call_state = ev['Channel-Call-State']
+        to = ev['Caller-Destination-Number']
+        if channel_call_state == 'RINGING' and request_uuid:
+            try:
+                call_req = self.call_requests[request_uuid]
+                call_req.gateways = [] # clear gateways to avoid retry
+            except (KeyError, AttributeError):
+                return
+            ring_url = call_req.ring_url
+            # set ring flag to true
+            call_req.ring_flag = True
+            self.log.info("Call Ringing for %s with RequestUUID  %s" \
+                            % (to, request_uuid))
+            if ring_url:
+                params = {
+                        'To': to,
+                        'RequestUUID': request_uuid,
+                        'Direction': 'outbound',
+                        'CallStatus': 'ringing',
+                        'From': ev['Caller-Caller-ID-Number']
+                    }
+                gevent.spawn(self.post_to_url, ring_url, params)
+
     def on_channel_originate(self, ev):
         request_uuid = ev['variable_plivo_request_uuid']
         answer_state = ev['Answer-State']
         direction = ev['Call-Direction']
         to = ev['Caller-Destination-Number']
+        #check if we get a ringing
         if request_uuid and answer_state == 'ringing' and direction == 'outbound':
             try:
                 call_req = self.call_requests[request_uuid]
