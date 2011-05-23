@@ -198,6 +198,7 @@ class Conference(Grammar):
         if self.muted:
             flags.append("muted")
         if self.start_on_enter:
+            flags.append("moderator")
             flags.append("wait-mod")
         if self.end_on_exit:
             flags.append("endconf")
