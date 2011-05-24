@@ -71,7 +71,7 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "filePath": "/usr/local/freeswitch/recordings/",
                 "format": "mp3",
                 "prefix": "",
-                "both": "false"
+                "bothLegs": "false"
         },
         "Redirect": {
                 "method": "POST"
@@ -803,7 +803,7 @@ class Record(Grammar):
         self.play_beep = ""
         self.format = ""
         self.prefix = ""
-        self.both = False
+        self.both_legs = False
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
@@ -818,7 +818,7 @@ class Record(Grammar):
         self.format = self.extract_attribute_value("format")
         self.prefix = self.extract_attribute_value("prefix")
         method = self.extract_attribute_value("method")
-        self.both = self.extract_attribute_value("both") == 'true'
+        self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
@@ -842,7 +842,7 @@ class Record(Grammar):
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.format)
-        if self.both:
+        if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
             outbound_socket.record_session(record_file)
