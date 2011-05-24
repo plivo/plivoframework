@@ -97,7 +97,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.lexed_xml_response = []
         self.target_url = ""
         self.hangup_url = ""
-        self.direction = ""
         self.session_params = {}
         self._hangup_cause = ''
         # create queue for waiting actions
@@ -211,18 +210,25 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.filter('Unique-ID %s' % self.get_channel_unique_id())
         # Linger to get all remaining events before closing
         self.linger()
-
+        # Don't hangup after bridge
         self.set("hangup_after_bridge=false")
 
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
         called_no = channel.get_header('Caller-Destination-Number')
         from_no = channel.get_header('Caller-Caller-ID-Number')
-        self.direction = channel.get_header('Call-Direction')
+        # Set To to Session Params
+        self.session_params['To'] = called_no
+        # Set From to Session Params
+        self.session_params['From'] = from_no
+        # Set CallUUID to Session Params
+        self.session_params['CallUUID'] = self.call_uuid
+        # Set Direction to Session Params
+        self.session_params["Direction"] = channel.get_header('Call-Direction')
         aleg_uuid = ""
         aleg_request_uuid = ""
 
-        if self.direction == 'outbound':
+        if self.session_params["Direction"] == 'outbound':
             # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
             aleg_request_uuid = channel.get_header('variable_plivo_request_uuid')
@@ -245,7 +251,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Don't post hangup in outbound direction
             self.default_hangup_url = None
             self.hangup_url = None
-            call_state = 'in-progress'
+            # Set CallStatus to Session Params
+            self.session_params['CallStatus'] = 'in-progress'
         else:
             # Look for target url in order below :
             #  get transfer_url from channel variable
@@ -270,20 +277,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
             # Look for hangup_url
             self.hangup_url = self.get_var('plivo_hangup_url')
-            call_state = 'ringing'
+            # Set CallStatus to Session Params
+            self.session_params['CallStatus'] = 'ringing'
 
         if not sched_hangup_id:
             sched_hangup_id = ""
 
-        # Post to ANSWER URL and get XML Response
-        self.session_params = {
-                  'CallUUID': self.call_uuid,
-                  'To': called_no,
-                  'From': from_no,
-                  'Direction': self.direction,
-                  'CallStatus' : call_state
-        }
-        # Add Params if present
+        # Add more Session Params if present
         if aleg_uuid:
             self.session_params['ALegUUID'] = aleg_uuid
         if aleg_request_uuid:
@@ -450,7 +450,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 # TODO Prepare grammar concurrently
                 grammar_element.prepare()
             # Check if it's an inbound call
-            if self.direction == 'inbound':
+            if self.session_params['Direction'] == 'inbound':
                 # Don't answer the call if grammar is of type no answer
                 # Only execute the grammar
                 if self.answered == False and \
@@ -458,3 +458,4 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.answer()
                     self.answered = True
             grammar_element.run(self)
+
