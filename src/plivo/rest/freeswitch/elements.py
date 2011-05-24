@@ -5,7 +5,6 @@ import os.path
 from datetime import datetime
 import re
 import uuid
-
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
                                                         file_exists
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \

@@ -6,7 +6,6 @@ Event Socket class
 """
 
 import types
-import string
 import gevent
 import gevent.socket as socket
 import gevent.queue as queue
