@@ -45,7 +45,8 @@ class CallRequest(object):
                  'gateways',
                  'answer_url',
                  'ring_url',
-                 'hangup_url'
+                 'hangup_url',
+                 'ring_flag',
                 ]
 
     def __init__(self, request_uuid, gateways,
