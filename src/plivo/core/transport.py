@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
+
 """
 Transport class
 """
-
-import gevent.socket as socket
-from plivo.core.errors import ConnectError
-
 
 class Transport(object):
     def write(self, data):

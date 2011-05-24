@@ -4,10 +4,7 @@
 from gevent import monkey
 monkey.patch_all()
 
-import urllib
-import urllib2
-
-import gevent
+from gevent import spawn
 from gevent import pool
 
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
@@ -64,7 +61,7 @@ class RESTInboundSocket(InboundEventSocket):
                 return
             status = status.strip()
             reason = reason.strip()
-            if status[:4] == '-ERR':
+            if status[:3] != '+OK':
                 # In case ring was done, just warn
                 # releasing call request will be done in hangup event
                 if call_req.ring_flag is True:
@@ -87,36 +84,6 @@ class RESTInboundSocket(InboundEventSocket):
                     self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
                                                     % (request_uuid, reason))
                     self.spawn_originate(request_uuid)
-
-    def on_channel_callstate(self, ev):
-        """
-        Channel Call State should be used to notify if the user phone is ringing
-        """
-        #Unfortunately the following variable is empty
-        #idea using the Caller-Unique-ID to cross check
-        request_uuid = ev['variable_plivo_request_uuid']
-        channel_call_state = ev['Channel-Call-State']
-        to = ev['Caller-Destination-Number']
-        if channel_call_state == 'RINGING' and request_uuid:
-            try:
-                call_req = self.call_requests[request_uuid]
-                call_req.gateways = [] # clear gateways to avoid retry
-            except (KeyError, AttributeError):
-                return
-            ring_url = call_req.ring_url
-            # set ring flag to true
-            call_req.ring_flag = True
-            self.log.info("Call Ringing for %s with RequestUUID  %s" \
-                            % (to, request_uuid))
-            if ring_url:
-                params = {
-                        'To': to,
-                        'RequestUUID': request_uuid,
-                        'Direction': 'outbound',
-                        'CallStatus': 'ringing',
-                        'From': ev['Caller-Caller-ID-Number']
-                    }
-                gevent.spawn(self.post_to_url, ring_url, params)
 
     def on_channel_originate(self, ev):
         request_uuid = ev['variable_plivo_request_uuid']
@@ -143,7 +110,7 @@ class RESTInboundSocket(InboundEventSocket):
                         'CallStatus': 'ringing',
                         'From': ev['Caller-Caller-ID-Number']
                     }
-                gevent.spawn(self.send_to_url, ring_url, params)
+                spawn(self.send_to_url, ring_url, params)
 
     def on_channel_hangup(self, ev):
         """
@@ -178,6 +145,7 @@ class RESTInboundSocket(InboundEventSocket):
             if not xfer:
                 return
             self.log.info("Executing Live Call Transfer for %s" % call_uuid)
+            self.set_var("plivo_transfer_progress", "false", uuid=call_uuid)
             res = self.api("uuid_transfer %s '%s' inline" % (call_uuid, xfer))
             if res.is_success():
                 self.log.info("Executing Live Call Transfer Done for %s" % call_uuid)
@@ -208,7 +176,7 @@ class RESTInboundSocket(InboundEventSocket):
                     'CallStatus': 'completed',
                     'From': ev['Caller-Caller-ID-Number']
                 }
-            gevent.spawn(self.send_to_url, hangup_url, params)
+            spawn(self.send_to_url, hangup_url, params)
 
     def send_to_url(self, url=None, params={}, method=None):
         if method is None:
@@ -275,6 +243,7 @@ class RESTInboundSocket(InboundEventSocket):
         return False
 
     def transfer_call(self, new_xml_url, call_uuid):
+        self.set_var("plivo_transfer_progress", "true", uuid=call_uuid)
         self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
         outbound_str = "socket:%s async full" \
                         % (self.fs_outbound_address)
