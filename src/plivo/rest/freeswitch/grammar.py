@@ -42,6 +42,8 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "invalidDigitsSound": ''
         },
         "Hangup": {
+                "reason": "",
+                "schedule": 0
         },
         "Number": {
                 #"gateways": DYNAMIC! MUST BE SET IN METHOD,
@@ -74,9 +76,6 @@ GRAMMAR_DEFAULT_PARAMS = {
         "Redirect": {
                 "method": "POST"
         },
-        "Reject": {
-                "reason": "rejected"
-        },
         "Speak": {
                 "voice": "slt",
                 "language": "en",
@@ -84,9 +83,6 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "engine": "flite",
                 "method": "",
                 "type": ""
-        },
-        "ScheduleHangup": {
-                "time": 0
         }
     }
 
@@ -561,9 +557,11 @@ class Hangup(Grammar):
     def __init__(self):
         Grammar.__init__(self)
         self.reason = ""
+        self.schedule = 0
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
+        self.schedule = self.extract_attribute_value("schedule", 0)
         reason = self.extract_attribute_value("reason")
         if reason == 'rejected':
             self.reason = 'CALL_REJECTED'
@@ -574,8 +572,26 @@ class Hangup(Grammar):
                                                                 % self.name)
 
     def execute(self, outbound_socket):
-        outbound_socket.hangup(self.reason)
-        return self.reason
+        try:
+            self.schedule = int(self.schedule)
+        except ValueError:
+            outbound_socket.log.error("ScheduleHangup Failed: bad value for 'schedule'")
+            return
+        # Schedule the call for hangup at a later time if 'schedule' param > 0
+        if self.schedule > 0:
+            res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
+                        % (self.schedule, outbound_socket.get_channel_unique_id()))
+            if res.is_success():
+                outbound_socket.log.info("ScheduleHangup after %s secs" \
+                                                                    % self.schedule)
+                return
+            else:
+                outbound_socket.log.error("ScheduleHangup Failed: %s"\
+                                                    % str(res.get_response()))
+                return
+        else:
+            outbound_socket.hangup(self.reason)
+            return self.reason
 
 
 class Number(Grammar):
@@ -951,37 +967,3 @@ class Speak(Grammar):
             # Log Speak execute response
             outbound_socket.log.info("Speak %s times - (%s)" \
                     % ((i+1), str(event.get_header('Application-Response'))))
-
-
-class ScheduleHangup(Grammar):
-    """Hangup the call after certain time
-
-   time: time in seconds to hangup the call after
-    """
-    def __init__(self):
-        Grammar.__init__(self)
-        self.time = 0
-
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
-        self.time = self.extract_attribute_value("time", 0)
-
-    def execute(self, outbound_socket):
-        try:
-            self.time = int(self.time)
-        except ValueError:
-            outbound_socket.log.error("ScheduleHangup Failed: bad value for 'time'")
-            return
-        if self.time > 0:
-            res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
-                        % (self.time, outbound_socket.get_channel_unique_id()))
-            if res.is_success():
-                outbound_socket.log.info("ScheduleHangup after %s secs" \
-                                                                    % self.time)
-                return
-            else:
-                outbound_socket.log.error("ScheduleHangup Failed: %s"\
-                                                    % str(res.get_response()))
-                return
-        outbound_socket.log.error("ScheduleHangup Failed: 'time' must be > 0 !")
-        return
