@@ -156,7 +156,7 @@ class Conference(Grammar):
     startConferenceOnEnter: the conference start when this member joins
     endConferenceOnExit: close conference after this user leaves
     maxMembers: max members in conference (0 for no limit)
-    beep: if 0, disabled 
+    beep: if 0, disabled
           if 1, play one beep when a member enters/leaves
           if 2 play two beeps when a member enters/leaves
           (default 0)
@@ -268,14 +268,14 @@ class Dial(Grammar):
         self.action = self.extract_attribute_value("action")
         self.caller_id = self.extract_attribute_value("callerId")
         try:
-            self.time_limit = int(self.extract_attribute_value("timeLimit", 
+            self.time_limit = int(self.extract_attribute_value("timeLimit",
                                   self.DEFAULT_TIMELIMIT))
         except ValueError:
             self.time_limit = self.DEFAULT_TIMELIMIT
         if self.time_limit <= 0:
             self.time_limit = self.DEFAULT_TIMELIMIT
         try:
-            self.timeout = int(self.extract_attribute_value("timeout", 
+            self.timeout = int(self.extract_attribute_value("timeout",
                                self.DEFAULT_TIMEOUT))
         except ValueError:
             self.timeout = self.DEFAULT_TIMEOUT
@@ -454,7 +454,7 @@ class GetDigits(Grammar):
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
         try:
-            num_digits = int(self.extract_attribute_value("numDigits", 
+            num_digits = int(self.extract_attribute_value("numDigits",
                              self.DEFAULT_MAX_DIGITS))
         except ValueError:
             num_digits = self.DEFAULT_MAX_DIGITS
@@ -577,17 +577,15 @@ class Number(Grammar):
 
     number: number to dial
     sendDigits: key to press after connecting to the number
-    url: url to be called to fetch the XML for actions upon call answer
     gateways: gateway string separated by comma to dialout the number
     gatewayCodecs: codecs for each gatway separated by comma
     gatewayTimeouts: timeouts for each gateway separated by comma
     gatewayRetries: number of times to retry each gateway separated by comma
-    extraDialString: extra dialstring to be added while dialing out to number
+    extraDialString: extra freeswitch dialstring to be added while dialing out to number
     """
     def __init__(self):
         Grammar.__init__(self)
         self.number = ""
-        self.url = ""
         self.gateways = []
         self.gateway_codecs = []
         self.gateway_timeouts = []
@@ -602,7 +600,6 @@ class Number(Grammar):
         self.number = re.split(',|\|', self.number)[0]
         self.extra_dial_string = \
                                 self.extract_attribute_value("extraDialString")
-        self.url = self.extract_attribute_value("url")
         self.send_digits = self.extract_attribute_value("sendDigits")
 
         gateways = self.extract_attribute_value("gateways")
@@ -982,7 +979,7 @@ class Speak(Grammar):
     def execute(self, outbound_socket):
         if self.item_type and self.method:
                 say_args = "%s %s %s %s" \
-                        % (self.language, self.item_type, 
+                        % (self.language, self.item_type,
                            self.method, self.text)
         else:
             say_args = "%s|%s|%s" % (self.engine, self.voice, self.text)
