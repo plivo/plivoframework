@@ -13,90 +13,90 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTNoExecuteException
 
 
-RECOGNIZED_SOUND_FORMATS = ["audio/mpeg", "audio/wav", "audio/x-wav"]
+RECOGNIZED_SOUND_FORMATS = ['audio/mpeg', 'audio/wav', 'audio/x-wav']
 
 GRAMMAR_DEFAULT_PARAMS = {
-        "Conference": {
-                #"room": SET IN ELEMENT BODY
-                "waitSound": None, 
-                "muted": "false",
-                "startConferenceOnEnter": "true",
-                "endConferenceOnExit": "false", 
-                "maxMembers": 0, 
-                "beep": 0,
-                "timeLimit": 14400 ,
-                "hangupOnStar": "false"
+        'Conference': {
+                #'room': SET IN ELEMENT BODY
+                'waitSound': None,
+                'muted': 'false',
+                'startConferenceOnEnter': 'true',
+                'endConferenceOnExit': 'false',
+                'maxMembers': 0,
+                'beep': 0,
+                'timeLimit': 14400 ,
+                'hangupOnStar': 'false'
         },
-        "Dial": {
+        'Dial': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
-                "method": "POST",
-                "hangupOnStar": "false",
+                'method': 'POST',
+                'hangupOnStar': 'false',
                 #callerId: DYNAMIC! MUST BE SET IN METHOD,
-                "timeLimit": 0,
-                "confirmSound": "",
-                "confirmKey": "",
-                "dialMusic": ""
+                'timeLimit': 0,
+                'confirmSound': '',
+                'confirmKey': '',
+                'dialMusic': ''
         },
-        "GetDigits": {
+        'GetDigits': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
-                "method": "POST",
-                "timeout": 5,
-                "finishOnKey": '#',
-                "numDigits": 99,
-                "retries": 1,
-                "playBeep": 'false',
-                "validDigits": '0123456789*#',
-                "invalidDigitsSound": ''
+                'method': 'POST',
+                'timeout': 5,
+                'finishOnKey': '#',
+                'numDigits': 99,
+                'retries': 1,
+                'playBeep': 'false',
+                'validDigits': '0123456789*#',
+                'invalidDigitsSound': ''
         },
-        "Hangup": {
-                "reason": "",
-                "schedule": 0
+        'Hangup': {
+                'reason': '',
+                'schedule': 0
         },
-        "Number": {
-                #"gateways": DYNAMIC! MUST BE SET IN METHOD,
-                #"gatewayCodecs": DYNAMIC! MUST BE SET IN METHOD,
-                #"gatewayTimeouts": DYNAMIC! MUST BE SET IN METHOD,
-                #"gatewayRetries": DYNAMIC! MUST BE SET IN METHOD,
-                #"extraDialString": DYNAMIC! MUST BE SET IN METHOD,
-                "sendDigits": "",
+        'Number': {
+                #'gateways': DYNAMIC! MUST BE SET IN METHOD,
+                #'gatewayCodecs': DYNAMIC! MUST BE SET IN METHOD,
+                #'gatewayTimeouts': DYNAMIC! MUST BE SET IN METHOD,
+                #'gatewayRetries': DYNAMIC! MUST BE SET IN METHOD,
+                #'extraDialString': DYNAMIC! MUST BE SET IN METHOD,
+                'sendDigits': '',
         },
-        "Wait": {
-                "length": 1
+        'Wait': {
+                'length': 1
         },
-        "Play": {
-                "loop": 1
+        'Play': {
+                'loop': 1
         },
-        "Preanswer": {
+        'Preanswer': {
         },
-        "Record": {
+        'Record': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
-                "method": 'POST',
-                "timeout": 15,
-                "finishOnKey": "1234567890*#",
-                "maxLength": 3600,
-                "playBeep": 'true',
-                "filePath": "/usr/local/freeswitch/recordings/",
-                "format": "mp3",
-                "prefix": "",
-                "bothLegs": "false"
+                'method': 'POST',
+                'timeout': 15,
+                'finishOnKey': '1234567890*#',
+                'maxLength': 3600,
+                'playBeep': 'true',
+                'filePath': '/usr/local/freeswitch/recordings/',
+                'format': 'mp3',
+                'prefix': '',
+                'bothLegs': 'false'
         },
-        "Redirect": {
-                "method": "POST"
+        'Redirect': {
+                'method': 'POST'
         },
-        "Speak": {
-                "voice": "slt",
-                "language": "en",
-                "loop": 1,
-                "engine": "flite",
-                "method": "",
-                "type": ""
+        'Speak': {
+                'voice': 'slt',
+                'language': 'en',
+                'loop': 1,
+                'engine': 'flite',
+                'method': '',
+                'type': ''
         }
     }
 
 
 class Element(object):
-    """Abstract Element Class to be inherited by all Element elements
-    """
+    """Abstract Element Class to be inherited by all Element elements"""
+
     def __init__(self):
         self.name = str(self.__class__.__name__)
         self.nestables = None
@@ -190,34 +190,34 @@ class Conference(Element):
         Element.parse_element(self, element, uri)
         room = self.text
         if not room:
-            raise RESTFormatException("Conference Room must be defined")
+            raise RESTFormatException('Conference Room must be defined')
         self.full_room = room + '@plivo'
         self.room = room
-        self.moh_sound = self.extract_attribute_value("waitSound", None)
-        self.muted = self.extract_attribute_value("muted", 'false') \
+        self.moh_sound = self.extract_attribute_value('waitSound', None)
+        self.muted = self.extract_attribute_value('muted', 'false') \
                         == 'true'
-        self.start_on_enter = self.extract_attribute_value("startConferenceOnEnter", 'true') \
+        self.start_on_enter = self.extract_attribute_value('startConferenceOnEnter', 'true') \
                                 == 'true'
-        self.end_on_exit = self.extract_attribute_value("endConferenceOnExit", 'false') \
+        self.end_on_exit = self.extract_attribute_value('endConferenceOnExit', 'false') \
                                 == 'true'
-        self.hangup_on_star = self.extract_attribute_value("hangupOnStar", 'false') \
+        self.hangup_on_star = self.extract_attribute_value('hangupOnStar', 'false') \
                                 == 'true'
         try:
-            self.time_limit = int(self.extract_attribute_value("timeLimit",
+            self.time_limit = int(self.extract_attribute_value('timeLimit',
                                                           self.DEFAULT_TIMELIMIT))
         except ValueError:
             self.time_limit = self.DEFAULT_TIMELIMIT
         if self.time_limit <= 0:
             self.time_limit = self.DEFAULT_TIMELIMIT
         try:
-            self.max_members = int(self.extract_attribute_value("maxMembers", 
+            self.max_members = int(self.extract_attribute_value('maxMembers',
                                                         self.DEFAULT_MAXMEMBERS))
         except ValueError:
             self.max_members = self.DEFAULT_MAXMEMBERS
         if self.max_members <= 0:
             self.max_members = self.DEFAULT_MAXMEMBERS
         try:
-            self.play_beep = int(self.extract_attribute_value("beep", 0))
+            self.play_beep = int(self.extract_attribute_value('beep', 0))
         except ValueError:
             self.play_beep = 0
 
@@ -233,11 +233,11 @@ class Conference(Element):
                 if url_exists(audio_path):
                     if audio_path[-4:].lower() != '.mp3':
                         raise RESTFormatException("Only mp3 files allowed for remote file play")
-                    if audio_path[:7].lower() == "http://":
+                    if audio_path[:7].lower() == 'http://':
                         audio_path = audio_path[7:]
-                    elif audio_path[:8].lower() == "https://":
+                    elif audio_path[:8].lower() == 'https://':
                         audio_path = audio_path[8:]
-                    elif audio_path[:6].lower() == "ftp://":
+                    elif audio_path[:6].lower() == 'ftp://':
                         audio_path = audio_path[6:]
                     else:
                         pass
@@ -337,23 +337,23 @@ class Dial(Element):
     def __init__(self):
         Element.__init__(self)
         self.nestables = ['Number']
-        self.method = ""
-        self.action = ""
+        self.method = ''
+        self.action = ''
         self.hangup_on_star = False
         self.caller_id = ''
         self.time_limit = self.DEFAULT_TIMELIMIT
         self.timeout = self.DEFAULT_TIMEOUT
-        self.dial_str = ""
-        self.confirm_sound = ""
-        self.confirm_key = ""
-        self.dial_music = ""
+        self.dial_str = ''
+        self.confirm_sound = ''
+        self.confirm_key = ''
+        self.dial_music = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
-        self.action = self.extract_attribute_value("action")
-        self.caller_id = self.extract_attribute_value("callerId")
+        self.action = self.extract_attribute_value('action')
+        self.caller_id = self.extract_attribute_value('callerId')
         try:
-            self.time_limit = int(self.extract_attribute_value("timeLimit",
+            self.time_limit = int(self.extract_attribute_value('timeLimit',
                                   self.DEFAULT_TIMELIMIT))
         except ValueError:
             self.time_limit = self.DEFAULT_TIMELIMIT
