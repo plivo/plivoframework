@@ -24,8 +24,9 @@ from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 
 class PlivoRestServer(PlivoRestApi):
     """Class PlivoRestServer"""
-    name = "PlivoRestServer"
-
+    name = 'PlivoRestServer'
+    default_http_method = 'POST'
+    
     def __init__(self, configfile, daemon=False,
                         pidfile='/tmp/plivo_rest.pid'):
         """Constructor
