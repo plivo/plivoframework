@@ -10,7 +10,7 @@ class RESTSyntaxException(Exception):
     pass
 
 
-class UnrecognizedGrammarException(Exception):
+class UnrecognizedElementException(Exception):
     pass
 
 

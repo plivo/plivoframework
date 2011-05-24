@@ -95,8 +95,8 @@ GRAMMAR_DEFAULT_PARAMS = {
     }
 
 
-class Grammar(object):
-    """Abstract Grammar Class to be inherited by all Grammar elements
+class Element(object):
+    """Abstract Element Class to be inherited by all Element elements
     """
     def __init__(self):
         self.name = str(self.__class__.__name__)
@@ -105,7 +105,7 @@ class Grammar(object):
         self.text = ''
         self.children = []
 
-    def parse_grammar(self, element, uri=None):
+    def parse_element(self, element, uri=None):
         self.prepare_attributes(element)
         self.prepare_text(element)
 
@@ -130,11 +130,11 @@ class Grammar(object):
         return item
 
     def prepare_attributes(self, element):
-        grammar_dict = GRAMMAR_DEFAULT_PARAMS[self.name]
-        if element.attrib and not grammar_dict:
+        element_dict = GRAMMAR_DEFAULT_PARAMS[self.name]
+        if element.attrib and not element_dict:
             raise RESTFormatException("%s does not require any attributes!"
                                                                 % self.name)
-        self.attributes = dict(grammar_dict, **element.attrib)
+        self.attributes = dict(element_dict, **element.attrib)
 
     def prepare_text(self, element):
         text = element.text
@@ -147,7 +147,7 @@ class Grammar(object):
         raise RESTRedirectException(url, params, method)
 
 
-class Conference(Grammar):
+class Conference(Element):
     """Go to a Conference Room
     room name is body text of Conference element.
 
@@ -175,7 +175,7 @@ class Conference(Grammar):
     DEFAULT_MAXMEMBERS = 200
 
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.full_room = ''
         self.room = ''
         self.moh_sound = None
@@ -187,8 +187,8 @@ class Conference(Grammar):
         self.time_limit = self.DEFAULT_TIMELIMIT
         self.hangup_on_star = False
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         room = self.text
         if not room:
             raise RESTFormatException("Conference Room must be defined")
@@ -319,7 +319,7 @@ class Conference(Grammar):
         outbound_socket.log.info("Leaving Conference: Room %s" % self.room)
 
 
-class Dial(Grammar):
+class Dial(Element):
     """Dial another phone number and connect it to this call
 
     action: submit the result of the dial to this URL
@@ -336,7 +336,7 @@ class Dial(Grammar):
     DEFAULT_TIMELIMIT = 14400
 
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.nestables = ['Number']
         self.method = ""
         self.action = ""
@@ -349,8 +349,8 @@ class Dial(Grammar):
         self.confirm_key = ""
         self.dial_music = ""
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         self.action = self.extract_attribute_value("action")
         self.caller_id = self.extract_attribute_value("callerId")
         try:
@@ -538,7 +538,7 @@ class Dial(Grammar):
             self.fetch_rest_xml(self.action, method=self.method)
 
 
-class GetDigits(Grammar):
+class GetDigits(Element):
     """Get digits from the caller's keypad
 
     action: URL to which the digits entered will be sent
@@ -555,7 +555,7 @@ class GetDigits(Grammar):
     DEFAULT_TIMEOUT = 5
 
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.nestables = ['Speak', 'Play', 'Wait']
         self.num_digits = None
         self.timeout = None
@@ -568,8 +568,8 @@ class GetDigits(Grammar):
         self.sound_files = []
         self.method = ""
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         try:
             num_digits = int(self.extract_attribute_value("numDigits",
                              self.DEFAULT_MAX_DIGITS))
@@ -617,7 +617,7 @@ class GetDigits(Grammar):
     def prepare(self):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
-                # :TODO Prepare Grammar concurrently
+                # :TODO Prepare Element concurrently
                 child_instance.prepare()
 
     def execute(self, outbound_socket):
@@ -656,7 +656,7 @@ class GetDigits(Grammar):
                 for i in range(loop):
                     self.sound_files.append(say_str)
             else:
-                pass  # Ignore invalid nested Grammar
+                pass  # Ignore invalid nested Element
 
         outbound_socket.log.info("GetDigits Started %s" % self.sound_files)
         if self.play_beep:
@@ -676,16 +676,16 @@ class GetDigits(Grammar):
             self.fetch_rest_xml(self.action, params, self.method)
 
 
-class Hangup(Grammar):
+class Hangup(Element):
     """Hangup the call
     """
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.reason = ""
         self.schedule = 0
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         self.schedule = self.extract_attribute_value("schedule", 0)
         reason = self.extract_attribute_value("reason")
         if reason == 'rejected':
@@ -719,7 +719,7 @@ class Hangup(Grammar):
             return self.reason
 
 
-class Number(Grammar):
+class Number(Element):
     """Specify phone number in a nested Dial element.
 
     number: number to dial
@@ -731,7 +731,7 @@ class Number(Grammar):
     extraDialString: extra freeswitch dialstring to be added while dialing out to number
     """
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.number = ""
         self.gateways = []
         self.gateway_codecs = []
@@ -740,8 +740,8 @@ class Number(Grammar):
         self.extra_dial_string = ""
         self.send_digits = ""
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         self.number = element.text.strip()
         # don't allow "|" and "," in a number noun to avoid call injection
         self.number = re.split(',|\|', self.number)[0]
@@ -768,17 +768,17 @@ class Number(Grammar):
 
 
 
-class Wait(Grammar):
+class Wait(Element):
     """Wait for some time to further process the call
 
     length: length of wait time in seconds
     """
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.length = 0
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         try:
             length = int(self.extract_attribute_value("length", 0))
         except ValueError:
@@ -805,20 +805,20 @@ class Wait(Grammar):
         event = outbound_socket.wait_for_action()
 
 
-class Play(Grammar):
+class Play(Element):
     """Play audio file at a URL
 
     url: url of audio file, MIME type on file must be set correctly
     loop: number of time to play the audio - loop = 0 means infinite
     """
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.audio_directory = ""
         self.loop_times = 1
         self.sound_file_path = ""
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
 
         # Extract Loop attribute
         try:
@@ -881,20 +881,20 @@ class Play(Grammar):
         return False
 
 
-class Preanswer(Grammar):
-    """Answer the call in Early Media Mode and execute nested grammar
+class Preanswer(Element):
+    """Answer the call in Early Media Mode and execute nested element
     """
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.nestables = ['Play', 'Speak', 'GetDigits', 'Wait']
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
 
     def prepare(self):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
-                # :TODO Prepare grammar concurrently
+                # :TODO Prepare element concurrently
                 child_instance.prepare()
 
     def execute(self, outbound_socket):
@@ -904,7 +904,7 @@ class Preanswer(Grammar):
         outbound_socket.log.info("Preanswer Completed")
 
 
-class Record(Grammar):
+class Record(Element):
     """Record audio from caller
 
     action: submit to this URL once recording finishes
@@ -917,7 +917,7 @@ class Record(Grammar):
     finishOnKey: Stop recording on this key
     """
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.silence_threshold = 500
         self.action = ""
         self.method = ""
@@ -930,8 +930,8 @@ class Record(Grammar):
         self.prefix = ""
         self.both_legs = False
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         max_length = self.extract_attribute_value("maxLength")
         timeout = self.extract_attribute_value("timeout")
         action = self.extract_attribute_value("action")
@@ -962,7 +962,7 @@ class Record(Grammar):
         self.finish_on_key = finish_on_key
 
     def execute(self, outbound_socket):
-        Grammar.run(self, outbound_socket)
+        Element.run(self, outbound_socket)
         filename = "%s%s-%s" % (self.prefix,
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
@@ -990,18 +990,18 @@ class Record(Grammar):
             outbound_socket.log.info("Record Completed")
 
 
-class Redirect(Grammar):
+class Redirect(Element):
     """Redirect call flow to another URL
 
     url: redirect url
     """
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.method = ""
         self.url = ""
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
@@ -1017,7 +1017,7 @@ class Redirect(Grammar):
         self.fetch_rest_xml(self.url, method=self.method)
 
 
-class Speak(Grammar):
+class Speak(Element):
     """Speak text
 
     text: text to say
@@ -1046,7 +1046,7 @@ class Speak(Grammar):
     DEFAULT_LOOP = 1
 
     def __init__(self):
-        Grammar.__init__(self)
+        Element.__init__(self)
         self.loop_times = 1
         self.language = "en"
         self.sound_file_path = ""
@@ -1055,8 +1055,8 @@ class Speak(Grammar):
         self.method = "POST"
         self.item_type = ""
 
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
         try:
             loop = int(self.extract_attribute_value("loop", self.DEFAULT_LOOP))
         except ValueError:

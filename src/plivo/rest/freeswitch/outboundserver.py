@@ -59,7 +59,7 @@ class PlivoOutboundServer(OutboundServer):
             self.default_http_method = 'POST'
 
         # This is where we define the connection with the
-        # Plivo XML grammar Processor
+        # Plivo XML element Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
                                         PlivoOutboundEventSocket, filter)
 

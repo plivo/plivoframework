@@ -16,10 +16,10 @@ import gevent.queue
 from plivo.core.freeswitch.eventtypes import Event
 from plivo.rest.freeswitch.helpers import HTTPRequest
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
-from plivo.rest.freeswitch import grammar
+from plivo.rest.freeswitch import elements
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
-                                    UnrecognizedGrammarException, \
+                                    UnrecognizedElementException, \
                                     RESTRedirectException
 
 
@@ -62,7 +62,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     """Class PlivoOutboundEventSocket
 
     An instance of this class is created every time an incoming call is received.
-    The instance requests for a XML grammar set to execute the call and acts as a
+    The instance requests for a XML element set to execute the call and acts as a
     bridge between Event_Socket and the web application
     """
     WAIT_FOR_ACTIONS = ('playback',
@@ -93,7 +93,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.auth_token = auth_token
         # set all settings empty
         self.xml_response = ""
-        self.parsed_grammar = []
+        self.parsed_element = []
         self.lexed_xml_response = []
         self.target_url = ""
         self.hangup_url = ""
@@ -112,7 +112,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.default_http_method = default_http_method
         # set answered flag
         self.answered = False
-        self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial', 'Conference']
+        self.no_answer_element = ['Wait', 'Reject', 'Preanswer', 'Dial', 'Conference']
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter)
 
@@ -298,7 +298,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.info("Processing Call")
         try:
             self.process_call()
-            return
         except Hangup:
             self.log.warn("Channel has hung up, breaking Processing Call")
         except Exception, e:
@@ -340,9 +339,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 params = redirect.get_params()
                 if not fetch_method:
                     fetch_method = 'POST'
-                # Reset all the previous response and grammar
+                # Reset all the previous response and element
                 self.xml_response = ""
-                self.parsed_grammar = []
+                self.parsed_element = []
                 self.lexed_xml_response = []
                 self.log.info("Redirecting to %s to fetch RESTXML" \
                                             % self.target_url)
@@ -386,7 +385,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def lex_xml(self):
         """
-        Validate the XML document and make sure we recognize all Grammar
+        Validate the XML document and make sure we recognize all Element
         """
         # Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
@@ -401,61 +400,61 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if doc.tag != "Response":
             raise RESTFormatException("No Response Tag Present")
 
-        # Make sure we recognize all the Grammar in the xml
+        # Make sure we recognize all the Element in the xml
         for element in doc:
-            invalid_grammar = []
-            if not hasattr(grammar, element.tag):
-                invalid_grammar.append(element.tag)
+            invalid_element = []
+            if not hasattr(elements, element.tag):
+                invalid_element.append(element.tag)
             else:
                 self.lexed_xml_response.append(element)
-            if invalid_grammar:
-                raise UnrecognizedGrammarException("Unrecognized Grammar: %s"
-                                                        % invalid_grammar)
+            if invalid_element:
+                raise UnrecognizedElementException("Unrecognized Element: %s"
+                                                        % invalid_element)
 
     def parse_xml(self):
         """
-        This method will parse the XML and add the Grammar into parsed_grammar
+        This method will parse the XML and add the Element into parsed_element
         """
-        # Check all Grammar element names
+        # Check all Element element names
         for element in self.lexed_xml_response:
-            grammar_element = getattr(grammar, str(element.tag), None)
-            grammar_instance = grammar_element()
-            grammar_instance.parse_grammar(element, self.target_url)
-            self.parsed_grammar.append(grammar_instance)
+            element_class = getattr(elements, str(element.tag), None)
+            element_instance = element_class()
+            element_instance.parse_element(element, self.target_url)
+            self.parsed_element.append(element_instance)
             # Validate, Parse & Store the nested children
-            # inside the main grammar element
-            self.validate_grammar(element, grammar_instance)
+            # inside the main element element
+            self.validate_element(element, element_instance)
 
-    def validate_grammar(self, element, grammar_instance):
+    def validate_element(self, element, element_instance):
         children = element.getchildren()
-        if children and not grammar_instance.nestables:
+        if children and not element_instance.nestables:
             raise RESTFormatException("%s cannot have any children!"
-                                            % grammar_instance.name)
+                                            % element_instance.name)
         for child in children:
-            if child.tag not in grammar_instance.nestables:
+            if child.tag not in element_instance.nestables:
                 raise RESTFormatException("%s is not nestable inside %s"
-                                            % (child, grammar_instance.name))
+                                            % (child, element_instance.name))
             else:
-                self.parse_children(child, grammar_instance)
+                self.parse_children(child, element_instance)
 
     def parse_children(self, child_element, parent_instance):
-        child_grammar_element = getattr(grammar, str(child_element.tag), None)
-        child_grammar_instance = child_grammar_element()
-        child_grammar_instance.parse_grammar(child_element, None)
-        parent_instance.children.append(child_grammar_instance)
+        child_element_class = getattr(elements, str(child_element.tag), None)
+        child_element_instance = child_element_class()
+        child_element_instance.parse_element(child_element, None)
+        parent_instance.children.append(child_element_instance)
 
     def execute_xml(self):
-        for grammar_element in self.parsed_grammar:
-            if hasattr(grammar, "prepare"):
-                # TODO Prepare grammar concurrently
-                grammar_element.prepare()
+        for element_instance in self.parsed_element:
+            if hasattr(element_instance, "prepare"):
+                # TODO Prepare element concurrently
+                element_instance.prepare()
             # Check if it's an inbound call
             if self.session_params['Direction'] == 'inbound':
-                # Don't answer the call if grammar is of type no answer
-                # Only execute the grammar
+                # Don't answer the call if element is of type no answer
+                # Only execute the element
                 if self.answered == False and \
-                    grammar_element.name not in self.no_answer_grammar:
+                    element_instance.name not in self.no_answer_element:
                     self.answer()
                     self.answered = True
-            grammar_element.run(self)
+            element_instance.run(self)
 
