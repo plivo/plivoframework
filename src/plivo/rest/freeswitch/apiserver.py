@@ -24,8 +24,9 @@ from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
 
 class PlivoRestServer(PlivoRestApi):
     """Class PlivoRestServer"""
-    name = "PlivoRestServer"
-
+    name = 'PlivoRestServer'
+    default_http_method = 'POST'
+    
     def __init__(self, configfile, daemon=False,
                         pidfile='/tmp/plivo_rest.pid'):
         """Constructor
@@ -87,7 +88,7 @@ class PlivoRestServer(PlivoRestApi):
                             auth_id=self.auth_id,
                             auth_token=self.auth_token,
                             filter='ALL', log=self.log,
-                            default_http_method = self.default_http_method)
+                            default_http_method=self.default_http_method)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
             func, methods = func_desc
