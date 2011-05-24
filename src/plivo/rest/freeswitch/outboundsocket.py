@@ -78,9 +78,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def __init__(self, socket, address, log,
                  default_answer_url=None,
                  default_hangup_url=None,
-                 default_http_method = "POST",
-                 auth_id="",
-                 auth_token="",
+                 default_http_method='POST',
+                 auth_id='',
+                 auth_token='',
                  request_id=0,
                  filter=None):
         # the request id
@@ -92,11 +92,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.auth_id = auth_id
         self.auth_token = auth_token
         # set all settings empty
-        self.xml_response = ""
+        self.xml_response = ''
         self.parsed_element = []
         self.lexed_xml_response = []
-        self.target_url = ""
-        self.hangup_url = ""
+        self.target_url = ''
+        self.hangup_url = ''
         self.session_params = {}
         self._hangup_cause = ''
         # create queue for waiting actions
@@ -116,7 +116,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter)
 
-    def _protocol_send(self, command, args=""):
+    def _protocol_send(self, command, args=''):
         """Access parent method _protocol_send
         """
         self.log.debug("Execute: %s args='%s'" % (command, args))
@@ -127,7 +127,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             raise Hangup()
         return response
 
-    def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
+    def _protocol_sendmsg(self, name, args=None, uuid='', lock=False, loops=1):
         """Access parent method _protocol_sendmsg
         """
         self.log.debug("Execute: %s args=%s, uuid='%s', lock=%s, loops=%d" \
@@ -281,7 +281,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['CallStatus'] = 'ringing'
 
         if not sched_hangup_id:
-            sched_hangup_id = ""
+            sched_hangup_id = ''
 
         # Add more Session Params if present
         if aleg_uuid:
@@ -445,7 +445,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def execute_xml(self):
         for element_instance in self.parsed_element:
-            if hasattr(element_instance, "prepare"):
+            if hasattr(element_instance, 'prepare'):
                 # TODO Prepare element concurrently
                 element_instance.prepare()
             # Check if it's an inbound call

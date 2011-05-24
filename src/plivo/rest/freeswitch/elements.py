@@ -570,7 +570,7 @@ class GetDigits(Element):
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
         try:
-            num_digits = int(self.extract_attribute_value("numDigits",
+            num_digits = int(self.extract_attribute_value('numDigits',
                              self.DEFAULT_MAX_DIGITS))
         except ValueError:
             num_digits = self.DEFAULT_MAX_DIGITS
