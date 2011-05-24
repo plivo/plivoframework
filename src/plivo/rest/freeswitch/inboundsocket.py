@@ -210,23 +210,22 @@ class RESTInboundSocket(InboundEventSocket):
                 }
             gevent.spawn(self.send_to_url, hangup_url, params)
 
-    def send_to_url(self, url=None, params={},
-                                            method=None):
+    def send_to_url(self, url=None, params={}, method=None):
         if method is None:
             method = self.default_http_method
 
         if not url:
-            self.log.warn("Cannot post No url found !")
+            self.log.warn("Cannot send %s, no url !" % method)
             return None
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         try:
             data = http_obj.fetch_response(url, params, method)
-            self.log.info("Posted to %s with %s -- Result: %s"
-                                            % (url, params, data))
+            self.log.info("Sent to %s %s with %s -- Result: %s"
+                                            % (method, url, params, data))
             return data
         except Exception, e:
-            self.log.error("Post to %s with %s -- Error: %s"
-                                            % (url, params, e))
+            self.log.error("Sending to %s %s with %s -- Error: %s"
+                                            % (method, url, params, e))
         return None
 
     def spawn_originate(self, request_uuid):

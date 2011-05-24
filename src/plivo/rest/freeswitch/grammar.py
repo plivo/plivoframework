@@ -18,7 +18,15 @@ RECOGNIZED_SOUND_FORMATS = ["audio/mpeg", "audio/wav", "audio/x-wav"]
 
 GRAMMAR_DEFAULT_PARAMS = {
         "Conference": {
-                "room": "",
+                #"room": SET IN ELEMENT BODY
+                "waitSound": None, 
+                "muted": "false",
+                "startConferenceOnEnter": "true",
+                "endConferenceOnExit": "false", 
+                "maxMembers": 0, 
+                "beep": 0,
+                "timeLimit": 14400 ,
+                "hangupOnStar": "false"
         },
         "Dial": {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -151,32 +159,49 @@ class Conference(Grammar):
     """Go to a Conference Room
     room name is body text of Conference element.
 
-    waitSound: sound to play while alone in conference
-    muted: enter conference muted
-    startConferenceOnEnter: the conference start when this member joins
-    endConferenceOnExit: close conference after this user leaves
-    maxMembers: max members in conference (0 for no limit)
+    waitSound: sound to play while alone in conference 
+          Can be a list of sound files separated by comma.
+          (default no sound)
+    muted: enter conference muted 
+          (default false)
+    startConferenceOnEnter: the conference start when this member joins 
+          (default true)
+    endConferenceOnExit: close conference after this member leaves 
+          (default false)
+    maxMembers: max members in conference 
+          (0 for max : 200)
     beep: if 0, disabled
           if 1, play one beep when a member enters/leaves
           if 2 play two beeps when a member enters/leaves
           (default 0)
+    timeLimit: max time before closing conference 
+          (default 14400 seconds)
+    hangupOnStar: exit conference when member press '*' 
+          (default false)
     """
+    DEFAULT_TIMELIMIT = 14400
+    DEFAULT_MAXMEMBERS = 200
+
     def __init__(self):
         Grammar.__init__(self)
+        self.full_room = ''
         self.room = ''
         self.moh_sound = None
         self.muted = False
         self.start_on_enter = True
         self.end_on_exit = False
-        self.max_members = 200
+        self.max_members = self.DEFAULT_MAXMEMBERS
         self.play_beep = 0
+        self.time_limit = self.DEFAULT_TIMELIMIT
+        self.hangup_on_star = False
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
         room = self.text
         if not room:
             raise RESTFormatException("Conference Room must be defined")
-        self.room = room + '@plivo'
+        self.full_room = room + '@plivo'
+        self.room = room
         self.moh_sound = self.extract_attribute_value("waitSound", None)
         self.muted = self.extract_attribute_value("muted", 'false') \
                         == 'true'
@@ -184,35 +209,73 @@ class Conference(Grammar):
                                 == 'true'
         self.end_on_exit = self.extract_attribute_value("endConferenceOnExit", 'false') \
                                 == 'true'
+        self.hangup_on_star = self.extract_attribute_value("hangupOnStar", 'false') \
+                                == 'true'
         try:
-            self.max_members = int(self.extract_attribute_value("maxMembers", 200))
+            self.time_limit = int(self.extract_attribute_value("timeLimit",
+                                                          self.DEFAULT_TIMELIMIT))
         except ValueError:
-            self.max_members = 200
+            self.time_limit = self.DEFAULT_TIMELIMIT
+        if self.time_limit <= 0:
+            self.time_limit = self.DEFAULT_TIMELIMIT
         try:
-            self.play_beep = int(self.extract_attribute_value("endConferenceOnExit", 0))
+            self.max_members = int(self.extract_attribute_value("maxMembers", 
+                                                        self.DEFAULT_MAXMEMBERS))
+        except ValueError:
+            self.max_members = self.DEFAULT_MAXMEMBERS
+        if self.max_members <= 0:
+            self.max_members = self.DEFAULT_MAXMEMBERS
+        try:
+            self.play_beep = int(self.extract_attribute_value("beep", 0))
         except ValueError:
             self.play_beep = 0
 
+    def _prepare_moh(self):
+        mohs = []
+        if not self.moh_sound:
+            return mohs
+        for audio_path in self.moh_sound.split(','):
+            if not is_valid_url(audio_path):
+                if file_exists(audio_path):
+                    mohs.append(audio_path)
+            else:
+                if url_exists(audio_path):
+                    if audio_path[-4:].lower() != '.mp3':
+                        raise RESTFormatException("Only mp3 files allowed for remote file play")
+                    if audio_path[:7].lower() == "http://":
+                        audio_path = audio_path[7:]
+                    elif audio_path[:8].lower() == "https://":
+                        audio_path = audio_path[8:]
+                    elif audio_path[:6].lower() == "ftp://":
+                        audio_path = audio_path[6:]
+                    else:
+                        pass
+                    mohs.append("shout://%s" % audio_path)
+        return mohs
+
     def execute(self, outbound_socket):
         flags = []
+        # set timeLimit scheduled group name for the room
+        sched_group_name = "conf_%s" % self.room
+        # always clean old kickall tasks for the room
+        outbound_socket.api("sched_del %s" % sched_group_name)
+        # settings for conference room
         outbound_socket.set("conference_controls=none")
-        if self.moh_sound:
-            outbound_socket.set("conference_moh_sound=%s" % self.moh_sound)
-        else:
-            outbound_socket.unset("conference_moh_sound")
-        if self.play_beep == 1:
-            outbound_socket.set("conference_enter_sound='tone_stream://%(300,200,700)'")
-            outbound_socket.set("conference_exit_sound='tone_stream://%(300,200,700)'")
-        elif self.play_beep == 2:
-            outbound_socket.set("conference_enter_sound='tone_stream://L=2;%(300,200,700)'")
-            outbound_socket.set("conference_exit_sound='tone_stream://L=2;%(300,200,700)'")
-        else:
-            outbound_socket.unset("conference_enter_sound")
-            outbound_socket.unset("conference_exit_sound")
         if self.max_members > 0:
             outbound_socket.set("max-members=%d" % self.max_members)
         else:
             outbound_socket.unset("max-members")
+        # set moh sound
+        mohs = self._prepare_moh()
+        if not mohs:
+            outbound_socket.unset("conference_moh_sound")
+        else:
+            outbound_socket.set("playback_delimiter=!")
+            play_str = "file_string://silence_stream://1"
+            for moh in mohs:
+                play_str = "%s!%s" % (play_str, moh)
+            outbound_socket.set("conference_moh_sound=%s" % play_str)
+        # set member flags
         if self.muted:
             flags.append("muted")
         if self.start_on_enter:
@@ -225,13 +288,43 @@ class Conference(Grammar):
         if flags_opt:
             outbound_socket.set("conference_member_flags=%s" % flags_opt)
         else:
-            outbound_socket.unset("conference_moh_sound")
+            outbound_socket.unset("conference_member_flags")
+        # set new kickall scheduled task
+        outbound_socket.api("sched_api +%d %s conference %s kick all" \
+                            % (self.time_limit, sched_group_name, self.room))
+        # really enter conference room
         outbound_socket.log.info("Entering Conference: Room %s (flags %s)" \
-                                        % (str(self.room), flags_opt))
-        outbound_socket.conference(str(self.room))
+                                        % (self.room, flags_opt))
+        res = outbound_socket.conference(self.full_room, lock=False)
+        if not res.is_success():
+            outbound_socket.log.error("Conference: Entering Room %s Failed" \
+                                % (self.room))
+            return
+        # wait for action event
         event = outbound_socket.wait_for_action()
-        outbound_socket.log.info("Leaving Conference: Room %s" \
-                                        % str(self.room))
+        # if event is add-member, get Member-ID
+        # and set extra features for conference
+        if event['Event-Subclass'] == 'conference::maintenance' \
+            and event['Action'] == 'add-member':
+            member_id = event['Member-ID']
+            outbound_socket.log.debug("Entered Conference: Room %s with Member-ID %s" \
+                            % (self.room, member_id))
+            # set digit binding if hangupOnStar is enabled
+            if member_id and self.hangup_on_star:
+                bind_digit_realm = "conf_%s" % outbound_socket.get_channel_unique_id()
+                outbound_socket.bind_digit_action("%s,*,exec:conference,%s kick %s" \
+                            % (bind_digit_realm, self.room, member_id), lock=True)
+            # set beep on enter/exit if enabled
+            if member_id and self.play_beep > 0:
+                if self.play_beep == 1:
+                    outbound_socket.api("conference %s enter_sound file tone_stream://%%(300,200,700)" % self.room)
+                    outbound_socket.api("conference %s exit_sound file tone_stream://%%(300,200,700)" % self.room)
+                elif self.play_beep == 2:
+                    outbound_socket.api("conference %s enter_sound file tone_stream://L=2;%%(300,200,700)" % self.room)
+                    outbound_socket.api("conference %s exit_sound file tone_stream://L=2;%%(300,200,700)" % self.room)
+            # now really wait conference ending for this member
+            event = outbound_socket.wait_for_action()
+        outbound_socket.log.info("Leaving Conference: Room %s" % self.room)
 
 
 class Dial(Grammar):
@@ -239,12 +332,13 @@ class Dial(Grammar):
 
     action: submit the result of the dial to this URL
     method: submit to 'action' url using GET or POST
-    hangupOnStar: hangup the bleg is a leg presses start and this is true
+    hangupOnStar: hangup the b leg if a leg presses start and this is true
     callerId: caller id to be send to the dialed number
     timeLimit: hangup the call after these many seconds. 0 means no timeLimit
     confirmSound: Sound to be played to b leg before call is bridged
     confirmKey: Key to be pressed to bridge the call.
-    dialMusic: Play this music to a-leg while doing a dial to bleg
+    dialMusic: Play music to a leg while doing a dial to b leg
+                Can be a list of files separated by comma
     """
     DEFAULT_TIMEOUT = 30
     DEFAULT_TIMELIMIT = 14400
@@ -283,13 +377,36 @@ class Dial(Grammar):
             self.timeout = self.DEFAULT_TIMEOUT
         self.confirm_sound = self.extract_attribute_value("confirmSound")
         self.confirm_key = self.extract_attribute_value("confirmKey")
-        self.dial_music = self.extract_attribute_value("dialMusic")
+        self.dial_music = self.extract_attribute_value("dialMusic", None)
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
                                                                     == 'true'
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
+
+    def _prepare_moh(self):
+        mohs = []
+        if not self.dial_music:
+            return mohs
+        for audio_path in self.dial_music.split(','):
+            if not is_valid_url(audio_path):
+                if file_exists(audio_path):
+                    mohs.append(audio_path)
+            else:
+                if url_exists(audio_path):
+                    if audio_path[-4:].lower() != '.mp3':
+                        raise RESTFormatException("Only mp3 files allowed for remote file play")
+                    if audio_path[:7].lower() == "http://":
+                        audio_path = audio_path[7:]
+                    elif audio_path[:8].lower() == "https://":
+                        audio_path = audio_path[8:]
+                    elif audio_path[:6].lower() == "ftp://":
+                        audio_path = audio_path[6:]
+                    else:
+                        pass
+                    mohs.append("shout://%s" % audio_path)
+        return mohs
 
     def create_number(self, number_instance):
         num_gw = []
@@ -374,12 +491,20 @@ class Dial(Grammar):
         if self.hangup_on_star:
             outbound_socket.set("bridge_terminate_key=*")
         # Play Dial music or bridge the early media accordingly
-        if self.dial_music:
+        mohs = self._prepare_moh()
+        if not mohs:
+            outbound_socket.unset("instant_ringback")
+            outbound_socket.unset("ringback")
+            outbound_socket.set("bridge_early_media=true")
+        else:
+            outbound_socket.set("playback_delimiter=!")
+            play_str = "file_string://silence_stream://1"
+            for moh in mohs:
+                play_str = "%s!%s" % (play_str, moh)
             outbound_socket.set("bridge_early_media=true")
             outbound_socket.set("instant_ringback=true")
-            outbound_socket.set("ringback=file_string://%s" % self.dial_music)
-        else:
-            outbound_socket.set("bridge_early_media=true")
+            outbound_socket.set("ringback=%s" % play_str)
+        # Set confirm sound and key
         if self.confirm_sound:
             # Use confirm key if present else just play music
             if self.confirm_key:

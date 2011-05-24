@@ -113,7 +113,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.default_http_method = default_http_method
         # set answered flag
         self.answered = False
-        self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial']
+        self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial', 'Conference']
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter)
 
@@ -182,6 +182,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.info('Event: channel %s hangup completed (%s)' %
                       (self.get_channel_unique_id(), self._hangup_cause))
 
+    def on_custom(self, event):
+        # special case to get Member-ID for conference
+        if event['Event-Subclass'] == 'conference::maintenance' \
+            and event['Action'] == 'add-member' \
+            and event['Unique-ID'] == self.get_channel_unique_id():
+            self._action_queue.put(event)
+
     def has_hangup(self):
         if self._hangup_cause:
             return True
@@ -199,8 +206,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def run(self):
         self.resume()
-        # Only catch events for this channel
-        self.myevents()
+        # Only catch events for this channel Unique-ID
+        self.eventplain('ALL')
+        self.filter('Unique-ID %s' % self.get_channel_unique_id())
         # Linger to get all remaining events before closing
         self.linger()
 
@@ -348,8 +356,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         The url result expected is an XML content which will be stored in
         xml_response
         """
-        self.log.info("Fetching %s RESTXML from %s with %s" \
-                                % (method, self.target_url, params))
+        self.log.info("Fetching RESTXML from %s with %s" \
+                                % (self.target_url, params))
         self.xml_response = self.send_to_url(self.target_url, params, method)
         self.log.info("Requested RESTXML to %s with %s" \
                                 % (self.target_url, params))
@@ -362,18 +370,18 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             method = self.default_http_method
 
         if not url:
-            self.log.warn("Cannot send, no url !")
+            self.log.warn("Cannot send %s, no url !" % method)
             return None
         params.update(self.session_params)
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         try:
             data = http_obj.fetch_response(url, params, method)
-            self.log.info("Posted to %s with %s -- Result: %s" \
-                                            % (url, params, data))
+            self.log.info("Sent to %s %s with %s -- Result: %s" \
+                                            % (method, url, params, data))
             return data
         except Exception, e:
-            self.log.error("Post to %s with %s -- Error: %s" \
-                                            % (url, params, e))
+            self.log.error("Sending to %s %s with %s -- Error: %s" \
+                                            % (method, url, params, e))
         return None
 
     def lex_xml(self):

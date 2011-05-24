@@ -209,6 +209,15 @@ class Commands(object):
         """
         return self._protocol_sendmsg("bind_meta_app", args, uuid, lock)
 
+    def bind_digit_action(self, args, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_bind_digit_action
+
+        >>> bind_digit_action("test1,456,exec:playback,ivr/ivr-welcome_to_freeswitch.wav")
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("bind_digit_action", args, uuid, lock)
+
     def wait_for_silence(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_wait_for_silence
 
