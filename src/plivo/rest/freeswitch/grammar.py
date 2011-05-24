@@ -560,12 +560,22 @@ class Hangup(Grammar):
     """
     def __init__(self):
         Grammar.__init__(self)
+        self.reason = ""
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
+        reason = self.extract_attribute_value("reason")
+        if reason == 'rejected':
+            self.reason = 'CALL_REJECTED'
+        elif reason == 'busy':
+            self.reason = 'USER_BUSY'
+        else:
+            raise RESTAttributeException("Reject Wrong Attribute Value for %s"
+                                                                % self.name)
 
     def execute(self, outbound_socket):
-        outbound_socket.hangup()
+        outbound_socket.hangup(self.reason)
+        return self.reason
 
 
 class Number(Grammar):
@@ -864,32 +874,6 @@ class Redirect(Grammar):
 
     def execute(self, outbound_socket):
         self.fetch_rest_xml(self.url, method=self.method)
-
-
-class Reject(Grammar):
-    """Reject the call
-    This wont answer the call, and should be the first grammar element
-
-    reason: reject reason/code
-    """
-    def __init__(self):
-        Grammar.__init__(self)
-        self.reason = ""
-
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
-        reason = self.extract_attribute_value("reason")
-        if reason == 'rejected':
-            self.reason = 'CALL_REJECTED'
-        elif reason == 'busy':
-            self.reason = 'USER_BUSY'
-        else:
-            raise RESTAttributeException("Reject Wrong Attribute Value for %s"
-                                                                % self.name)
-
-    def execute(self, outbound_socket):
-        outbound_socket.hangup(self.reason)
-        return self.reason
 
 
 class Speak(Grammar):
