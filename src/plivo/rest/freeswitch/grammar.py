@@ -229,7 +229,7 @@ class Conference(Grammar):
         outbound_socket.log.info("Entering Conference: Room %s (flags %s)" \
                                         % (str(self.room), flags_opt))
         outbound_socket.conference(str(self.room))
-        event = outbound_socket._action_queue.get()
+        event = outbound_socket.wait_for_action()
         outbound_socket.log.info("Leaving Conference: Room %s" \
                                         % str(self.room))
 
@@ -395,7 +395,7 @@ class Dial(Grammar):
         # Start dial
         outbound_socket.log.info("Dial Started %s" % self.dial_str)
         outbound_socket.bridge(self.dial_str)
-        event = outbound_socket._action_queue.get()
+        event = outbound_socket.wait_for_action()
         reason = None
         originate_disposition = event['variable_originate_disposition']
         hangup_cause = originate_disposition
@@ -551,7 +551,7 @@ class GetDigits(Grammar):
                             invalid_file=self.invalid_digits_sound,
                             valid_digits=self.valid_digits,
                             play_beep=self.play_beep)
-        event = outbound_socket._action_queue.get()
+        event = outbound_socket.wait_for_action()
         digits = outbound_socket.get_var('pagd_input')
         if digits is not None and self.action:
             # Redirect
@@ -655,7 +655,7 @@ class Wait(Grammar):
             outbound_socket.playback(pause_str)
         else:
             outbound_socket.sleep(str(self.length * 1000))
-        event = outbound_socket._action_queue.get()
+        event = outbound_socket.wait_for_action()
 
 
 class Play(Grammar):
@@ -717,11 +717,11 @@ class Play(Grammar):
                 outbound_socket.endless_playback(self.sound_file_path)
                 # Log playback execute response
                 outbound_socket.log.info("Infinite Play started")
-                outbound_socket._action_queue.get()
+                outbound_socket.wait_for_action()
             else:
                 for i in range(self.loop_times):
                     outbound_socket.playback(self.sound_file_path)
-                    event = outbound_socket._action_queue.get()
+                    event = outbound_socket.wait_for_action()
                     # Log playback execute response
                     outbound_socket.log.info("Play finished once (%s)" \
                             % str(event.get_header('Application-Response')))
@@ -821,7 +821,7 @@ class Record(Grammar):
         if self.play_beep == 'true':
             beep = 'tone_stream://%(300,200,700)'
             outbound_socket.playback(beep)
-            event = outbound_socket._action_queue.get()
+            event = outbound_socket.wait_for_action()
             # Log playback execute response
             outbound_socket.log.debug("Record Beep played (%s)" \
                             % str(event.get_header('Application-Response')))
@@ -830,7 +830,7 @@ class Record(Grammar):
         outbound_socket.record(record_file, self.max_length,
                             self.silence_threshold, self.timeout,
                             self.finish_on_key)
-        event = outbound_socket._action_queue.get()
+        event = outbound_socket.wait_for_action()
         outbound_socket.stop_dtmf()
 
 
@@ -989,7 +989,7 @@ class Speak(Grammar):
                 outbound_socket.say(say_args)
             else:
                 outbound_socket.speak(say_args)
-            event = outbound_socket._action_queue.get()
+            event = outbound_socket.wait_for_action()
             # Log Speak execute response
             outbound_socket.log.info("Speak %s times - (%s)" \
                     % ((i+1), str(event.get_header('Application-Response'))))

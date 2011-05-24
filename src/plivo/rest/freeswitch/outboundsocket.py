@@ -131,6 +131,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             raise Hangup()
         return response
 
+    def wait_for_action(self):
+        """
+        Wait until an action is over
+        """
+        return self._action_queue.get()
+
     # Commands like `playback`, `record` etc. return +OK "immediately".
     # However, the only way to know if the audio file played has finished,
     # is by handling CHANNEL_EXECUTE_COMPLETE events.
