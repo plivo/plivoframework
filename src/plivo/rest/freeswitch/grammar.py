@@ -50,6 +50,8 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "invalidDigitsSound": ''
         },
         "Hangup": {
+                "reason": "",
+                "schedule": 0
         },
         "Number": {
                 #"gateways": DYNAMIC! MUST BE SET IN METHOD,
@@ -76,18 +78,11 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "playBeep": 'true',
                 "filePath": "/usr/local/freeswitch/recordings/",
                 "format": "mp3",
-                "prefix": ""
-        },
-        "RecordSession": {
-                "filePath": "/usr/local/freeswitch/recordings/",
-                "format": "mp3",
-                "prefix": ""
+                "prefix": "",
+                "bothLegs": "false"
         },
         "Redirect": {
                 "method": "POST"
-        },
-        "Reject": {
-                "reason": "rejected"
         },
         "Speak": {
                 "voice": "slt",
@@ -96,9 +91,6 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "engine": "flite",
                 "method": "",
                 "type": ""
-        },
-        "ScheduleHangup": {
-                "time": 0
         }
     }
 
@@ -689,12 +681,42 @@ class Hangup(Grammar):
     """
     def __init__(self):
         Grammar.__init__(self)
+        self.reason = ""
+        self.schedule = 0
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
+        self.schedule = self.extract_attribute_value("schedule", 0)
+        reason = self.extract_attribute_value("reason")
+        if reason == 'rejected':
+            self.reason = 'CALL_REJECTED'
+        elif reason == 'busy':
+            self.reason = 'USER_BUSY'
+        else:
+            raise RESTAttributeException("Reject Wrong Attribute Value for %s"
+                                                                % self.name)
 
     def execute(self, outbound_socket):
-        outbound_socket.hangup()
+        try:
+            self.schedule = int(self.schedule)
+        except ValueError:
+            outbound_socket.log.error("ScheduleHangup Failed: bad value for 'schedule'")
+            return
+        # Schedule the call for hangup at a later time if 'schedule' param > 0
+        if self.schedule > 0:
+            res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
+                        % (self.schedule, outbound_socket.get_channel_unique_id()))
+            if res.is_success():
+                outbound_socket.log.info("ScheduleHangup after %s secs" \
+                                                                    % self.schedule)
+                return
+            else:
+                outbound_socket.log.error("ScheduleHangup Failed: %s"\
+                                                    % str(res.get_response()))
+                return
+        else:
+            outbound_socket.hangup(self.reason)
+            return self.reason
 
 
 class Number(Grammar):
@@ -906,6 +928,7 @@ class Record(Grammar):
         self.play_beep = ""
         self.format = ""
         self.prefix = ""
+        self.both_legs = False
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
@@ -920,6 +943,7 @@ class Record(Grammar):
         self.format = self.extract_attribute_value("format")
         self.prefix = self.extract_attribute_value("prefix")
         method = self.extract_attribute_value("method")
+        self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
@@ -943,51 +967,27 @@ class Record(Grammar):
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.format)
-        if self.play_beep == 'true':
-            beep = 'tone_stream://%(300,200,700)'
-            outbound_socket.playback(beep)
+        if self.both_legs:
+            outbound_socket.set("RECORD_STEREO=true")
+            outbound_socket.set("media_bug_answer_req=true")
+            outbound_socket.record_session(record_file)
+            outbound_socket.log.info("Record Both Executed")
+        else:
+            if self.play_beep == 'true':
+                beep = 'tone_stream://%(300,200,700)'
+                outbound_socket.playback(beep)
+                event = outbound_socket.wait_for_action()
+                # Log playback execute response
+                outbound_socket.log.debug("Record Beep played (%s)" \
+                                % str(event.get_header('Application-Response')))
+            outbound_socket.start_dtmf()
+            outbound_socket.log.info("Record Started")
+            outbound_socket.record(record_file, self.max_length,
+                                self.silence_threshold, self.timeout,
+                                self.finish_on_key)
             event = outbound_socket.wait_for_action()
-            # Log playback execute response
-            outbound_socket.log.debug("Record Beep played (%s)" \
-                            % str(event.get_header('Application-Response')))
-        outbound_socket.start_dtmf()
-        outbound_socket.log.info("Record Started")
-        outbound_socket.record(record_file, self.max_length,
-                            self.silence_threshold, self.timeout,
-                            self.finish_on_key)
-        event = outbound_socket.wait_for_action()
-        outbound_socket.stop_dtmf()
-
-
-class RecordSession(Grammar):
-    """Record call session
-
-    format: file format
-    filePath: complete file path to save the file to
-    """
-    def __init__(self):
-        Grammar.__init__(self)
-        self.file_path = ""
-        self.format = ""
-        self.prefix = ""
-
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
-        self.file_path = self.extract_attribute_value("filePath")
-        self.prefix = self.extract_attribute_value("prefix")
-        if self.file_path:
-            self.file_path = os.path.normpath(self.file_path) + os.sep
-        self.format = self.extract_attribute_value("format")
-
-    def execute(self, outbound_socket):
-        outbound_socket.set("RECORD_STEREO=true")
-        outbound_socket.set("media_bug_answer_req=true")
-        filename = "%s%s-%s" % (self.prefix,
-                                datetime.now().strftime("%Y%m%d-%H%M%S"),
-                                outbound_socket.call_uuid)
-        record_file = "%s%s%s.%s" % (self.file_path, filename, self.format)
-        outbound_socket.record_session("%s%s" % (self.file_path, filename))
-        outbound_socket.log.info("RecordSession Executed")
+            outbound_socket.stop_dtmf()
+            outbound_socket.log.info("Record Completed")
 
 
 class Redirect(Grammar):
@@ -1015,32 +1015,6 @@ class Redirect(Grammar):
 
     def execute(self, outbound_socket):
         self.fetch_rest_xml(self.url, method=self.method)
-
-
-class Reject(Grammar):
-    """Reject the call
-    This wont answer the call, and should be the first grammar element
-
-    reason: reject reason/code
-    """
-    def __init__(self):
-        Grammar.__init__(self)
-        self.reason = ""
-
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
-        reason = self.extract_attribute_value("reason")
-        if reason == 'rejected':
-            self.reason = 'CALL_REJECTED'
-        elif reason == 'busy':
-            self.reason = 'USER_BUSY'
-        else:
-            raise RESTAttributeException("Reject Wrong Attribute Value for %s"
-                                                                % self.name)
-
-    def execute(self, outbound_socket):
-        outbound_socket.hangup(self.reason)
-        return self.reason
 
 
 class Speak(Grammar):
@@ -1118,37 +1092,3 @@ class Speak(Grammar):
             # Log Speak execute response
             outbound_socket.log.info("Speak %s times - (%s)" \
                     % ((i+1), str(event.get_header('Application-Response'))))
-
-
-class ScheduleHangup(Grammar):
-    """Hangup the call after certain time
-
-   time: time in seconds to hangup the call after
-    """
-    def __init__(self):
-        Grammar.__init__(self)
-        self.time = 0
-
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
-        self.time = self.extract_attribute_value("time", 0)
-
-    def execute(self, outbound_socket):
-        try:
-            self.time = int(self.time)
-        except ValueError:
-            outbound_socket.log.error("ScheduleHangup Failed: bad value for 'time'")
-            return
-        if self.time > 0:
-            res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
-                        % (self.time, outbound_socket.get_channel_unique_id()))
-            if res.is_success():
-                outbound_socket.log.info("ScheduleHangup after %s secs" \
-                                                                    % self.time)
-                return
-            else:
-                outbound_socket.log.error("ScheduleHangup Failed: %s"\
-                                                    % str(res.get_response()))
-                return
-        outbound_socket.log.error("ScheduleHangup Failed: 'time' must be > 0 !")
-        return
