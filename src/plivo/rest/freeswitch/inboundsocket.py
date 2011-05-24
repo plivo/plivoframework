@@ -4,9 +4,6 @@
 from gevent import monkey
 monkey.patch_all()
 
-import urllib
-import urllib2
-
 import gevent
 from gevent import pool
 

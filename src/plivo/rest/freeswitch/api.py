@@ -23,11 +23,11 @@ def auth_protect(decorated_func):
 
 
 class Gateway(object):
-    __slots__ = ['__weakref__', 
+    __slots__ = ('__weakref__', 
                  'request_uuid',
                  'to', 'gw', 'codecs',
                  'timeout', 'extra_dial_string'
-                ]
+                )
 
     def __init__(self, request_uuid, to, gw, codecs,
                  timeout, extra_dial_string):
@@ -40,14 +40,14 @@ class Gateway(object):
 
 
 class CallRequest(object):
-    __slots__ = ['__weakref__',
+    __slots__ = ('__weakref__',
                  'request_uuid',
                  'gateways',
                  'answer_url',
                  'ring_url',
                  'hangup_url',
-                 'ring_flag'
-                ]
+                 'ring_flag',
+                )
 
     def __init__(self, request_uuid, gateways,
                  answer_url, ring_url, hangup_url):
