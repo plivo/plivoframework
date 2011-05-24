@@ -6,7 +6,6 @@ Event Types classes
 """
 
 from urllib import unquote
-from urllib import quote
 
 
 class Event(object):
