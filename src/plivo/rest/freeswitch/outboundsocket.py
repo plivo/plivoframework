@@ -239,10 +239,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             answer_url = channel.get_header('variable_plivo_answer_url')
             if xfer_url:
                 self.target_url = xfer_url
-                self.log.info("Using Call TransferUrl %s" % self.target_url)
+                self.log.info("Using TransferUrl %s" % self.target_url)
             elif answer_url:
                 self.target_url = answer_url
-                self.log.info("Using Call AnswerUrl %s" % self.target_url)
+                self.log.info("Using AnswerUrl %s" % self.target_url)
             else:
                 self.log.error("Aborting -- No Call Url found !")
                 return
@@ -263,13 +263,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             default_answer_url = self.default_answer_url
             if xfer_url:
                 self.target_url = xfer_url
-                self.log.info("Using Call TransferUrl %s" % self.target_url)
+                self.log.info("Using TransferUrl %s" % self.target_url)
             elif answer_url:
                 self.target_url = answer_url
-                self.log.info("Using Call AnswerUrl %s" % self.target_url)
+                self.log.info("Using AnswerUrl %s" % self.target_url)
             elif default_answer_url:
                 self.target_url = default_answer_url
-                self.log.info("Using Call DefaultAnswerUrl %s" % self.target_url)
+                self.log.info("Using DefaultAnswerUrl %s" % self.target_url)
             else:
                 self.log.error("Aborting -- No Call Url found !")
                 return
@@ -457,4 +457,22 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.answer()
                     self.answered = True
             element_instance.run(self)
+        # If transfer is in progress, don't hangup call
+        if not self.has_hangup():
+            xfer_progress = self.get_var("plivo_transfer_progress") == 'true'
+            if not xfer_progress:
+                self.log.warn("No Transfer In Progress, Hangup Now")
+                self.session_params['CallStatus'] = 'completed'
+                self.hangup()
+                if self.hangup_url:
+                    hangup_url = self.hangup_url
+                elif self.default_hangup_url:
+                    hangup_url = self.default_hangup_url
+                if hangup_url:
+                    self.session_params['HangupCause'] = 'NORMAL_CLEARING'
+                    self.session_params['CallStatus'] = 'completed'
+                    self.log.info("Sending hangup to %s" % hangup_url)
+                    gevent.spawn(self.send_to_url, hangup_url)
+            else:
+                self.log.warn("Transfer In Progress, Don't Hangup")
 

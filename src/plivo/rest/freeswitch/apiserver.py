@@ -87,7 +87,7 @@ class PlivoRestServer(PlivoRestApi):
                             auth_id=self.auth_id,
                             auth_token=self.auth_token,
                             filter='ALL', log=self.log,
-                            default_http_method = self.default_http_method)
+                            default_http_method=default_http_method)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
             func, methods = func_desc

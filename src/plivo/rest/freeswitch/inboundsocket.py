@@ -88,6 +88,7 @@ class RESTInboundSocket(InboundEventSocket):
                                                     % (request_uuid, reason))
                     self.spawn_originate(request_uuid)
 
+    '''
     def on_channel_callstate(self, ev):
         """
         Channel Call State should be used to notify if the user phone is ringing
@@ -117,6 +118,7 @@ class RESTInboundSocket(InboundEventSocket):
                         'From': ev['Caller-Caller-ID-Number']
                     }
                 gevent.spawn(self.post_to_url, ring_url, params)
+    '''
 
     def on_channel_originate(self, ev):
         request_uuid = ev['variable_plivo_request_uuid']
@@ -178,6 +180,7 @@ class RESTInboundSocket(InboundEventSocket):
             if not xfer:
                 return
             self.log.info("Executing Live Call Transfer for %s" % call_uuid)
+            self.set_var("plivo_transfer_progress", "false", uuid=call_uuid)
             res = self.api("uuid_transfer %s '%s' inline" % (call_uuid, xfer))
             if res.is_success():
                 self.log.info("Executing Live Call Transfer Done for %s" % call_uuid)
@@ -275,6 +278,7 @@ class RESTInboundSocket(InboundEventSocket):
         return False
 
     def transfer_call(self, new_xml_url, call_uuid):
+        self.set_var("plivo_transfer_progress", "true", uuid=call_uuid)
         self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
         outbound_str = "socket:%s async full" \
                         % (self.fs_outbound_address)
