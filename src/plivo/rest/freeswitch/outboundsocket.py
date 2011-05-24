@@ -83,9 +83,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  auth_token="",
                  request_id=0,
                  filter=None):
+        # the request id
         self._request_id = request_id
+        # set logger
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
+        # set auth id/token
+        self.auth_id = auth_id
+        self.auth_token = auth_token
+        # set all settings empty
         self.xml_response = ""
         self.parsed_grammar = []
         self.lexed_xml_response = []
@@ -93,19 +99,22 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.hangup_url = ""
         self.direction = ""
         self.session_params = {}
+        self._hangup_cause = ''
+        # create queue for waiting actions
         self._action_queue = gevent.queue.Queue()
+        # set default answer url
         self.default_answer_url = default_answer_url
-        # default hangup_url is answer_url
-        if self.default_hangup_url:
+        # set default hangup_url
+        if default_hangup_url:
             self.default_hangup_url = default_hangup_url
         else:
             self.default_hangup_url = self.default_answer_url
+        # set default http method POST or GET
         self.default_http_method = default_http_method
+        # set answered flag
         self.answered = False
-        self._hangup_cause = ''
         self.no_answer_grammar = ['Wait', 'Reject', 'Preanswer', 'Dial']
-        self.auth_id = auth_id
-        self.auth_token = auth_token
+        # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter)
 
     def _protocol_send(self, command, args=""):

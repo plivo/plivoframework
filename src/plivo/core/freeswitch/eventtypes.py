@@ -11,6 +11,13 @@ from urllib import quote
 
 class Event(object):
     '''Event class'''
+    __slots__ = ('__weakref__',
+                 '_headers',
+                 '_raw_body',
+                 '_raw_headers',
+                 '_u_raw_headers',
+                )
+
     def __init__(self, buffer=""):
         self._headers = {}
         self._raw_body = ''
