@@ -61,7 +61,7 @@ class RESTInboundSocket(InboundEventSocket):
                 return
             status = status.strip()
             reason = reason.strip()
-            if status[:4] == '-ERR':
+            if status[:3] != '+OK':
                 # In case ring was done, just warn
                 # releasing call request will be done in hangup event
                 if call_req.ring_flag is True:
