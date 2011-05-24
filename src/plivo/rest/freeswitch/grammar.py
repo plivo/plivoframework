@@ -68,12 +68,8 @@ GRAMMAR_DEFAULT_PARAMS = {
                 "playBeep": 'true',
                 "filePath": "/usr/local/freeswitch/recordings/",
                 "format": "mp3",
-                "prefix": ""
-        },
-        "RecordSession": {
-                "filePath": "/usr/local/freeswitch/recordings/",
-                "format": "mp3",
-                "prefix": ""
+                "prefix": "",
+                "both": "false"
         },
         "Redirect": {
                 "method": "POST"
@@ -781,6 +777,7 @@ class Record(Grammar):
         self.play_beep = ""
         self.format = ""
         self.prefix = ""
+        self.both = False
 
     def parse_grammar(self, element, uri=None):
         Grammar.parse_grammar(self, element, uri)
@@ -795,6 +792,7 @@ class Record(Grammar):
         self.format = self.extract_attribute_value("format")
         self.prefix = self.extract_attribute_value("prefix")
         method = self.extract_attribute_value("method")
+        self.both = self.extract_attribute_value("both") == 'true'
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
@@ -818,51 +816,27 @@ class Record(Grammar):
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.format)
-        if self.play_beep == 'true':
-            beep = 'tone_stream://%(300,200,700)'
-            outbound_socket.playback(beep)
+        if self.both:
+            outbound_socket.set("RECORD_STEREO=true")
+            outbound_socket.set("media_bug_answer_req=true")
+            outbound_socket.record_session(record_file)
+            outbound_socket.log.info("Record Both Executed")
+        else:
+            if self.play_beep == 'true':
+                beep = 'tone_stream://%(300,200,700)'
+                outbound_socket.playback(beep)
+                event = outbound_socket.wait_for_action()
+                # Log playback execute response
+                outbound_socket.log.debug("Record Beep played (%s)" \
+                                % str(event.get_header('Application-Response')))
+            outbound_socket.start_dtmf()
+            outbound_socket.log.info("Record Started")
+            outbound_socket.record(record_file, self.max_length,
+                                self.silence_threshold, self.timeout,
+                                self.finish_on_key)
             event = outbound_socket.wait_for_action()
-            # Log playback execute response
-            outbound_socket.log.debug("Record Beep played (%s)" \
-                            % str(event.get_header('Application-Response')))
-        outbound_socket.start_dtmf()
-        outbound_socket.log.info("Record Started")
-        outbound_socket.record(record_file, self.max_length,
-                            self.silence_threshold, self.timeout,
-                            self.finish_on_key)
-        event = outbound_socket.wait_for_action()
-        outbound_socket.stop_dtmf()
-
-
-class RecordSession(Grammar):
-    """Record call session
-
-    format: file format
-    filePath: complete file path to save the file to
-    """
-    def __init__(self):
-        Grammar.__init__(self)
-        self.file_path = ""
-        self.format = ""
-        self.prefix = ""
-
-    def parse_grammar(self, element, uri=None):
-        Grammar.parse_grammar(self, element, uri)
-        self.file_path = self.extract_attribute_value("filePath")
-        self.prefix = self.extract_attribute_value("prefix")
-        if self.file_path:
-            self.file_path = os.path.normpath(self.file_path) + os.sep
-        self.format = self.extract_attribute_value("format")
-
-    def execute(self, outbound_socket):
-        outbound_socket.set("RECORD_STEREO=true")
-        outbound_socket.set("media_bug_answer_req=true")
-        filename = "%s%s-%s" % (self.prefix,
-                                datetime.now().strftime("%Y%m%d-%H%M%S"),
-                                outbound_socket.call_uuid)
-        record_file = "%s%s%s.%s" % (self.file_path, filename, self.format)
-        outbound_socket.record_session("%s%s" % (self.file_path, filename))
-        outbound_socket.log.info("RecordSession Executed")
+            outbound_socket.stop_dtmf()
+            outbound_socket.log.info("Record Completed")
 
 
 class Redirect(Grammar):
