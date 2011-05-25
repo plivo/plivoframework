@@ -65,6 +65,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'length': 1
         },
         'Play': {
+                #url: SET IN ELEMENT BODY
                 'loop': 1
         },
         'Preanswer': {
@@ -931,20 +932,18 @@ class Preanswer(Element):
 class Record(Element):
     """Record audio from caller
 
-    action: submit to this URL once recording finishes
-    method: submit to 'action' url using GET or POST
-    maxLength: maximum number of seconds to record
-    timeout: seconds of silence before considering the recording complete
-    playBeep: play a beep before recording (true/false)
-    format: file format
+    maxLength: maximum number of seconds to record (default 60)
+    timeout: seconds of silence before considering the recording complete (default 500)
+    playBeep: play a beep before recording (true/false, default false)
+    format: file format (default mp3)
     filePath: complete file path to save the file to
     finishOnKey: Stop recording on this key
+    bothLegs: record both legs (true/false, default false)
+              no beep will be played
     """
     def __init__(self):
         Element.__init__(self)
         self.silence_threshold = 500
-        self.action = ""
-        self.method = ""
         self.max_length = None
         self.timeout = None
         self.finish_on_key = ""
@@ -958,7 +957,6 @@ class Record(Element):
         Element.parse_element(self, element, uri)
         max_length = self.extract_attribute_value("maxLength")
         timeout = self.extract_attribute_value("timeout")
-        action = self.extract_attribute_value("action")
         finish_on_key = self.extract_attribute_value("finishOnKey")
         self.file_path = self.extract_attribute_value("filePath")
         if self.file_path:
@@ -966,11 +964,7 @@ class Record(Element):
         self.play_beep = self.extract_attribute_value("playBeep") == 'true'
         self.format = self.extract_attribute_value("format")
         self.prefix = self.extract_attribute_value("prefix")
-        method = self.extract_attribute_value("method")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
-        if not method in ('GET', 'POST'):
-            raise RESTAttributeException("Method must be 'GET' or 'POST'")
-        self.method = method
 
         if max_length < 1:
             raise RESTFormatException("Record 'maxLength' must be a positive integer")
