@@ -109,12 +109,12 @@ class Element(object):
         self.prepare_text(element)
 
     def run(self, outbound_socket):
-        outbound_socket.log.info("[%s] Execute %s %s" \
+        outbound_socket.log.info("[%s] %s %s" \
             % (self.name, self.text, self.attributes))
-        execute = getattr(self, 'execute')
+        execute = getattr(self, 'execute', None)
         if not execute:
             outbound_socket.log.error("[%s] Element cannot be executed !" % self.name)
-            raise RESTNoExecuteException("%s Element cannot be executed !" % self.name)
+            raise RESTNoExecuteException("Element %s cannot be executed !" % self.name)
         result = execute(outbound_socket)
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
@@ -387,7 +387,7 @@ class Dial(Element):
         self.confirm_key = self.extract_attribute_value("confirmKey")
         self.dial_music = self.extract_attribute_value("dialMusic")
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
-                                                                    == 'true'
+                                                                == 'true'
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
@@ -699,7 +699,7 @@ class GetDigits(Element):
 
         outbound_socket.log.info("GetDigits Started %s" % self.sound_files)
         if self.play_beep:
-            outbound_socket.log.debug("GetDigits will play a beep")
+            outbound_socket.log.debug("GetDigits play Beep enabled")
         outbound_socket.play_and_get_digits(max_digits=self.num_digits,
                             max_tries=self.retries, timeout=self.timeout,
                             terminators=self.finish_on_key,
@@ -826,13 +826,13 @@ class Wait(Element):
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
         try:
-            length = int(self.extract_attribute_value("length", 1))
+            length = int(self.extract_attribute_value("length"))
         except ValueError:
-            raise RESTFormatException("Wait length must be an integer")
+            raise RESTFormatException("Wait 'length' must be an integer")
         self.transfer = self.extract_attribute_value("transferEnabled") \
                             == 'true'
         if length < 1:
-            raise RESTFormatException("Wait length must be a positive integer")
+            raise RESTFormatException("Wait 'length' must be a positive integer")
         self.length = length
 
     def execute(self, outbound_socket):
@@ -869,7 +869,7 @@ class Play(Element):
         except ValueError:
             loop = 1
         if loop < 0:
-            raise RESTFormatException("Play loop must be a positive integer or 0")
+            raise RESTFormatException("Play 'loop' must be a positive integer or 0")
         self.loop_times = loop
         # Pull out the text within the element
         audio_path = element.text.strip()
@@ -1027,9 +1027,9 @@ class Record(Element):
 
 
 class Redirect(Element):
-    """Redirect call flow to another URL
-
-    url: redirect url
+    """Redirect call flow to another Url.
+    Url is set in element body
+    method: GET or POST
     """
     def __init__(self):
         Element.__init__(self)
@@ -1072,13 +1072,13 @@ class Speak(Element):
     Flite Voices  : slt, rms, awb, kal
     Cepstral Voices : (Use any voice here supported by cepstral)
     """
-    valid_methods = ['PRONOUNCED', 'ITERATED', 'COUNTED']
-    valid_types = ['NUMBER', 'ITEMS', 'PERSONS', 'MESSAGES',
+    valid_methods = ('PRONOUNCED', 'ITERATED', 'COUNTED')
+    valid_types = ('NUMBER', 'ITEMS', 'PERSONS', 'MESSAGES',
                    'CURRENCY', 'TIME_MEASUREMENT', 'CURRENT_DATE', ''
                    'CURRENT_TIME', 'CURRENT_DATE_TIME', 'TELEPHONE_NUMBER',
                    'TELEPHONE_EXTENSION', 'URL', 'IP_ADDRESS', 'EMAIL_ADDRESS',
                    'POSTAL_ADDRESS', 'ACCOUNT_NUMBER', 'NAME_SPELLED',
-                   'NAME_PHONETIC', 'SHORT_DATE_TIME']
+                   'NAME_PHONETIC', 'SHORT_DATE_TIME')
     DEFAULT_LOOP = 1
 
     def __init__(self):
@@ -1088,27 +1088,25 @@ class Speak(Element):
         self.sound_file_path = ""
         self.engine = ""
         self.voice = ""
-        self.method = "POST"
         self.item_type = ""
+        self.method = ""
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
         try:
-            loop = int(self.extract_attribute_value("loop", self.DEFAULT_LOOP))
+            self.loop_times = int(self.extract_attribute_value("loop", self.DEFAULT_LOOP))
         except ValueError:
-            loop = self.DEFAULT_LOOP
-        if loop <= 0:
+            self.loop_times = self.DEFAULT_LOOP
+        if self.loop_times <= 0:
             self.loop_times = 999
-        else:
-            self.loop_times = loop
         self.engine = self.extract_attribute_value("engine")
         self.language = self.extract_attribute_value("language")
         self.voice = self.extract_attribute_value("voice")
         item_type = self.extract_attribute_value("type")
-        if item_type and (item_type in self.valid_types):
+        if item_type in self.valid_types:
             self.item_type = item_type
         method = self.extract_attribute_value("method")
-        if method and (method in self.valid_methods):
+        if method in self.valid_methods:
             self.method = method
 
     def execute(self, outbound_socket):
@@ -1126,5 +1124,5 @@ class Speak(Element):
                 outbound_socket.speak(say_args)
             event = outbound_socket.wait_for_action()
             # Log Speak execute response
-            outbound_socket.log.info("Speak %s times - (%s)" \
+            outbound_socket.log.info("Speak %d times - (%s)" \
                     % ((i+1), str(event.get_header('Application-Response'))))
