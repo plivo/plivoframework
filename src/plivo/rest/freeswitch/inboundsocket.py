@@ -263,6 +263,7 @@ class RESTInboundSocket(InboundEventSocket):
             _options.append("absolute_codec_string=%s" % gw.codecs)
         if gw.timeout:
             _options.append("originate_timeout=%s" % gw.timeout)
+        _options.append("ignore_early_media=true")
         options = ','.join(_options)
         outbound_str = "'socket:%s async full' inline" \
                         % self.fs_outbound_address
