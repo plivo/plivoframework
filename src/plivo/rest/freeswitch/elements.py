@@ -610,7 +610,7 @@ class GetDigits(Element):
             timeout = int(self.extract_attribute_value("timeout", self.DEFAULT_TIMEOUT))
         except ValueError:
             timeout = self.DEFAULT_TIMEOUT * 1000
-        if timeout <= 0:
+        if timeout < 1:
             raise RESTFormatException("GetDigits 'timeout' must be a positive integer")
 
         finish_on_key = self.extract_attribute_value("finishOnKey")
@@ -812,7 +812,7 @@ class Wait(Element):
             raise RESTFormatException("Wait length must be an integer")
         self.transfer = self.extract_attribute_value("transferEnabled") \
                             == 'true'
-        if length <= 0:
+        if length < 1:
             raise RESTFormatException("Wait length must be a positive integer")
         self.length = length
 
@@ -833,7 +833,7 @@ class Play(Element):
     """Play audio file at a URL
 
     url: url of audio file, MIME type on file must be set correctly
-    loop: number of time to play the audio - loop = 0 means infinite
+    loop: number of time to play the audio - (0 means infinite)
     """
     def __init__(self):
         Element.__init__(self)
@@ -972,10 +972,10 @@ class Record(Element):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
         self.method = method
 
-        if max_length < 0:
+        if max_length < 1:
             raise RESTFormatException("Record 'maxLength' must be a positive integer")
         self.max_length = max_length
-        if timeout < 0:
+        if timeout < 1:
             raise RESTFormatException("Record 'timeout' must be a positive integer")
         self.timeout = timeout
         if action and is_valid_url(action):
