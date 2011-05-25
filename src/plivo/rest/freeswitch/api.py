@@ -70,7 +70,6 @@ class PlivoRestApi(object):
                                      'ALLOWED_IPS')
         if not allowed_ips:
             return True
-        ip_list = allowed_ips.split(',')
         for ip in allowed_ips.split(','):
             if ip.strip() == request.remote_addr.strip():
                 return True
@@ -83,21 +82,17 @@ class PlivoRestApi(object):
         secret = get_conf_value(self._config, 'rest_server', 'AUTH_TOKEN')
         if not key or not secret:
             return True
-        if 'Authorization' in request.headers:
-            auth_header = request.headers['Authorization'].split()
-            if auth_header[0] == 'Basic':
-                encoded_auth_str = auth_header[1]
+        try:
+            auth_type, encoded_auth_str = \
+                request.headers['Authorization'].split(' ', 1)
+            if auth_type == 'Basic':
                 decoded_auth_str = base64.decodestring(encoded_auth_str)
-                auth_list = decoded_auth_str.split(':')
-                auth_id = auth_list[0]
-                auth_token = auth_list[1]
+                auth_id, auth_token = decoded_auth_str.split(':', 1)
                 if auth_id == key and secret == auth_token:
                     return True
+        except (KeyError, ValueError, TypeError):
+            pass
         raise Unauthorized("HTTP Auth Failed")
-
-    def test_config(self):
-        '''Test to get config parameter'''
-        return get_conf_value(self._config, 'freeswitch', 'FS_INBOUND_ADDRESS')
 
     @auth_protect
     def index(self):
@@ -123,6 +118,7 @@ class PlivoRestApi(object):
         gw_retry_list = []
         gw_codec_list = []
         gw_timeout_list = []
+        args_list = []
         sched_hangup_id = None
         # don't allow "|" and "," in 'to' (destination) to avoid call injection
         to = re.split(',|\|', to)[0]
@@ -140,7 +136,6 @@ class PlivoRestApi(object):
         # create a new request uuid
         request_uuid = str(uuid.uuid1())
         # append args
-        args_list = []
         args_list.append("plivo_request_uuid=%s" % request_uuid)
         args_list.append("plivo_answer_url=%s" % answer_url)
         args_list.append("origination_caller_id_number=%s" % caller_id)
@@ -179,7 +174,6 @@ class PlivoRestApi(object):
 
         # build originate string
         args_str = ','.join(args_list)
-        #originate_str = "originate {%s" % args_str
 
         for gw in gw_list:
             try:
@@ -193,7 +187,7 @@ class PlivoRestApi(object):
             try:
                 timeout = int(gw_timeout_list.pop(0))
             except (ValueError, IndexError):
-                timeout = 60
+                timeout = 60 # TODO allow no timeout ?
             for i in range(retry):
                 gateway = Gateway(request_uuid, to, gw, codecs, timeout, args_str)
                 gateways.append(gateway)

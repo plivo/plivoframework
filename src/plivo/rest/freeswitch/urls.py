@@ -33,6 +33,4 @@ URLS = {
         '/' + PLIVO_VERSION + '/ScheduleHangup/': (PlivoRestApi.schedule_hangup, ['POST']),
         # API to cancel a scheduled hangup on a single call
         '/' + PLIVO_VERSION + '/CancelScheduledHangup/': (PlivoRestApi.cancel_scheduled_hangup, ['POST']),
-        # API to test the config
-        '/TestConfig/': (PlivoRestApi.test_config, ['GET']),
-        }
+       }
