@@ -732,8 +732,7 @@ class Hangup(Element):
         elif reason == 'busy':
             self.reason = 'USER_BUSY'
         else:
-            raise RESTAttributeException("Reject Wrong Attribute Value for %s"
-                                                                % self.name)
+            self.reason = ""
 
     def execute(self, outbound_socket):
         try:
@@ -748,16 +747,18 @@ class Hangup(Element):
             if res.is_success():
                 outbound_socket.log.info("Hangup (schedule) will be fired in %d secs" \
                                                             % self.schedule)
-                return
             else:
                 outbound_socket.log.error("Hangup (schedule) Failed: %s"\
                                                     % str(res.get_response()))
-                return
+            return
         # Immediate hangup
-        else:
-            outbound_socket.log.info("Hangup with reason %s" % self.reason)
+        if self.reason:
+            outbound_socket.log.info("Hanging up now (reason %s)" % self.reason)
             outbound_socket.hangup(self.reason)
-            return self.reason
+        else:
+            outbound_socket.log.info("Hanging up now (no reason)")
+            outbound_socket.hangup()
+        return self.reason
 
 
 class Number(Element):
