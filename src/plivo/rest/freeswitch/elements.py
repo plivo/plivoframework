@@ -468,14 +468,16 @@ class Dial(Element):
         # Set timeout
         outbound_socket.set("call_timeout=%d" % self.timeout)
         outbound_socket.set("answer_timeout=%d" % self.timeout)
-        # Set callerid
+        # Set callerid or unset if not provided
         if self.caller_id:
             caller_id = "effective_caller_id_number=%s" % self.caller_id
             dial_options.append(caller_id)
         else:
             outbound_socket.unset("effective_caller_id_number")
-        # Set ring flag if dial will ring 
-        outbound_socket.unset("plivo_dial_rang")
+        # Set ring flag if dial will ring. 
+        # But first set plivo_dial_rang to false
+        # to be sure we don't get it from an old Dial
+        outbound_socket.set("plivo_dial_rang=false")
         outbound_socket.set("execute_on_ring=eval ${uuid_setvar(%s plivo_dial_rang true}" \
                             % outbound_socket.get_channel_unique_id())
         # Set numbers to dial from Number nouns
@@ -501,15 +503,17 @@ class Dial(Element):
                       % (self.time_limit, sched_hangup_id,
                          outbound_socket.get_channel_unique_id())
         outbound_socket.set(hangup_str)
-        # Set hangup on '*'
+        # Set hangup on '*' or unset if not provided
         if self.hangup_on_star:
             outbound_socket.set("bridge_terminate_key=*")
+        else:
+            outbound_socket.unset("bridge_terminate_key")
         # Play Dial music or bridge the early media accordingly
         mohs = self._prepare_moh()
         if not mohs:
+            outbound_socket.set("bridge_early_media=true")
             outbound_socket.unset("instant_ringback")
             outbound_socket.unset("ringback")
-            outbound_socket.set("bridge_early_media=true")
         else:
             outbound_socket.set("playback_delimiter=!")
             play_str = "file_string://silence_stream://1"
@@ -518,7 +522,7 @@ class Dial(Element):
             outbound_socket.set("bridge_early_media=true")
             outbound_socket.set("instant_ringback=true")
             outbound_socket.set("ringback=%s" % play_str)
-        # Set confirm sound and key
+        # Set confirm sound and key or unset if not provided
         if self.confirm_sound:
             # Use confirm key if present else just play music
             if self.confirm_key:
@@ -531,6 +535,10 @@ class Dial(Element):
             outbound_socket.set("group_confirm_cancel_timeout=1")
             outbound_socket.set(confirm_music_str)
             outbound_socket.set(confirm_key_str)
+        else:
+            outbound_socket.unset("group_confirm_cancel_timeout")
+            outbound_socket.unset("group_confirm_file")
+            outbound_socket.unset("group_confirm_key")
         # Start dial
         outbound_socket.log.info("Dial Started %s" % self.dial_str)
         outbound_socket.bridge(self.dial_str)
@@ -553,11 +561,12 @@ class Dial(Element):
                     reason = '%s (A leg)' % hangup_cause
         outbound_socket.log.info("Dial Finished with reason: %s" \
                                  % reason)
-        # Unsched hangup
+        # Unschedule hangup task
         outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
         # Get ring status
         dial_rang = outbound_socket.get_var("plivo_dial_rang") == 'true'
-        # Call url action
+        # If action is set, redirect to this url
+        # Otherwise, continue to next Element
         if self.action and is_valid_url(self.action):
             params = {}
             if dial_rang:
@@ -730,21 +739,23 @@ class Hangup(Element):
         try:
             self.schedule = int(self.schedule)
         except ValueError:
-            outbound_socket.log.error("ScheduleHangup Failed: bad value for 'schedule'")
+            outbound_socket.log.error("Hangup (schedule) Failed: bad value for 'schedule'")
             return
         # Schedule the call for hangup at a later time if 'schedule' param > 0
         if self.schedule > 0:
             res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
                         % (self.schedule, outbound_socket.get_channel_unique_id()))
             if res.is_success():
-                outbound_socket.log.info("ScheduleHangup after %s secs" \
-                                                                    % self.schedule)
+                outbound_socket.log.info("Hangup (schedule) will be fired in %d secs" \
+                                                            % self.schedule)
                 return
             else:
-                outbound_socket.log.error("ScheduleHangup Failed: %s"\
+                outbound_socket.log.error("Hangup (schedule) Failed: %s"\
                                                     % str(res.get_response()))
                 return
+        # Immediate hangup
         else:
+            outbound_socket.log.info("Hangup with reason %s" % self.reason)
             outbound_socket.hangup(self.reason)
             return self.reason
 
