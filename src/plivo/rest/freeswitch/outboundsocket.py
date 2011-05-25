@@ -74,6 +74,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         'speak',
                         'conference',
                        )
+    NO_ANSWER_ELEMENTS = ('Wait', 
+                          'Reject', 
+                          'Preanswer', 
+                          'Dial', 
+                         )
 
     def __init__(self, socket, address, log,
                  default_answer_url=None,
@@ -112,7 +117,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.default_http_method = default_http_method
         # set answered flag
         self.answered = False
-        self.no_answer_element = ['Wait', 'Reject', 'Preanswer', 'Dial', 'Conference']
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter)
 
@@ -142,6 +146,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def wait_for_action(self):
         """
         Wait until an action is over
+        and return action event.
         """
         return self._action_queue.get()
 
@@ -296,6 +301,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
             self.unset("plivo_sched_hangup_id")
+
         # Run application
         self.log.info("Processing Call")
         try:
@@ -345,8 +351,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.xml_response = ""
                 self.parsed_element = []
                 self.lexed_xml_response = []
-                self.log.info("Redirecting to %s to fetch RESTXML" \
-                                            % self.target_url)
+                self.log.info("Redirecting to %s %s to fetch RESTXML" \
+                                        % (fetch_method, self.target_url))
                 gevent.sleep(0.010)
                 continue
         self.log.warn("Max Redirect Reached !")
@@ -415,9 +421,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def parse_xml(self):
         """
-        This method will parse the XML and add the Element into parsed_element
+        This method will parse the XML 
+        and add the Elements into parsed_element
         """
-        # Check all Element element names
+        # Check all Elements tag name
         for element in self.lexed_xml_response:
             element_class = getattr(elements, str(element.tag), None)
             element_instance = element_class()
@@ -454,16 +461,17 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             if self.session_params['Direction'] == 'inbound':
                 # Don't answer the call if element is of type no answer
                 # Only execute the element
-                if self.answered == False and \
-                    element_instance.name not in self.no_answer_element:
+                if not self.answered and \
+                    not element_instance.name in self.NO_ANSWER_ELEMENTS:
                     self.answer()
                     self.answered = True
+            # execute Element
             element_instance.run(self)
         # If transfer is in progress, don't hangup call
         if not self.has_hangup():
             xfer_progress = self.get_var("plivo_transfer_progress") == 'true'
             if not xfer_progress:
-                self.log.warn("No more Elements, Hangup Now")
+                self.log.warn("No more Elements, Hangup Now !")
                 self.session_params['CallStatus'] = 'completed'
                 self.hangup()
                 if self.hangup_url:
@@ -478,5 +486,5 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.log.info("Sending hangup to %s" % hangup_url)
                     gevent.spawn(self.send_to_url, hangup_url)
             else:
-                self.log.warn("Transfer In Progress, Don't Hangup")
+                self.log.warn("No more Elements, Transfer In Progress !")
 

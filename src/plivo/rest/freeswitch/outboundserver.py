@@ -54,8 +54,7 @@ class PlivoOutboundServer(OutboundServer):
                                         'freeswitch', 'DEFAULT_HANGUP_URL')
         self.default_http_method = helpers.get_conf_value(self._config,
                                         'rest_server', 'DEFAULT_HTTP_METHOD')
-        if not self.default_http_method or \
-                            self.default_http_method not in ('GET', 'POST'):
+        if not self.default_http_method in ('GET', 'POST'):
             self.default_http_method = 'POST'
 
         # This is where we define the connection with the
@@ -104,7 +103,7 @@ class PlivoOutboundServer(OutboundServer):
             else:
                 self.log = StdoutLogger()
             debug_mode = helpers.get_conf_value(self._config,
-                                                        'freeswitch', 'DEBUG')
+                                                    'freeswitch', 'DEBUG')
             if debug_mode == 'true':
                 self.log.set_debug()
             else:

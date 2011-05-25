@@ -181,15 +181,15 @@ class RESTInboundSocket(InboundEventSocket):
             xfer = self.xfer_jobs.pop(call_uuid, None)
             if not xfer:
                 return
-            self.log.info("Executing Live Call Transfer for %s" % call_uuid)
+            self.log.info("TransferCall In Progress for %s" % call_uuid)
             # unset transfer progress flag
             self.set_var("plivo_transfer_progress", "false", uuid=call_uuid)
             # really transfer now
             res = self.api("uuid_transfer %s '%s' inline" % (call_uuid, xfer))
             if res.is_success():
-                self.log.info("Executing Live Call Transfer Done for %s" % call_uuid)
+                self.log.info("TransferCall Done for %s" % call_uuid)
             else:
-                self.log.info("Executing Live Call Transfer Failed for %s: %s" \
+                self.log.info("TransferCall Failed for %s: %s" \
                                % (call_uuid, res.get_response()))
         # On state CS_HANGUP, remove transfer job linked to call_uuid
         elif ev['Channel-State'] == 'CS_HANGUP':
@@ -243,12 +243,12 @@ class RESTInboundSocket(InboundEventSocket):
         try:
             call_req = self.call_requests[request_uuid]
         except KeyError:
-            self.log.warn("CallRequest not found for RequestUUID %s" % request_uuid)
+            self.log.warn("Call Request not found for RequestUUID %s" % request_uuid)
             return
         try:
             gw = call_req.gateways.pop(0)
         except IndexError:
-            self.log.warn("No more gateway to call for RequestUUID %s" % request_uuid)
+            self.log.warn("No more Gateways to call for RequestUUID %s" % request_uuid)
             try:
                 self.call_requests[request_uuid] = None
                 del self.call_requests[request_uuid]
@@ -278,12 +278,12 @@ class RESTInboundSocket(InboundEventSocket):
 
     def bulk_originate(self, request_uuid_list):
         if request_uuid_list:
-            self.log.info("Bulk Calls for RequestUUIDs %s" % str(request_uuid_list))
+            self.log.info("BulkCall for RequestUUIDs %s" % str(request_uuid_list))
             job_pool = pool.Pool(len(request_uuid_list))
             [ job_pool.spawn(self.spawn_originate, request_uuid)
                                         for request_uuid in request_uuid_list ]
             return True
-        self.log.error("Bulk Calls Failed -- No RequestUUID !")
+        self.log.error("BulkCall Failed -- No RequestUUID !")
         return False
 
     def transfer_call(self, new_xml_url, call_uuid):
@@ -297,23 +297,23 @@ class RESTInboundSocket(InboundEventSocket):
         outbound_str = "socket:%s async full" \
                         % (self.fs_outbound_address)
         self.xfer_jobs[call_uuid] = outbound_str
-        # Transfer to sleep a little waiting for real transfer
+        # Transfer into sleep state a little waiting for real transfer
         res = self.api("uuid_transfer %s 'sleep:5000' inline" % call_uuid)
         if res.is_success():
-            self.log.info("Spawning Live Call Transfer for %s" % call_uuid)
+            self.log.info("TransferCall Spawned for %s" % call_uuid)
             return True
-        # On failure, remove the job
+        # On failure, remove the job and log error
         try:
             del self.xfer_jobs[call_uuid]
         except KeyError:
             pass
-        self.log.error("Spawning Live Call Transfer Failed for %s : %s" \
+        self.log.error("TransferCall Spawning Failed for %s : %s" \
                         % (call_uuid, str(res.get_response())))
         return False
 
     def hangup_call(self, call_uuid="", request_uuid=""):
         if not call_uuid and not request_uuid:
-            self.log.error("Call Hangup Failed -- Missing call_uuid or request_uuid")
+            self.log.error("Call Hangup Failed -- Missing CallUUID or RequestUUID")
             return
         if call_uuid:
             callid = "CallUUID %s" % call_uuid
