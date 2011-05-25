@@ -71,8 +71,6 @@ ELEMENTS_DEFAULT_PARAMS = {
         'Preanswer': {
         },
         'Record': {
-                #action: DYNAMIC! MUST BE SET IN METHOD,
-                'method': 'POST',
                 'timeout': 15,
                 'finishOnKey': '1234567890*#',
                 'maxLength': 60,
@@ -474,6 +472,12 @@ class Dial(Element):
         if self.caller_id:
             caller_id = "effective_caller_id_number=%s" % self.caller_id
             dial_options.append(caller_id)
+        else:
+            outbound_socket.unset("effective_caller_id_number")
+        # Set ring flag if dial will ring 
+        outbound_socket.unset("plivo_dial_rang")
+        outbound_socket.set("execute_on_ring=eval ${uuid_setvar(%s plivo_dial_rang true}" \
+                            % outbound_socket.get_channel_unique_id())
         # Set numbers to dial from Number nouns
         for child in self.children:
             if isinstance(child, Number):
@@ -491,9 +495,6 @@ class Dial(Element):
         self.dial_str += ','.join(numbers)
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
-        # Set ring flag if dial will ring 
-        outbound_socket.unset("plivo_dial_rang")
-        outbound_socket.set("execute_on_ring='set plivo_dial_rang=true'")
         # Set time limit: when reached, B Leg is hung up
         sched_hangup_id = str(uuid.uuid1())
         hangup_str = "api_on_answer=sched_api +%d %s uuid_transfer %s -bleg 'hangup:ALLOTTED_TIMEOUT' inline" \
@@ -935,7 +936,7 @@ class Record(Element):
 
     maxLength: maximum number of seconds to record (default 60)
     timeout: seconds of silence before considering the recording complete (default 500)
-    playBeep: play a beep before recording (true/false, default false)
+    playBeep: play a beep before recording (true/false, default true)
     format: file format (default mp3)
     filePath: complete file path to save the file to
     finishOnKey: Stop recording on this key

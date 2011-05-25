@@ -161,8 +161,6 @@ class RESTInboundSocket(InboundEventSocket):
         try:
             call_req = self.call_requests[request_uuid]
         except KeyError:
-            self.log.warn("CallRequest not found for RequestUUID %s" \
-                            % request_uuid)
             return
         # If there are gateways to try again, spawn originate
         if call_req.gateways:
