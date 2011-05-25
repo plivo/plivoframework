@@ -491,6 +491,9 @@ class Dial(Element):
         self.dial_str += ','.join(numbers)
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
+        # Set ring flag if dial will ring 
+        outbound_socket.unset("plivo_dial_rang")
+        outbound_socket.set("execute_on_ring='set plivo_dial_rang=true'")
         # Set time limit: when reached, B Leg is hung up
         sched_hangup_id = str(uuid.uuid1())
         hangup_str = "api_on_answer=sched_api +%d %s uuid_transfer %s -bleg 'hangup:ALLOTTED_TIMEOUT' inline" \
@@ -551,9 +554,17 @@ class Dial(Element):
                                  % reason)
         # Unsched hangup
         outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
+        # Get ring status
+        dial_rang = outbound_socket.get_var("plivo_dial_rang") == 'true'
         # Call url action
         if self.action and is_valid_url(self.action):
-            self.fetch_rest_xml(self.action, method=self.method)
+            params = {}
+            if dial_rang:
+                params['RingStatus'] = 'true'
+            else:
+                params['RingStatus'] = 'false'
+            params['HangupCause'] = hangup_cause
+            self.fetch_rest_xml(self.action, params, method=self.method)
 
 
 class GetDigits(Element):
