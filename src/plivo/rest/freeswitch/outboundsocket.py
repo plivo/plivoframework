@@ -169,6 +169,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             hangup_url = self.hangup_url
         elif self.default_hangup_url:
             hangup_url = self.default_hangup_url
+        else:
+            hangup_url = None
         if hangup_url:
             self.session_params['HangupCause'] = self._hangup_cause
             self.session_params['CallStatus'] = 'completed'
@@ -461,13 +463,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if not self.has_hangup():
             xfer_progress = self.get_var("plivo_transfer_progress") == 'true'
             if not xfer_progress:
-                self.log.warn("No Transfer In Progress, Hangup Now")
+                self.log.warn("No more Elements, Hangup Now")
                 self.session_params['CallStatus'] = 'completed'
                 self.hangup()
                 if self.hangup_url:
                     hangup_url = self.hangup_url
                 elif self.default_hangup_url:
                     hangup_url = self.default_hangup_url
+                else:
+                    hangup_url = None
                 if hangup_url:
                     self.session_params['HangupCause'] = 'NORMAL_CLEARING'
                     self.session_params['CallStatus'] = 'completed'

@@ -45,7 +45,7 @@ class CallRequest(object):
                  'answer_url',
                  'ring_url',
                  'hangup_url',
-                 'ring_flag',
+                 'state_flag',
                 )
 
     def __init__(self, request_uuid, gateways,
@@ -55,7 +55,7 @@ class CallRequest(object):
         self.answer_url = answer_url
         self.ring_url = ring_url
         self.hangup_url = hangup_url
-        self.ring_flag = False
+        self.state_flag = None
 
 
 
