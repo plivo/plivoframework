@@ -18,13 +18,14 @@ RECOGNIZED_SOUND_FORMATS = ['audio/mpeg', 'audio/wav', 'audio/x-wav']
 GRAMMAR_DEFAULT_PARAMS = {
         'Conference': {
                 #'room': SET IN ELEMENT BODY
-                'waitSound': None,
+                'waitSound': '',
                 'muted': 'false',
                 'startConferenceOnEnter': 'true',
                 'endConferenceOnExit': 'false',
                 'maxMembers': 0,
-                'beep': 0,
-                'timeLimit': 14400 ,
+                'enterSound': '',
+                'exitSound': '',
+                'timeLimit': 0 ,
                 'hangupOnStar': 'false'
         },
         'Dial': {
@@ -161,16 +162,22 @@ class Conference(Element):
           (default false)
     maxMembers: max members in conference 
           (0 for max : 200)
-    beep: if 0, disabled
-          if 1, play one beep when a member enters/leaves
-          if 2 play two beeps when a member enters/leaves
-          (default 0)
-    timeLimit: max time before closing conference 
-          (default 14400 seconds)
+    enterSound: sound to play when a member enters
+          if empty, disabled
+          if 'beep:1', play one beep
+          if 'beep:2', play two beeps
+          (default disabled)
+    exitSound: sound to play when a member exits
+          if empty, disabled
+          if 'beep:1', play one beep
+          if 'beep:2', play two beeps
+          (default disabled)
+    timeLimit: max time in seconds before closing conference 
+          (default 0, no timeLimit)
     hangupOnStar: exit conference when member press '*' 
           (default false)
     """
-    DEFAULT_TIMELIMIT = 14400
+    DEFAULT_TIMELIMIT = 0
     DEFAULT_MAXMEMBERS = 200
 
     def __init__(self):
@@ -181,9 +188,10 @@ class Conference(Element):
         self.muted = False
         self.start_on_enter = True
         self.end_on_exit = False
-        self.max_members = self.DEFAULT_MAXMEMBERS
-        self.play_beep = 0
         self.time_limit = self.DEFAULT_TIMELIMIT
+        self.max_members = self.DEFAULT_MAXMEMBERS
+        self.enter_sound = ''
+        self.exit_sound = ''
         self.hangup_on_star = False
 
     def parse_element(self, element, uri=None):
@@ -193,21 +201,19 @@ class Conference(Element):
             raise RESTFormatException('Conference Room must be defined')
         self.full_room = room + '@plivo'
         self.room = room
-        self.moh_sound = self.extract_attribute_value('waitSound', None)
-        self.muted = self.extract_attribute_value('muted', 'false') \
+        self.moh_sound = self.extract_attribute_value('waitSound')
+        self.muted = self.extract_attribute_value('muted') \
                         == 'true'
-        self.start_on_enter = self.extract_attribute_value('startConferenceOnEnter', 'true') \
+        self.start_on_enter = self.extract_attribute_value('startConferenceOnEnter') \
                                 == 'true'
-        self.end_on_exit = self.extract_attribute_value('endConferenceOnExit', 'false') \
+        self.end_on_exit = self.extract_attribute_value('endConferenceOnExit') \
                                 == 'true'
-        self.hangup_on_star = self.extract_attribute_value('hangupOnStar', 'false') \
+        self.hangup_on_star = self.extract_attribute_value('hangupOnStar') \
                                 == 'true'
         try:
             self.time_limit = int(self.extract_attribute_value('timeLimit',
                                                           self.DEFAULT_TIMELIMIT))
         except ValueError:
-            self.time_limit = self.DEFAULT_TIMELIMIT
-        if self.time_limit <= 0:
             self.time_limit = self.DEFAULT_TIMELIMIT
         try:
             self.max_members = int(self.extract_attribute_value('maxMembers',
@@ -217,9 +223,13 @@ class Conference(Element):
         if self.max_members <= 0:
             self.max_members = self.DEFAULT_MAXMEMBERS
         try:
-            self.play_beep = int(self.extract_attribute_value('beep', 0))
+            self.enter_sound = self.extract_attribute_value('enterSound')
         except ValueError:
-            self.play_beep = 0
+            self.enter_sound = ''
+        try:
+            self.exit_sound = self.extract_attribute_value('exitSound')
+        except ValueError:
+            self.exit_sound = ''
 
     def _prepare_moh(self):
         mohs = []
@@ -246,10 +256,6 @@ class Conference(Element):
 
     def execute(self, outbound_socket):
         flags = []
-        # set timeLimit scheduled group name for the room
-        sched_group_name = "conf_%s" % self.room
-        # always clean old kickall tasks for the room
-        outbound_socket.api("sched_del %s" % sched_group_name)
         # settings for conference room
         outbound_socket.set("conference_controls=none")
         if self.max_members > 0:
@@ -280,9 +286,17 @@ class Conference(Element):
             outbound_socket.set("conference_member_flags=%s" % flags_opt)
         else:
             outbound_socket.unset("conference_member_flags")
-        # set new kickall scheduled task
-        outbound_socket.api("sched_api +%d %s conference %s kick all" \
-                            % (self.time_limit, sched_group_name, self.room))
+        # set new kickall scheduled task if timeLimit > 0
+        if self.time_limit > 0:
+            # set timeLimit scheduled group name for the room
+            sched_group_name = "conf_%s" % self.room
+            # always clean old kickall tasks for the room
+            outbound_socket.api("sched_del %s" % sched_group_name)
+            # set new kickall task for the room
+            outbound_socket.api("sched_api +%d %s conference %s kick all" \
+                                % (self.time_limit, sched_group_name, self.room))
+            outbound_socket.log.warn("Conference: Room %s, timeLimit set to %d seconds" \
+                                    % (self.room, self.time_limit)) 
         # really enter conference room
         outbound_socket.log.info("Entering Conference: Room %s (flags %s)" \
                                         % (self.room, flags_opt))
@@ -307,11 +321,13 @@ class Conference(Element):
                             % (bind_digit_realm, self.room, member_id), lock=True)
             # set beep on enter/exit if enabled
             if member_id and self.play_beep > 0:
-                if self.play_beep == 1:
+                if self.enter_sound == 'beep:1':
                     outbound_socket.api("conference %s enter_sound file tone_stream://%%(300,200,700)" % self.room)
-                    outbound_socket.api("conference %s exit_sound file tone_stream://%%(300,200,700)" % self.room)
-                elif self.play_beep == 2:
+                elif self.enter_sound == 'beep:2':
                     outbound_socket.api("conference %s enter_sound file tone_stream://L=2;%%(300,200,700)" % self.room)
+                if self.exit_sound == 'beep:1':
+                    outbound_socket.api("conference %s exit_sound file tone_stream://%%(300,200,700)" % self.room)
+                elif self.exit_sound == 'beep:2':
                     outbound_socket.api("conference %s exit_sound file tone_stream://L=2;%%(300,200,700)" % self.room)
             # now really wait conference ending for this member
             event = outbound_socket.wait_for_action()
