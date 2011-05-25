@@ -162,7 +162,6 @@ class Conference(Element):
           (default false)
     maxMembers: max members in conference
           (0 for max : 200)
-<<<<<<< HEAD
     enterSound: sound to play when a member enters
           if empty, disabled
           if 'beep:1', play one beep
@@ -173,18 +172,9 @@ class Conference(Element):
           if 'beep:1', play one beep
           if 'beep:2', play two beeps
           (default disabled)
-    timeLimit: max time in seconds before closing conference 
+    timeLimit: max time in seconds before closing conference
           (default 0, no timeLimit)
-    hangupOnStar: exit conference when member press '*' 
-=======
-    beep: if 0, disabled
-          if 1, play one beep when a member enters/leaves
-          if 2 play two beeps when a member enters/leaves
-          (default 0)
-    timeLimit: max time before closing conference
-          (default 14400 seconds)
     hangupOnStar: exit conference when member press '*'
->>>>>>> 4d5544957fa64c48327c102bf2a78f3a9e2d0b09
           (default false)
     """
     DEFAULT_TIMELIMIT = 0
@@ -308,7 +298,7 @@ class Conference(Element):
             outbound_socket.api("sched_api +%d %s conference %s kick all" \
                                 % (self.time_limit, sched_group_name, self.room))
             outbound_socket.log.warn("Conference: Room %s, timeLimit set to %d seconds" \
-                                    % (self.room, self.time_limit)) 
+                                    % (self.room, self.time_limit))
         # really enter conference room
         outbound_socket.log.info("Entering Conference: Room %s (flags %s)" \
                                         % (self.room, flags_opt))
