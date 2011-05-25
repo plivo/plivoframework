@@ -109,12 +109,12 @@ class Element(object):
         self.prepare_text(element)
 
     def run(self, outbound_socket):
-        outbound_socket.log.info("[%s] %s %s" \
+        outbound_socket.log.info("[%s] Execute %s %s" \
             % (self.name, self.text, self.attributes))
         execute = getattr(self, 'execute')
         if not execute:
-            outbound_socket.log.error("[%s] cannot be executed !" % self.name)
-            raise RESTNoExecuteException("%s cannot be executed !" % self.name)
+            outbound_socket.log.error("[%s] Element cannot be executed !" % self.name)
+            raise RESTNoExecuteException("%s Element cannot be executed !" % self.name)
         result = execute(outbound_socket)
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
