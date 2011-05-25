@@ -114,7 +114,7 @@ class Element(object):
         execute = getattr(self, 'execute')
         if not execute:
             outbound_socket.log.error("[%s] cannot be executed !" % self.name)
-            raise RESTExecuteException("%s cannot be executed !" % self.name)
+            raise RESTNoExecuteException("%s cannot be executed !" % self.name)
         result = execute(outbound_socket)
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
