@@ -29,7 +29,7 @@ class RESTInboundSocket(InboundEventSocket):
         self.auth_token = auth_token
         # Mapping of Key: job-uuid - Value: request_uuid
         self.bk_jobs = {}
-        # Transfer jobs: call_uuid - Value: where to transfer
+        # Transfer jobs: call_uuid - Value: inline dptools to execute
         self.xfer_jobs = {}
         # Call Requests
         self.call_requests = {}
@@ -62,15 +62,15 @@ class RESTInboundSocket(InboundEventSocket):
             status = status.strip()
             reason = reason.strip()
             if status[:3] != '+OK':
-                # In case ring was done, just warn
+                # In case ring/early state done, just warn
                 # releasing call request will be done in hangup event
-                if call_req.ring_flag is True:
-                    self.log.warn("Call Rang for RequestUUID %s but Failed (%s)" \
-                                                    % (request_uuid, reason))
+                if call_req.state_flag in ('Ringing', 'EarlyMedia'):
+                    self.log.error("Call Attempt Done (%s) for RequestUUID %s but Failed (%s)" \
+                                                    % (call_req.state_flag, request_uuid, reason))
                     return
                 # If no more gateways, release call request
                 elif not call_req.gateways:
-                    self.log.warn("Call Failed for RequestUUID %s but No More Gateways (%s)" \
+                    self.log.error("Call Failed for RequestUUID %s but No More Gateways (%s)" \
                                                     % (request_uuid, reason))
                     # set an empty call_uuid
                     call_uuid = ''
@@ -78,46 +78,83 @@ class RESTInboundSocket(InboundEventSocket):
                     self.set_hangup_complete(self, request_uuid, call_uuid,
                                              reason, ev, hangup_url)
                     return
-                # If there are gateways and call request ring_flag is False
-                #  try again: spawn originate
+                # If there are gateways and call request state_flag is not set
+                # try again a call
                 elif call_req.gateways:
-                    self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
+                    self.log.warn("Call Failed without Ringing/EarlyMedia for RequestUUID %s - Retrying Now (%s)" \
                                                     % (request_uuid, reason))
                     self.spawn_originate(request_uuid)
 
-    def on_channel_originate(self, ev):
+    def on_channel_progress(self, ev):
         request_uuid = ev['variable_plivo_request_uuid']
-        answer_state = ev['Answer-State']
         direction = ev['Call-Direction']
-        to = ev['Caller-Destination-Number']
-        #check if we get a ringing
-        if request_uuid and answer_state == 'ringing' and direction == 'outbound':
+        # Detect ringing state
+        if request_uuid and direction == 'outbound':
             try:
                 call_req = self.call_requests[request_uuid]
-                call_req.gateways = [] # clear gateways to avoid retry
             except (KeyError, AttributeError):
                 return
-            ring_url = call_req.ring_url
-            # set ring flag to true
-            call_req.ring_flag = True
-            self.log.info("Call Ringing for %s with RequestUUID  %s" \
-                            % (to, request_uuid))
-            if ring_url:
-                params = {
-                        'To': to,
-                        'RequestUUID': request_uuid,
-                        'Direction': 'outbound',
-                        'CallStatus': 'ringing',
-                        'From': ev['Caller-Caller-ID-Number']
-                    }
-                spawn(self.send_to_url, ring_url, params)
+            # only send if not already ringing/early state
+            if not call_req.state_flag:
+                # set state flag to true
+                call_req.state_flag = 'Ringing'
+                # clear gateways to avoid retry
+                call_req.gateways = [] 
+                called_num = ev['Caller-Destination-Number']
+                caller_num = ev['Caller-Caller-ID-Number']
+                self.log.info("Call from %s to %s Ringing for RequestUUID %s" \
+                                % (caller_num, called_num, request_uuid))
+                # send ring if ring_url found
+                ring_url = call_req.ring_url
+                if ring_url:
+                    params = {
+                            'To': called_num,
+                            'RequestUUID': request_uuid,
+                            'Direction': direction,
+                            'CallStatus': 'ringing',
+                            'From': caller_num
+                        }
+                    spawn(self.send_to_url, ring_url, params)
+
+    def on_channel_progress_media(self, ev):
+        request_uuid = ev['variable_plivo_request_uuid']
+        direction = ev['Call-Direction']
+        # Detect early media state
+        # See http://wiki.freeswitch.org/wiki/Early_media#Early_Media_And_Dialing_Out
+        if request_uuid and direction == 'outbound':
+            try:
+                call_req = self.call_requests[request_uuid]
+            except (KeyError, AttributeError):
+                return
+            # only send if not already ringing/early state
+            if not call_req.state_flag:
+                # set state flag to true
+                call_req.state_flag = 'EarlyMedia'
+                # clear gateways to avoid retry
+                call_req.gateways = [] 
+                called_num = ev['Caller-Destination-Number']
+                caller_num = ev['Caller-Caller-ID-Number']
+                self.log.info("Call from %s to %s in EarlyMedia for RequestUUID %s" \
+                                % (caller_num, called_num, request_uuid))
+                # send ring if ring_url found
+                ring_url = call_req.ring_url
+                if ring_url:
+                    params = {
+                            'To': called_num,
+                            'RequestUUID': request_uuid,
+                            'Direction': direction,
+                            'CallStatus': 'ringing',
+                            'From': caller_num
+                        }
+                    spawn(self.send_to_url, ring_url, params)
 
     def on_channel_hangup(self, ev):
         """
         Capture Channel Hangup
         """
         request_uuid = ev['variable_plivo_request_uuid']
-        if not request_uuid:
+        direction = ev['Call-Direction']
+        if not request_uuid and direction != 'outbound':
             return
         call_uuid = ev['Unique-ID']
         reason = ev['Hangup-Cause']
@@ -132,26 +169,31 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
                             % (request_uuid, reason))
             self.spawn_originate(request_uuid)
+            return
         # Else clean call request
-        else:
-            hangup_url = call_req.hangup_url
-            self.set_hangup_complete(request_uuid, call_uuid, reason, ev,
-                                                        hangup_url)
+        hangup_url = call_req.hangup_url
+        self.set_hangup_complete(request_uuid, call_uuid, reason, ev,
+                                                    hangup_url)
 
     def on_channel_state(self, ev):
+        # When tranfer is ready to start,
+        # channel goes in state CS_RESET
         if ev['Channel-State'] == 'CS_RESET':
             call_uuid = ev['Unique-ID']
             xfer = self.xfer_jobs.pop(call_uuid, None)
             if not xfer:
                 return
             self.log.info("Executing Live Call Transfer for %s" % call_uuid)
+            # unset transfer progress flag
             self.set_var("plivo_transfer_progress", "false", uuid=call_uuid)
+            # really transfer now
             res = self.api("uuid_transfer %s '%s' inline" % (call_uuid, xfer))
             if res.is_success():
                 self.log.info("Executing Live Call Transfer Done for %s" % call_uuid)
             else:
                 self.log.info("Executing Live Call Transfer Failed for %s: %s" \
                                % (call_uuid, res.get_response()))
+        # On state CS_HANGUP, remove transfer job linked to call_uuid
         elif ev['Channel-State'] == 'CS_HANGUP':
             call_uuid = ev['Unique-ID']
             self.xfer_jobs.pop(call_uuid, None)
@@ -166,17 +208,20 @@ class RESTInboundSocket(InboundEventSocket):
             pass
         self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
         if hangup_url:
-            to = ev['Caller-Destination-Number']
+            called_num = ev['Caller-Destination-Number']
+            caller_num = ev['Caller-Caller-ID-Number']
             params = {
                     'RequestUUID': request_uuid,
                     'CallUUID': call_uuid,
                     'HangupCause': reason,
                     'Direction': 'outbound',
-                    'To': to,
+                    'To': called_num,
                     'CallStatus': 'completed',
-                    'From': ev['Caller-Caller-ID-Number']
+                    'From': caller_num
                 }
             spawn(self.send_to_url, hangup_url, params)
+        else:
+            self.log.debug("No hangupUrl for RequestUUID %s" % request_uuid)
 
     def send_to_url(self, url=None, params={}, method=None):
         if method is None:
@@ -243,15 +288,22 @@ class RESTInboundSocket(InboundEventSocket):
         return False
 
     def transfer_call(self, new_xml_url, call_uuid):
+        # Set transfer progress flag to prevent hangup 
+        # when the current outbound_socket flow will end
         self.set_var("plivo_transfer_progress", "true", uuid=call_uuid)
+        # Set transfer url
         self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
+        # Link inline dptools (will be run when ready to start transfer) 
+        # to the call_uuid job
         outbound_str = "socket:%s async full" \
                         % (self.fs_outbound_address)
         self.xfer_jobs[call_uuid] = outbound_str
+        # Transfer to sleep a little waiting for real transfer
         res = self.api("uuid_transfer %s 'sleep:5000' inline" % call_uuid)
         if res.is_success():
             self.log.info("Spawning Live Call Transfer for %s" % call_uuid)
             return True
+        # On failure, remove the job
         try:
             del self.xfer_jobs[call_uuid]
         except KeyError:
