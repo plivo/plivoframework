@@ -277,7 +277,7 @@ class PlivoRestApi(object):
             elif ring_url and not is_valid_url(ring_url):
                 msg = "Ring URL is not Valid"
             else:
-                extra_dial_string = get_post_param(request, 'OriginateDialString')
+                extra_dial_string = get_post_param(request, 'ExtraDialString')
                 gw_codecs = get_post_param(request, 'GatewayCodecs')
                 gw_timeouts = get_post_param(request, 'GatewayTimeouts')
                 gw_retries = get_post_param(request, 'GatewayRetries')
@@ -385,7 +385,7 @@ class PlivoRestApi(object):
                 msg = "Ring URL is not Valid"
             else:
                 extra_dial_string = get_post_param(request,
-                                                        'OriginateDialString')
+                                                        'ExtraDialString')
                 # Is a string of strings
                 gw_codecs_str = get_post_param(request, 'GatewayCodecs')
                 gw_timeouts_str = get_post_param(request, 'GatewayTimeouts')
