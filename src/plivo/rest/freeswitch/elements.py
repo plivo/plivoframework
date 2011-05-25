@@ -15,7 +15,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 
 RECOGNIZED_SOUND_FORMATS = ['audio/mpeg', 'audio/wav', 'audio/x-wav']
 
-GRAMMAR_DEFAULT_PARAMS = {
+ELEMENTS_DEFAULT_PARAMS = {
         'Conference': {
                 #'room': SET IN ELEMENT BODY
                 'waitSound': None,
@@ -129,7 +129,7 @@ class Element(object):
         return item
 
     def prepare_attributes(self, element):
-        element_dict = GRAMMAR_DEFAULT_PARAMS[self.name]
+        element_dict = ELEMENTS_DEFAULT_PARAMS[self.name]
         if element.attrib and not element_dict:
             raise RESTFormatException("%s does not require any attributes!"
                                                                 % self.name)
@@ -150,24 +150,24 @@ class Conference(Element):
     """Go to a Conference Room
     room name is body text of Conference element.
 
-    waitSound: sound to play while alone in conference 
+    waitSound: sound to play while alone in conference
           Can be a list of sound files separated by comma.
           (default no sound)
-    muted: enter conference muted 
+    muted: enter conference muted
           (default false)
-    startConferenceOnEnter: the conference start when this member joins 
+    startConferenceOnEnter: the conference start when this member joins
           (default true)
-    endConferenceOnExit: close conference after this member leaves 
+    endConferenceOnExit: close conference after this member leaves
           (default false)
-    maxMembers: max members in conference 
+    maxMembers: max members in conference
           (0 for max : 200)
     beep: if 0, disabled
           if 1, play one beep when a member enters/leaves
           if 2 play two beeps when a member enters/leaves
           (default 0)
-    timeLimit: max time before closing conference 
+    timeLimit: max time before closing conference
           (default 14400 seconds)
-    hangupOnStar: exit conference when member press '*' 
+    hangupOnStar: exit conference when member press '*'
           (default false)
     """
     DEFAULT_TIMELIMIT = 14400
