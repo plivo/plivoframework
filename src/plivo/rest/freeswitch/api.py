@@ -22,7 +22,7 @@ def auth_protect(decorated_func):
 
 
 class Gateway(object):
-    __slots__ = ('__weakref__', 
+    __slots__ = ('__weakref__',
                  'request_uuid',
                  'to', 'gw', 'codecs',
                  'timeout', 'extra_dial_string'
@@ -269,7 +269,7 @@ class PlivoRestApi(object):
         elif not is_valid_url(answer_url):
             msg = "Answer URL is not Valid"
         else:
-            hangup_url = get_post_param(request, 'HangUpUrl')
+            hangup_url = get_post_param(request, 'HangupUrl')
             ring_url = get_post_param(request, 'RingUrl')
             if hangup_url and not is_valid_url(hangup_url):
                 msg = "Hangup URL is not Valid"
@@ -376,7 +376,7 @@ class PlivoRestApi(object):
         elif not is_valid_url(answer_url):
             msg = "Answer URL is not Valid"
         else:
-            hangup_url = get_post_param(request, 'HangUpUrl')
+            hangup_url = get_post_param(request, 'HangupUrl')
             ring_url = get_post_param(request, 'RingUrl')
             if hangup_url and not is_valid_url(hangup_url):
                 msg = "Hangup URL is not Valid"
