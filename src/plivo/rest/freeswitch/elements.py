@@ -74,7 +74,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'method': 'POST',
                 'timeout': 15,
                 'finishOnKey': '1234567890*#',
-                'maxLength': 3600,
+                'maxLength': 60,
                 'playBeep': 'true',
                 'filePath': '/usr/local/freeswitch/recordings/',
                 'format': 'mp3',
@@ -396,7 +396,7 @@ class Dial(Element):
             self.timeout = self.DEFAULT_TIMEOUT
         self.confirm_sound = self.extract_attribute_value("confirmSound")
         self.confirm_key = self.extract_attribute_value("confirmKey")
-        self.dial_music = self.extract_attribute_value("dialMusic", None)
+        self.dial_music = self.extract_attribute_value("dialMusic")
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
                                                                     == 'true'
         method = self.extract_attribute_value("method")
@@ -610,21 +610,21 @@ class GetDigits(Element):
             timeout = int(self.extract_attribute_value("timeout", self.DEFAULT_TIMEOUT))
         except ValueError:
             timeout = self.DEFAULT_TIMEOUT * 1000
-        if timeout < 0:
+        if timeout <= 0:
             raise RESTFormatException("GetDigits 'timeout' must be a positive integer")
 
         finish_on_key = self.extract_attribute_value("finishOnKey")
-        self.play_beep = self.extract_attribute_value("playBeep", 'false') == 'true'
+        self.play_beep = self.extract_attribute_value("playBeep") == 'true'
         self.invalid_digits_sound = \
                             self.extract_attribute_value("invalidDigitsSound")
         self.valid_digits = self.extract_attribute_value("validDigits")
         action = self.extract_attribute_value("action")
 
         try:
-            retries = int(self.extract_attribute_value("retries", 1))
+            retries = int(self.extract_attribute_value("retries"))
         except ValueError:
             retries = 1
-        if retries < 0:
+        if retries <= 0:
             raise RESTFormatException("GetDigits 'retries' must be greater than 0")
 
         method = self.extract_attribute_value("method")
@@ -802,20 +802,17 @@ class Wait(Element):
     """
     def __init__(self):
         Element.__init__(self)
-        self.length = 0
+        self.length = 1
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
         try:
-            length = int(self.extract_attribute_value("length", 0))
+            length = int(self.extract_attribute_value("length", 1))
         except ValueError:
             raise RESTFormatException("Wait length must be an integer")
-        transfer = self.extract_attribute_value("transferEnabled")
-        if transfer == 'true':
-            self.transfer = True
-        else:
-            self.transfer = False
-        if length < 0:
+        self.transfer = self.extract_attribute_value("transferEnabled") \
+                            == 'true'
+        if length <= 0:
             raise RESTFormatException("Wait length must be a positive integer")
         self.length = length
 
@@ -853,13 +850,13 @@ class Play(Element):
         except ValueError:
             loop = 1
         if loop < 0:
-            raise RESTFormatException("Play loop must be a positive integer")
+            raise RESTFormatException("Play loop must be a positive integer or 0")
         self.loop_times = loop
         # Pull out the text within the element
         audio_path = element.text.strip()
 
-        if audio_path is None:
-            raise RESTFormatException("No File for play given!")
+        if not audio_path:
+            raise RESTFormatException("No File to play set !")
 
         if not is_valid_url(audio_path):
             if file_exists(audio_path):
@@ -966,7 +963,7 @@ class Record(Element):
         self.file_path = self.extract_attribute_value("filePath")
         if self.file_path:
             self.file_path = os.path.normpath(self.file_path) + os.sep
-        self.play_beep = self.extract_attribute_value("playBeep")
+        self.play_beep = self.extract_attribute_value("playBeep") == 'true'
         self.format = self.extract_attribute_value("format")
         self.prefix = self.extract_attribute_value("prefix")
         method = self.extract_attribute_value("method")
@@ -979,7 +976,7 @@ class Record(Element):
             raise RESTFormatException("Record 'maxLength' must be a positive integer")
         self.max_length = max_length
         if timeout < 0:
-            raise RESTFormatException("Record 'timeout' must be positive")
+            raise RESTFormatException("Record 'timeout' must be a positive integer")
         self.timeout = timeout
         if action and is_valid_url(action):
             self.action = action
@@ -1000,7 +997,7 @@ class Record(Element):
             outbound_socket.record_session(record_file)
             outbound_socket.log.info("Record Both Executed")
         else:
-            if self.play_beep == 'true':
+            if self.play_beep:
                 beep = 'tone_stream://%(300,200,700)'
                 outbound_socket.playback(beep)
                 event = outbound_socket.wait_for_action()
