@@ -369,8 +369,8 @@ class PlivoRestApi(object):
         answer_url = get_post_param(request, 'AnswerUrl')
         delimiter = get_post_param(request, 'Delimiter')
 
-        if delimiter == ',':
-            msg = "Delimiter cannot be ','"
+        if delimiter in (',', '/'):
+            msg = "This Delimiter not allowed"
         elif not caller_id or not to_str or not gw_str or not answer_url or\
             not delimiter:
             msg = "Mandatory Parameters Missing"
