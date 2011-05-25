@@ -717,6 +717,10 @@ class GetDigits(Element):
 
 class Hangup(Element):
     """Hangup the call
+    schedule: schedule hangup in X seconds (default 0, immediate hangup)
+    reason: rejected, busy or "" (default "", no reason)
+
+    Note: when hangup is scheduled, reason is not taken into account.
     """
     def __init__(self):
         Element.__init__(self)
@@ -750,14 +754,14 @@ class Hangup(Element):
             else:
                 outbound_socket.log.error("Hangup (schedule) Failed: %s"\
                                                     % str(res.get_response()))
-            return
         # Immediate hangup
-        if self.reason:
-            outbound_socket.log.info("Hanging up now (reason %s)" % self.reason)
-            outbound_socket.hangup(self.reason)
         else:
-            outbound_socket.log.info("Hanging up now (no reason)")
-            outbound_socket.hangup()
+            if not self.reason:
+                reason = "NORMAL_CLEARING"
+            else:
+                reason = self.reason
+            outbound_socket.log.info("Hanging up now (%s)" % reason)
+            outbound_socket.hangup(reason)
         return self.reason
 
 
