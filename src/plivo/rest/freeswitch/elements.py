@@ -22,7 +22,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'muted': 'false',
                 'startConferenceOnEnter': 'true',
                 'endConferenceOnExit': 'false',
-                'maxMembers': 0,
+                'maxMembers': 200,
                 'beep': 0,
                 'timeLimit': 14400 ,
                 'hangupOnStar': 'false'
