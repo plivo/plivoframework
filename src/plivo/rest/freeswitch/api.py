@@ -519,7 +519,7 @@ class PlivoRestApi(object):
         result = False
 
         call_uuid = get_post_param(request, 'CallUUID')
-        new_xml_url = get_post_param(request, 'URL')
+        new_xml_url = get_post_param(request, 'Url')
 
         if not call_uuid:
             msg = "CallUUID Parameter must be present"
