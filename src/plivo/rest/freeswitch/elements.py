@@ -22,7 +22,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'muted': 'false',
                 'startConferenceOnEnter': 'true',
                 'endConferenceOnExit': 'false',
-                'maxMembers': 0,
+                'maxMembers': 200,
                 'enterSound': '',
                 'exitSound': '',
                 'timeLimit': 0 ,
@@ -232,7 +232,7 @@ class Conference(Element):
                                                         self.DEFAULT_MAXMEMBERS))
         except ValueError:
             self.max_members = self.DEFAULT_MAXMEMBERS
-        if self.max_members <= 0:
+        if self.max_members <= 0 or self.max_members > self.DEFAULT_MAXMEMBERS:
             self.max_members = self.DEFAULT_MAXMEMBERS
         try:
             self.enter_sound = self.extract_attribute_value('enterSound')
