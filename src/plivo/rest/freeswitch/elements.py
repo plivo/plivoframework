@@ -215,6 +215,8 @@ class Conference(Element):
                                                           self.DEFAULT_TIMELIMIT))
         except ValueError:
             self.time_limit = self.DEFAULT_TIMELIMIT
+        if self.time_limit <= 0:
+            self.time_limit = self.DEFAULT_TIMELIMIT
         try:
             self.max_members = int(self.extract_attribute_value('maxMembers',
                                                         self.DEFAULT_MAXMEMBERS))
@@ -320,7 +322,7 @@ class Conference(Element):
                 outbound_socket.bind_digit_action("%s,*,exec:conference,%s kick %s" \
                             % (bind_digit_realm, self.room, member_id), lock=True)
             # set beep on enter/exit if enabled
-            if member_id and self.play_beep > 0:
+            if member_id:
                 if self.enter_sound == 'beep:1':
                     outbound_socket.api("conference %s enter_sound file tone_stream://%%(300,200,700)" % self.room)
                 elif self.enter_sound == 'beep:2':
