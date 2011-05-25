@@ -7,21 +7,21 @@ Contributing
 .. contents::
     :local:
     :depth: 1
-    
+
 
 .. _community-code-of-conduct:
 
 Community Code of Conduct
 =========================
 
-Members of our community need to work together effectively, and this code 
+Members of our community need to work together effectively, and this code
 of conduct lays down the ground rules for our cooperation.
 
-Please read the following documentation about how the Plivo Project functions, 
-coding styles expected for contributions, and the community standards we expect 
+Please read the following documentation about how the Plivo Project functions,
+coding styles expected for contributions, and the community standards we expect
 everyone to abide by.
 
-The Code of Conduct is heavily based on the `Ubuntu Code of Conduct`_, 
+The Code of Conduct is heavily based on the `Ubuntu Code of Conduct`_,
 `Celery Code of Conduct`_, and the `Pylons Code of Conduct`_.
 
 .. _`Ubuntu Code of Conduct`: http://www.ubuntu.com/community/conduct
@@ -34,7 +34,7 @@ Be considerate.
 Your work will be used by other people, and you in turn will depend on the
 work of others.  Any decision you take will affect users and colleagues, and
 we expect you to take those consequences into account when making decisions.
-Even if it's not obvious at the time, our contributions to Ubuntu will impact
+Even if it's not obvious at the time, our contributions to Plivo will impact
 the work of others.  For example, changes to code, infrastructure, policy,
 documentation and translations during a release may negatively impact
 others work.

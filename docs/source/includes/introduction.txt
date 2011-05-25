@@ -1,7 +1,7 @@
 :Version: 0.1.0
 :Web: http://www.plivo.org/
-:Download: http://www.plivo.org/download/
-:Source: https://github.com/plive/
+:Download: http://www.plivo.org/get-started/
+:Source: https://github.com/plivo/
 :Keywords: voip, freeswitch, Framework, asynchronous, event_socket,
   gevent, python, distributed
 
@@ -9,23 +9,22 @@
 
 .. _plivo-synopsis:
 
-Plivo can be used to build almost any kind of telephony application – from 
-simple click-to-call systems to complex applications like IVRs, Voice-mail 
-Systems, Billing Systems or even a full-fledged Call Center Application. 
+Plivo can be used to build almost any kind of telephony application – from
+simple click-to-call systems to complex applications like IVRs, Voice-mail
+Systems, Billing Systems or even a full-fledged Call Center Application.
 
-Plivo was born out of a desire to write telephony applications rapidly. 
-While Twilio solved that problem for many – we have always wished that app 
-developers wouldn’t be locked to their services. So we created Plivo – 
-a 100% FOSS framework built on the next generation telephony platform 
-`Freeswitch`_. While building Plivo, we have consciously kept our APIs as 
-consistent as possible with Twilio – allowing us to reuse Twilio’s helper 
-libraries so that developers can port their existing applications to Plivo 
-with minimal code modification. However, it must be noted that our code 
+Plivo was born out of a desire to write telephony applications rapidly.
+While Twilio solved that problem for many – we have always wished that app
+developers wouldn’t be locked to their services. So we created Plivo –
+a 100% FOSS framework built on the next generation telephony platform
+`Freeswitch`_. While building Plivo, we have consciously kept our APIs as
+consistent as possible with Twilio – allowing us to reuse Twilio’s helper
+libraries so that developers can port their existing applications to Plivo
+with minimal code modification. However, it must be noted that our code
 base is in no way related to Twilio.
 
 .. _`Freeswitch`: http://www.freeswitch.org/
-.. _`Asterisk`: http://www.asterisk.org/
-.. _`RabbitMQ`: http://www.gevent.org/
+.. _`Gevent`: http://www.gevent.org/
 
 
 .. contents::
@@ -73,4 +72,3 @@ is hosted on `Plivo`_ Website.
 
 .. _`latest documentation`: https://github.com/plivo/
 .. _`Plivo`: http://www.plivo.org/
-
