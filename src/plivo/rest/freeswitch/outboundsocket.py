@@ -75,9 +75,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         'conference',
                        )
     NO_ANSWER_ELEMENTS = ('Wait', 
-                          'Reject', 
                           'Preanswer', 
                           'Dial', 
+                          'Hangup', 
                          )
 
     def __init__(self, socket, address, log,

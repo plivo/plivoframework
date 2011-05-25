@@ -742,18 +742,19 @@ class Hangup(Element):
         try:
             self.schedule = int(self.schedule)
         except ValueError:
-            outbound_socket.log.error("Hangup (schedule) Failed: bad value for 'schedule'")
+            outbound_socket.log.error("Hangup (scheduled) Failed: bad value for 'schedule'")
             return
         # Schedule the call for hangup at a later time if 'schedule' param > 0
         if self.schedule > 0:
-            res = outbound_socket.api("sched_api +%d uuid_kill %s ALLOTTED_TIMEOUT" \
+            res = outbound_socket.api("sched_api +%d none uuid_kill %s ALLOTTED_TIMEOUT" \
                         % (self.schedule, outbound_socket.get_channel_unique_id()))
             if res.is_success():
-                outbound_socket.log.info("Hangup (schedule) will be fired in %d secs" \
+                outbound_socket.log.info("Hangup (scheduled) will be Fired in %d secs" \
                                                             % self.schedule)
             else:
-                outbound_socket.log.error("Hangup (schedule) Failed: %s"\
+                outbound_socket.log.error("Hangup (scheduled) Failed: %s"\
                                                     % str(res.get_response()))
+            return "Scheduled in %d secs" % self.schedule
         # Immediate hangup
         else:
             if not self.reason:
