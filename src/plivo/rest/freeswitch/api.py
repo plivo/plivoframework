@@ -99,6 +99,7 @@ class PlivoRestApi(object):
         '''Test to get config parameter'''
         return get_conf_value(self._config, 'freeswitch', 'FS_INBOUND_ADDRESS')
 
+    @auth_protect
     def index(self):
         message = """
         Welcome to Plivo - http://www.plivo.org/<br>
