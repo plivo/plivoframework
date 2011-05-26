@@ -64,13 +64,6 @@ gpgcheck = 1
         fi
 
         yum -y --enablerepo=rpmforge install git-core
-
-        #cd /usr/src/
-        #wget http://kernel.org/pub/software/scm/git/git-1.7.5.2.tar.bz2
-        #tar -xvjf git-1.7.5.2.tar.bz2
-        #cd git-1.7.5.2
-        #make prefix=/usr/local all
-        #make prefix=/usr/local install
     ;;
 esac
 

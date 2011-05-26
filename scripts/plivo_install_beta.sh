@@ -112,7 +112,7 @@ gpgcheck = 1
 
         # Install easy_install
         cd $DEPLOY/source
-        wget https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+        wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
         python ez_setup.py
 
         easy_install --prefix $DEPLOY virtualenv
