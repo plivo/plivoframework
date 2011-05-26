@@ -46,12 +46,31 @@ case $DIST in
     'CENTOS')
         yum -y update
         yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
-        cd /usr/src/
-        wget http://kernel.org/pub/software/scm/git/git-1.7.5.2.tar.bz2
-        tar -xvjf git-1.7.5.2.tar.bz2
-        cd git-1.7.5.2
-        make prefix=/usr/local all
-        make prefix=/usr/local install
+        
+        #install the RPMFORGE Repository
+        if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
+	        then
+		        # Install RPMFORGE Repo
+        rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt		
+        echo '
+[rpmforge]
+name = Red Hat Enterprise $releasever - RPMforge.net - dag
+mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
+enabled = 0
+protect = 0
+gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
+gpgcheck = 1
+' > /etc/yum.repos.d/rpmforge.repo
+        fi
+        
+        yum -y --enablerepo=rpmforge install git-core
+        
+        #cd /usr/src/
+        #wget http://kernel.org/pub/software/scm/git/git-1.7.5.2.tar.bz2
+        #tar -xvjf git-1.7.5.2.tar.bz2
+        #cd git-1.7.5.2
+        #make prefix=/usr/local all
+        #make prefix=/usr/local install
     ;;
 esac
 
