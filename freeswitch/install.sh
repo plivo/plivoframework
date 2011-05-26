@@ -45,7 +45,7 @@ case $DIST in
 
         ;;
         'CENTOS')
-            sudo yum -y update
+            yum -y update
             yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel git-core gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
 
         ;;
@@ -72,7 +72,7 @@ sed -i "s/#say\/mod_say_ru/say\/mod_say_ru/g" modules.conf
 sed -i "s/#say\/mod_say_zh/say\/mod_say_zh/g" modules.conf
 sed -i "s/#say\/mod_say_hu/say\/mod_say_hu/g" modules.conf
 sed -i "s/#say\/mod_say_th/say\/mod_say_th/g" modules.conf
-make && make install && make sounds-install && make cd-moh-install
+make && make install && make sounds-install && make moh-install
 
 # Enable FreeSWITCH modules
 cd $FS_INSTALLED_PATH/conf/autoload_configs/
