@@ -95,8 +95,8 @@ gpgcheck = 1
         fi
 
         # Setup Env
-        mkdir -p /usr/src/deploy
-        cd /usr/src/deploy
+        mkdir -p $REAL_PATH/deploy
+        cd $REAL_PATH/deploy
         export DEPLOY=$PWD
 
         # Install Isolated copy of python
