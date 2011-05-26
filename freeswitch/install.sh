@@ -17,9 +17,9 @@ CURRENT_PATH=$PWD
 
 # Identify Linux Distribution
 if [ -f /etc/debian_version ] ; then
-        DIST="DEBIAN"
+    DIST="DEBIAN"
 elif [ -f /etc/redhat-release ] ; then
-        DIST="CENTOS"
+    DIST="CENTOS"
 else
     echo ""
     echo "This Installer should be run on a CentOS or a Debian based system"
@@ -38,17 +38,17 @@ read INPUT
 
 echo "Setting up Prerequisites and Dependencies for FreeSWITCH"
 case $DIST in
-        'DEBIAN')
-            apt-get -y update
-            apt-get -y upgrade
-            apt-get -y install autoconf automake autotools-dev binutils bison build-essential cpp curl flex g++ gcc git-core libaudiofile-dev libc6-dev libdb-dev libexpat1 libgdbm-dev libgnutls-dev libmcrypt-dev libncurses5-dev libnewt-dev libpcre3 libpopt-dev libsctp-dev libsqlite3-dev libtiff4 libtiff4-dev libtool libx11-dev libxml2 libxml2-dev lksctp-tools lynx m4 make mcrypt ncftp nmap openssl sox sqlite3 ssl-cert ssl-cert unixodbc-dev unzip zip zlib1g-dev zlib1g-dev
+    'DEBIAN')
+        apt-get -y update
+        apt-get -y upgrade
+        apt-get -y install autoconf automake autotools-dev binutils bison build-essential cpp curl flex g++ gcc git-core libaudiofile-dev libc6-dev libdb-dev libexpat1 libgdbm-dev libgnutls-dev libmcrypt-dev libncurses5-dev libnewt-dev libpcre3 libpopt-dev libsctp-dev libsqlite3-dev libtiff4 libtiff4-dev libtool libx11-dev libxml2 libxml2-dev lksctp-tools lynx m4 make mcrypt ncftp nmap openssl sox sqlite3 ssl-cert ssl-cert unixodbc-dev unzip zip zlib1g-dev zlib1g-dev
 
-        ;;
-        'CENTOS')
-            yum -y update
-            yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel git-core gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
+    ;;
+    'CENTOS')
+        yum -y update
+        yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel git-core gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
 
-        ;;
+    ;;
 esac
 
 # Install FreeSWITCH
