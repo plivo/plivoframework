@@ -69,6 +69,10 @@ case $DIST in
         'CENTOS')
             yum -y update
             yum -y install python-setuptools python-tools python-devel libevent
+
+        which git &>/dev/null
+        if [ $? -ne 0 ]; then
+
             #install the RPMFORGE Repository
             if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
             then
@@ -86,7 +90,7 @@ gpgcheck = 1
             fi
 
             yum -y --enablerepo=rpmforge install git-core
-
+        fi
         ;;
 esac
 
