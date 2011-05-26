@@ -993,15 +993,10 @@ class Record(Element):
         if timeout < 1:
             raise RESTFormatException("Record 'timeout' must be a positive integer")
         self.timeout = timeout
-        if action and is_valid_url(action):
-            self.action = action
-        else:
-            self.action = uri
         # :TODO Validate Finish on Key
         self.finish_on_key = finish_on_key
 
     def execute(self, outbound_socket):
-        Element.run(self, outbound_socket)
         filename = "%s%s-%s" % (self.prefix,
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
