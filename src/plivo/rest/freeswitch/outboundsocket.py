@@ -76,7 +76,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         'park',
                        )
     NO_ANSWER_ELEMENTS = ('Wait', 
-                          'Preanswer', 
+                          'PreAnswer', 
                           'Dial', 
                           'Hangup', 
                          )
@@ -464,6 +464,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 # Only execute the element
                 if not self.answered and \
                     not element_instance.name in self.NO_ANSWER_ELEMENTS:
+                    self.log.debug("Answering because Element %s need it" \
+                        % element_instance.name)
                     self.answer()
                     self.answered = True
             # execute Element

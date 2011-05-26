@@ -13,8 +13,6 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTNoExecuteException
 
 
-RECOGNIZED_SOUND_FORMATS = ['audio/mpeg', 'audio/wav', 'audio/x-wav']
-
 ELEMENTS_DEFAULT_PARAMS = {
         'Conference': {
                 #'room': SET IN ELEMENT BODY
@@ -68,7 +66,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 #url: SET IN ELEMENT BODY
                 'loop': 1
         },
-        'Preanswer': {
+        'PreAnswer': {
         },
         'Record': {
                 'timeout': 15,
@@ -927,7 +925,7 @@ class Play(Element):
         return False
 
 
-class Preanswer(Element):
+class PreAnswer(Element):
     """Answer the call in Early Media Mode and execute nested element
     """
     def __init__(self):
@@ -944,10 +942,11 @@ class Preanswer(Element):
                 child_instance.prepare()
 
     def execute(self, outbound_socket):
+        outbound_socket._protocol_sendmsg("pre_answer")
         for child_instance in self.children:
             if hasattr(child_instance, "run"):
                 child_instance.run(outbound_socket)
-        outbound_socket.log.info("Preanswer Completed")
+        outbound_socket.log.info("PreAnswer Completed")
 
 
 class Record(Element):
