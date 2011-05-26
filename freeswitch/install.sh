@@ -56,7 +56,7 @@ cd $FS_BASE_PATH
 git clone $FS_GIT_REPO
 cd $FS_BASE_PATH/freeswitch
 sh bootstrap.sh && ./configure
-cp modules.conf modules.conf.bak
+[ -f modules.conf ] && cp modules.conf modules.conf.bak
 sed -i "s/#applications\/mod_curl/applications\/mod_curl/g" modules.conf
 sed -i "s/#asr_tts\/mod_flite/asr_tts\/mod_flite/g" modules.conf
 sed -i "s/#asr_tts\/mod_tts_commandline/asr_tts\/mod_tts_commandline/g" modules.conf
@@ -74,10 +74,19 @@ sed -i "s/#say\/mod_say_hu/say\/mod_say_hu/g" modules.conf
 sed -i "s/#say\/mod_say_th/say\/mod_say_th/g" modules.conf
 make && make install && make sounds-install && make cd-moh-install
 
-# Enable FreeSWITCH for loading
+# Enable FreeSWITCH modules
 cd $FS_INSTALLED_PATH/conf/autoload_configs/
-[ -f modules.conf.xml ] && mv modules.conf.xml modules.conf.xml.bak
-wget --no-check-certificate $FS_CONF_PATH/modules.conf.xml -O modules.conf.xml
+[ -f modules.conf.xml ] && cp modules.conf.xml modules.conf.xml.bak
+sed -i "s/<\!-- <load module=\"mod_xml_curl\"\/> -->/<load module=\"mod_xml_curl\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_xml_cdr\"\/> -->/<load module=\"mod_xml_cdr\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_dingaling\"\/> -->/<load module=\"mod_dingaling\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_shout\"\/> -->/<load module=\"mod_shout\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!--<load module=\"mod_shout\"\/>-->/<load module=\"mod_shout\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_flite\"\/> -->/<load module=\"mod_flite\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_say_ru\"\/> -->/<load module=\"mod_say_ru\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_say_zh\"\/> -->/<load module=\"mod_say_zh\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' $FS_CONF_PATH/modules.conf.xml
+
 
 cd $FS_INSTALLED_PATH/conf/dialplan/
 
