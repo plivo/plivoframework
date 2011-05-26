@@ -97,7 +97,20 @@ wget --no-check-certificate $FS_CONF_PATH/default.xml -O default.xml
 
 # Place Plivo Public Dialplan in FreeSWITCH
 [ -f public.xml ] && mv public.xml public.xml.bak
-wget --no-check-certificate $FS_CONF_PATH/public.xml -O public.xml
+
+PLIVO_PUBLIC_XML='\n'
+PLIVO_PUBLIC_XML+="    <!--"
+PLIVO_PUBLIC_XML+="     This extension allows calling any digits of number"
+PLIVO_PUBLIC_XML+="     freeswitch will call plivo outbound server on every incoming call"
+PLIVO_PUBLIC_XML+="    -->"
+PLIVO_PUBLIC_XML+="    <extension name=\"plivo_public_did\">"
+PLIVO_PUBLIC_XML+="        <condition field=\"destination_number\" expression=>"
+PLIVO_PUBLIC_XML+="            <action application=\"socket\" data=\"127.0.0.1:8084 async full\"/>"
+PLIVO_PUBLIC_XML+="        </condition>"
+PLIVO_PUBLIC_XML+="    </extension>"
+PLIVO_PUBLIC_XML+="    "
+
+sed -i "s/<\/context>*$/$PLIVO_PUBLIC_XML &/" public.xml
 
 cd $CURRENT_PATH
 
