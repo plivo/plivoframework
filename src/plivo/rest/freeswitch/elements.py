@@ -942,7 +942,7 @@ class PreAnswer(Element):
                 child_instance.prepare()
 
     def execute(self, outbound_socket):
-        outbound_socket._protocol_sendmsg("pre_answer")
+        outbound_socket.preanswer()
         for child_instance in self.children:
             if hasattr(child_instance, "run"):
                 child_instance.run(outbound_socket)
