@@ -73,9 +73,17 @@ sed -i "s/#say\/mod_say_hu/say\/mod_say_hu/g" modules.conf
 sed -i "s/#say\/mod_say_th/say\/mod_say_th/g" modules.conf
 make && make install && make sounds-install && cd-moh-install
 
-# Enable FreeSWITCH for loading
+# Enable FreeSWITCH modules
 cd $FS_INSTALLED_PATH/conf/autoload_configs/
-wget --no-check-certificate $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_xml_curl\"\/> -->/<load module=\"mod_xml_curl\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_xml_cdr\"\/> -->/<load module=\"mod_xml_cdr\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_dingaling\"\/> -->/<load module=\"mod_dingaling\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_shout\"\/> -->/<load module=\"mod_shout\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!--<load module=\"mod_shout\"\/>-->/<load module=\"mod_shout\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_flite\"\/> -->/<load module=\"mod_flite\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_say_ru\"\/> -->/<load module=\"mod_say_ru\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_say_zh\"\/> -->/<load module=\"mod_say_zh\"\/>/g"  $FS_CONF_PATH/modules.conf.xml
+sed -i 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' $FS_CONF_PATH/modules.conf.xml
 
 cd $FS_INSTALLED_PATH/conf/dialplan/
 
