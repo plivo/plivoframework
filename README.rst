@@ -14,7 +14,7 @@ Currently, it supports FreeSWITCH. Future support is planned for XMPP, Asterisk 
 Documentation
 ~~~~~~~~~~~~~~
 
-See `Plivo Documentation <http://www.plivo.org/documentation/>`_ for more information.
+See `Plivo Documentation <http://www.plivo.org/docs/>`_ for more information.
 
 
 License
