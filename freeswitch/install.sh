@@ -56,7 +56,21 @@ esac
 cd $FS_BASE_PATH/freeswitch
 ./bootstrap && ./configure
 mv modules.conf modules.conf.bk
-wget --no-check-certificate $FS_CONF_PATH/modules.conf
+sed -i "s/#applications\/mod_curl/applications\/mod_curl/g" modules.conf
+sed -i "s/#asr_tts\/mod_flite/asr_tts\/mod_flite/g" modules.conf
+sed -i "s/#asr_tts\/mod_tts_commandline/asr_tts\/mod_tts_commandline/g" modules.conf
+sed -i "s/#formats\/mod_shout/formats\/mod_shout/g" modules.conf
+sed -i "s/#endpoints\/mod_dingaling/endpoints\/mod_dingaling/g" modules.conf
+sed -i "s/#formats\/mod_shell_stream/formats\/mod_shell_stream/g" modules.conf
+sed -i "s/#say\/mod_say_de/say\/mod_say_de/g" modules.conf
+sed -i "s/#say\/mod_say_es/say\/mod_say_es/g" modules.conf
+sed -i "s/#say\/mod_say_fr/say\/mod_say_fr/g" modules.conf
+sed -i "s/#say\/mod_say_it/say\/mod_say_it/g" modules.conf
+sed -i "s/#say\/mod_say_nl/say\/mod_say_nl/g" modules.conf
+sed -i "s/#say\/mod_say_ru/say\/mod_say_ru/g" modules.conf
+sed -i "s/#say\/mod_say_zh/say\/mod_say_zh/g" modules.conf
+sed -i "s/#say\/mod_say_hu/say\/mod_say_hu/g" modules.conf
+sed -i "s/#say\/mod_say_th/say\/mod_say_th/g" modules.conf
 make && make install && make sounds-install && cd-moh-install
 
 # Enable FreeSWITCH for loading
