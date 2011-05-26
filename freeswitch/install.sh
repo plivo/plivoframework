@@ -77,17 +77,18 @@ make && make install && make sounds-install && make moh-install
 # Enable FreeSWITCH modules
 cd $FS_INSTALLED_PATH/conf/autoload_configs/
 [ -f modules.conf.xml ] && cp modules.conf.xml modules.conf.xml.bak
-sed -i "s/<\!-- <load module=\"mod_xml_curl\"\/> -->/<load module=\"mod_xml_curl\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_xml_cdr\"\/> -->/<load module=\"mod_xml_cdr\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_dingaling\"\/> -->/<load module=\"mod_dingaling\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_shout\"\/> -->/<load module=\"mod_shout\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i "s/<\!--<load module=\"mod_shout\"\/>-->/<load module=\"mod_shout\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_flite\"\/> -->/<load module=\"mod_flite\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_say_ru\"\/> -->/<load module=\"mod_say_ru\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_say_zh\"\/> -->/<load module=\"mod_say_zh\"\/>/g"  $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
-sed -i 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' $FS_INSTALLED_PATH/conf/autoload_configs/modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_xml_curl\"\/> -->/<load module=\"mod_xml_curl\"\/>/g" modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_xml_cdr\"\/> -->/<load module=\"mod_xml_cdr\"\/>/g" modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_dingaling\"\/> -->/<load module=\"mod_dingaling\"\/>/g" modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_shout\"\/> -->/<load module=\"mod_shout\"\/>/g" modules.conf.xml
+sed -i "s/<\!--<load module=\"mod_shout\"\/>-->/<load module=\"mod_shout\"\/>/g" modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_flite\"\/> -->/<load module=\"mod_flite\"\/>/g" modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_say_ru\"\/> -->/<load module=\"mod_say_ru\"\/>/g" modules.conf.xml
+sed -i "s/<\!-- <load module=\"mod_say_zh\"\/> -->/<load module=\"mod_say_zh\"\/>/g" modules.conf.xml
+sed -i 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' modules.conf.xml
 
 
+#Configure Dialplan
 cd $FS_INSTALLED_PATH/conf/dialplan/
 
 # Place Plivo Default Dialplan in FreeSWITCH
