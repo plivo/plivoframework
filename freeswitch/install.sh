@@ -42,13 +42,17 @@ case $DIST in
         apt-get -y update
         apt-get -y upgrade
         apt-get -y install autoconf automake autotools-dev binutils bison build-essential cpp curl flex g++ gcc git-core libaudiofile-dev libc6-dev libdb-dev libexpat1 libgdbm-dev libgnutls-dev libmcrypt-dev libncurses5-dev libnewt-dev libpcre3 libpopt-dev libsctp-dev libsqlite3-dev libtiff4 libtiff4-dev libtool libx11-dev libxml2 libxml2-dev lksctp-tools lynx m4 make mcrypt ncftp nmap openssl sox sqlite3 ssl-cert ssl-cert unixodbc-dev unzip zip zlib1g-dev zlib1g-dev
-
-    ;;
-    'CENTOS')
-        yum -y update
-        yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel git-core gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
-
-    ;;
+        ;;
+        'CENTOS')
+            yum -y update
+            yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
+            cd /usr/src/
+            wget http://kernel.org/pub/software/scm/git/git-1.7.5.2.tar.bz2
+            tar -xvjf git-1.7.5.2.tar.bz2
+            cd git-1.7.5.2
+            make prefix=/usr/local all
+            make prefix=/usr/local install
+        ;;
 esac
 
 # Install FreeSWITCH
@@ -81,7 +85,6 @@ sed -i "s/<\!-- <load module=\"mod_xml_curl\"\/> -->/<load module=\"mod_xml_curl
 sed -i "s/<\!-- <load module=\"mod_xml_cdr\"\/> -->/<load module=\"mod_xml_cdr\"\/>/g" modules.conf.xml
 sed -i "s/<\!-- <load module=\"mod_dingaling\"\/> -->/<load module=\"mod_dingaling\"\/>/g" modules.conf.xml
 sed -i "s/<\!-- <load module=\"mod_shout\"\/> -->/<load module=\"mod_shout\"\/>/g" modules.conf.xml
-sed -i "s/<\!--<load module=\"mod_shout\"\/>-->/<load module=\"mod_shout\"\/>/g" modules.conf.xml
 sed -i "s/<\!--<load module=\"mod_tts_commandline\"\/>-->/<load module=\"mod_tts_commandline\"\/>/g" modules.conf.xml
 sed -i "s/<\!-- <load module=\"mod_flite\"\/> -->/<load module=\"mod_flite\"\/>/g" modules.conf.xml
 sed -i "s/<\!-- <load module=\"mod_say_ru\"\/> -->/<load module=\"mod_say_ru\"\/>/g" modules.conf.xml
