@@ -62,10 +62,13 @@ fi
 echo "Setting up Prerequisites and Dependencies"
 case $DIST in
         'DEBIAN')
-            apt-get -y install python-setuptools python-dev build-essential libevent-dev
+            apt-get -y update
+            apt-get -y upgrade
+            apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
         ;;
         'CENTOS')
-            yum -y install python-setuptools python-tools python-devel libevent
+            yum -y update
+            yum -y install git-core python-setuptools python-tools python-devel libevent
         ;;
 esac
 
@@ -84,7 +87,7 @@ $REAL_PATH/bin/plivo-postinstall &>/dev/null
 
 
 # Install Complete
-clear
+#clear
 echo ""
 echo ""
 echo ""
