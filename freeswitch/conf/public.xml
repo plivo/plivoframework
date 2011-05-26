@@ -1,0 +1,53 @@
+<!--
+    NOTICE:
+
+    This context is usually accessed via the external sip profile listening on port 5080.
+
+    It is recommended to have separate inbound and outbound contexts.  Not only for security
+    but clearing up why you would need to do such a thing.  You don't want outside un-authenticated
+    callers hitting your default context which allows dialing calls thru your providers and results
+    in Toll Fraud.
+-->
+
+<!-- http://wiki.freeswitch.org/wiki/Dialplan_XML -->
+<include>
+  <context name="public">
+
+    <extension name="unloop">
+      <condition field="${unroll_loops}" expression="^true$"/>
+      <condition field="${sip_looped_call}" expression="^true$">
+    <action application="deflect" data="${destination_number}"/>
+      </condition>
+    </extension>
+    <!--
+    Tag anything pass thru here as an outside_call so you can make sure not
+    to create any routing loops based on the conditions that it came from
+    the outside of the switch.
+    -->
+    <extension name="outside_call" continue="true">
+      <condition>
+    <action application="set" data="outside_call=true"/>
+    <action application="set" data="RFC2822_DATE=${strftime(%a, %d %b %Y %T %z)}"/>
+      </condition>
+    </extension>
+
+    <extension name="call_debug" continue="true">
+      <condition field="${call_debug}" expression="^true$" break="never">
+    <action application="info"/>
+      </condition>
+    </extension>
+
+    <!--
+     This extension allows calling any digits of number
+     freeswitch will call plivo outbound server on every incoming call
+    -->
+    <extension name="plivo_public_did">
+        <condition field="destination_number" expression="^(\d+)$">
+            <action application="socket" data="127.0.0.1:8084 async full"/>
+        </condition>
+    </extension>
+
+
+
+  </context>
+</include>
