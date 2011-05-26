@@ -10,17 +10,16 @@ FS_GIT_REPO=git://git.freeswitch.org/freeswitch.git
 FS_INSTALLED_PATH=/usr/local/freeswitch
 
 #####################################################
-FS_BASE_PATH = /usr/src/
+FS_BASE_PATH=/usr/src/
 #####################################################
 
-PWD = `pwd`
+CURRENT_PATH=$PWD
 
-
-# Identify Linix Distribution type
+# Identify Linux Distribution
 if [ -f /etc/debian_version ] ; then
-        DIST='DEBIAN'
+        DIST="DEBIAN"
 elif [ -f /etc/redhat-release ] ; then
-        DIST='CENTOS'
+        DIST="CENTOS"
 else
     echo ""
     echo "This Installer should be run on a CentOS or a Debian based system"
@@ -31,7 +30,7 @@ fi
 
 clear
 echo ""
-echo "FreeSWITCH will be installed at "$FS_BASE_PATH""
+echo "FreeSWITCH will be installed in $FS_INSTALLED_PATH"
 echo "Press any key to continue or CTRL-C to exit"
 echo ""
 read INPUT
@@ -53,9 +52,11 @@ case $DIST in
 esac
 
 # Install FreeSWITCH
+cd $FS_BASE_PATH
+git clone $FS_GIT_REPO
 cd $FS_BASE_PATH/freeswitch
-./bootstrap && ./configure
-mv modules.conf modules.conf.bk
+sh bootstrap.sh && ./configure
+cp modules.conf modules.conf.bak
 sed -i "s/#applications\/mod_curl/applications\/mod_curl/g" modules.conf
 sed -i "s/#asr_tts\/mod_flite/asr_tts\/mod_flite/g" modules.conf
 sed -i "s/#asr_tts\/mod_tts_commandline/asr_tts\/mod_tts_commandline/g" modules.conf
@@ -71,23 +72,24 @@ sed -i "s/#say\/mod_say_ru/say\/mod_say_ru/g" modules.conf
 sed -i "s/#say\/mod_say_zh/say\/mod_say_zh/g" modules.conf
 sed -i "s/#say\/mod_say_hu/say\/mod_say_hu/g" modules.conf
 sed -i "s/#say\/mod_say_th/say\/mod_say_th/g" modules.conf
-make && make install && make sounds-install && cd-moh-install
+make && make install && make sounds-install && make cd-moh-install
 
 # Enable FreeSWITCH for loading
 cd $FS_INSTALLED_PATH/conf/autoload_configs/
-wget --no-check-certificate $FS_CONF_PATH/modules.conf.xml
+[ -f modules.conf.xml ] && mv modules.conf.xml modules.conf.xml.bak
+wget --no-check-certificate $FS_CONF_PATH/modules.conf.xml -O modules.conf.xml
 
 cd $FS_INSTALLED_PATH/conf/dialplan/
 
 # Place Plivo Default Dialplan in FreeSWITCH
-mv default.xml default.xml.bk
-wget --no-check-certificate $FS_CONF_PATH/default.xml
+[ -f default.xml ] && mv default.xml default.xml.bak
+wget --no-check-certificate $FS_CONF_PATH/default.xml -O default.xml
 
 # Place Plivo Public Dialplan in FreeSWITCH
-mv public.xml public.xml.bk
-wget --no-check-certificate $FS_CONF_PATH/public.xml
+[ -f public.xml ] && mv public.xml public.xml.bak
+wget --no-check-certificate $FS_CONF_PATH/public.xml -O public.xml
 
-cd $PWD
+cd $CURRENT_PATH
 
 # Install Complete
 clear
