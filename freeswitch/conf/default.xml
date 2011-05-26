@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    NOTICE:
+
+    This context is usually accessed via authenticated callers on the sip profile on port 5060
+    or transfered callers from the public context which arrived via the sip profile on port 5080.
+
+    Authenticated users will use the user_context variable on the user to determine what context
+    they can access.  You can also add a user in the directory with the cidr= attribute acl.conf.xml
+    will build the domains ACL using this value.
+-->
+<!-- http://wiki.freeswitch.org/wiki/Dialplan_XML -->
+<include>
+  <context name="default">
+
+    <!--
+     This extension allows calling any digits of number
+     freeswitch will call plivo outbound server on every incoming call
+    -->
+    <extension name="plivo">
+        <condition field="destination_number" expression="^(\d+)$">
+            <action application="socket" data="127.0.0.1:8084 async full"/>
+        </condition>
+    </extension>
+
+    <!--
+     This extension allows calling sip:someone@example.com
+     freeswitch will call plivo outbound server on every incoming call
+    -->
+    <extension name="plivo_sip_uri">
+      <condition field="destination_number" expression="^sip:(.*)$">
+        <action application="socket" data="127.0.0.1:8084 async full"/>
+      </condition>
+    </extension>
+
+
+  </context>
+</include>
