@@ -101,7 +101,7 @@ wget --no-check-certificate $FS_CONF_PATH/public.xml -O public.xml
 cd $CURRENT_PATH
 
 # Install Complete
-clear
+#clear
 echo ""
 echo ""
 echo ""
