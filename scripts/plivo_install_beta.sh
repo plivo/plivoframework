@@ -105,7 +105,7 @@ gpgcheck = 1
         wget http://www.python.org/ftp/python/2.6.6/Python-2.6.6.tgz
         tar -xvf Python-2.6.6.tgz
         cd Python-2.6.6
-        ./configure —prefix=$DEPLOY
+        ./configure --prefix=$DEPLOY
         make && make install
         # This is what does all the magic by setting upgraded python
         export PATH=$DEPLOY/bin:$PATH
