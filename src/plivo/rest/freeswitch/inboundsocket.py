@@ -194,7 +194,10 @@ class RESTInboundSocket(InboundEventSocket):
         # On state CS_HANGUP, remove transfer job linked to call_uuid
         elif ev['Channel-State'] == 'CS_HANGUP':
             call_uuid = ev['Unique-ID']
-            self.xfer_jobs.pop(call_uuid, None)
+            # try to clean transfer call
+            xfer = self.xfer_jobs.pop(call_uuid, None)
+            if xfer:
+                self.log.warn("TransferCall Aborted (hangup) for %s" % call_uuid)
 
     def set_hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
         self.log.info("Call %s Completed, Reason %s, Request uuid %s"

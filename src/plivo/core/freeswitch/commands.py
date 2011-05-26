@@ -486,8 +486,17 @@ class Commands(object):
     def sched_hangup(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_sched_hangup
 
-        >>> sched_hangup("+60 alloted_timeout")
+        >>> sched_hangup("+60 ALLOTTED_TIMEOUT")
 
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("sched_hangup", args, uuid, lock)
+
+    def sched_transfer(self, args, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_sched_transfer
+
+        >>> sched_transfer("+60 9999 XML default")
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("sched_transfer", args, uuid, lock)
