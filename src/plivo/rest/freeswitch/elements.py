@@ -746,9 +746,10 @@ class Hangup(Element):
             return
         # Schedule the call for hangup at a later time if 'schedule' param > 0
         if self.schedule > 0:
-            res = outbound_socket.api("sched_api +%d none uuid_transfer %s 'hangup:ALLOTTED_TIMEOUT' inline" \
+            res = outbound_socket.sched_hangup("+%d ALLOTTED_TIMEOUT" % self.schedule,
+                                               lock=True)
             if res.is_success():
-                outbound_socket.log.info("Hangup (scheduled) will be Fired in %d secs" \
+                outbound_socket.log.info("Hangup (scheduled) will be fired in %d secs !" \
                                                             % self.schedule)
             else:
                 outbound_socket.log.error("Hangup (scheduled) Failed: %s"\
@@ -818,6 +819,8 @@ class Wait(Element):
     """Wait for some time to further process the call
 
     length: length of wait time in seconds
+    transferEnabled: break Wait on transfer or hangup 
+                    (true/false default false)
     """
     def __init__(self):
         Element.__init__(self)
@@ -844,7 +847,7 @@ class Wait(Element):
                                     % str(self.length * 1000)
             outbound_socket.playback(pause_str)
         else:
-            outbound_socket.sleep(str(self.length * 1000))
+            outbound_socket.sleep(str(self.length * 1000), lock=False)
         event = outbound_socket.wait_for_action()
 
 
@@ -990,15 +993,10 @@ class Record(Element):
         if timeout < 1:
             raise RESTFormatException("Record 'timeout' must be a positive integer")
         self.timeout = timeout
-        if action and is_valid_url(action):
-            self.action = action
-        else:
-            self.action = uri
         # :TODO Validate Finish on Key
         self.finish_on_key = finish_on_key
 
     def execute(self, outbound_socket):
-        Element.run(self, outbound_socket)
         filename = "%s%s-%s" % (self.prefix,
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
