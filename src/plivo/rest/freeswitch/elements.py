@@ -746,9 +746,11 @@ class Hangup(Element):
             return
         # Schedule the call for hangup at a later time if 'schedule' param > 0
         if self.schedule > 0:
-            res = outbound_socket.api("sched_api +%d none uuid_transfer %s 'hangup:ALLOTTED_TIMEOUT' inline" \
+            sched_hangup_str = "sched_api +%d none uuid_transfer %s 'hangup:ALLOTTED_TIMEOUT' inline" \
+                                % (self.schedule, outbound_socket.get_channel_unique_id())
+            res = outbound_socket.api(sched_hangup_str)
             if res.is_success():
-                outbound_socket.log.info("Hangup (scheduled) will be Fired in %d secs" \
+                outbound_socket.log.info("Hangup (scheduled) will be fired in %d secs !" \
                                                             % self.schedule)
             else:
                 outbound_socket.log.error("Hangup (scheduled) Failed: %s"\
