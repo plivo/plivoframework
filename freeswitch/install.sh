@@ -134,10 +134,10 @@ echo "Congratulations, FreeSWITCH is now installed at '$FS_INSTALLED_PATH'"
 echo "**************************************************************"
 echo
 echo "* To Start FreeSWITCH in foreground :"
-echo "    '.$FS_INSTALLED_PATH/bin/freeswitch'"
+echo "    '$FS_INSTALLED_PATH/bin/freeswitch'"
 echo
 echo "* To Start FreeSWITCH in background :"
-echo "    '.$FS_INSTALLED_PATH/bin/freeswitch -nc'"
+echo "    '$FS_INSTALLED_PATH/bin/freeswitch -nc'"
 echo
 echo "**************************************************************"
 echo ""
