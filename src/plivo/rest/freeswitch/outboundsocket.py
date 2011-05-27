@@ -24,6 +24,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 
 
 MAX_REDIRECT = 10000
+EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM"
 
 
 
@@ -87,8 +88,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  default_http_method='POST',
                  auth_id='',
                  auth_token='',
-                 request_id=0,
-                 filter=None):
+                 request_id=0):
         # the request id
         self._request_id = request_id
         # set logger
@@ -119,7 +119,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         # inherits from outboundsocket
-        OutboundEventSocket.__init__(self, socket, address, filter)
+        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER)
 
     def _protocol_send(self, command, args=''):
         """Access parent method _protocol_send
@@ -183,12 +183,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.log.info("Sending hangup to %s" % hangup_url)
             gevent.spawn(self.send_to_url, hangup_url)
 
-    def on_channel_hangup_complete(self, event):
-        if not self._hangup_cause:
-            self._hangup_cause = event['Hangup-Cause']
-        self.log.info('Event: channel %s hangup completed (%s)' %
-                      (self.get_channel_unique_id(), self._hangup_cause))
-
     def on_custom(self, event):
         # special case to get Member-ID for conference
         if event['Event-Subclass'] == 'conference::maintenance' \
@@ -214,7 +208,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def run(self):
         self.resume()
         # Only catch events for this channel Unique-ID
-        self.eventplain('ALL')
+        self.eventplain(EVENT_FILTER)
         self.filter('Unique-ID %s' % self.get_channel_unique_id())
         # Linger to get all remaining events before closing
         self.linger()

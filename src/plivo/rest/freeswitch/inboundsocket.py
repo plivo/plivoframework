@@ -11,6 +11,9 @@ from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.rest.freeswitch.helpers import HTTPRequest
 
 
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP CHANNEL_STATE"
+
+
 class RESTInboundSocket(InboundEventSocket):
     """
     Interface between REST API and the InboundSocket
@@ -20,9 +23,8 @@ class RESTInboundSocket(InboundEventSocket):
     def __init__(self, host, port, password,
                  outbound_address='',
                  auth_id='', auth_token='',
-                 filter='ALL', log=None,
-                 default_http_method='POST'):
-        InboundEventSocket.__init__(self, host, port, password, filter)
+                 log=None, default_http_method='POST'):
+        InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER)
         self.fs_outbound_address = outbound_address
         self.log = log
         self.auth_id = auth_id
