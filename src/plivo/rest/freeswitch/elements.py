@@ -916,8 +916,9 @@ class Play(Element):
                 for i in range(self.loop_times):
                     res = outbound_socket.playback(self.sound_file_path)
                     if res.is_success():
+                        gevent.sleep(0)
                         event = outbound_socket.wait_for_action()
-                        gevent.sleep(0.010)
+                        gevent.sleep(0.01)
                     else:
                         outbound_socket.log.error("Play Failed - %s" \
                                         % str(res.get_response()))

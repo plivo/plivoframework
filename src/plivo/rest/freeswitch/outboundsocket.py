@@ -106,7 +106,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.session_params = {}
         self._hangup_cause = ''
         # create queue for waiting actions
-        self._action_queue = gevent.queue.Queue()
+        self._action_queue = gevent.queue.Queue(50)
         # set default answer url
         self.default_answer_url = default_answer_url
         # set default hangup_url
@@ -151,17 +151,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         return self._action_queue.get()
 
-    # Commands like `playback`, `record` etc. return +OK "immediately".
-    # However, the only way to know if the audio file played has finished,
-    # is by handling CHANNEL_EXECUTE_COMPLETE events.
-    #
-    # Such events are received by the on_channel_execute_complete method
-    #
     # In order to "block" the execution of our service until the
-    # playback is finished, we use a synchronized queue from gevent
+    # command is finished, we use a synchronized queue from gevent
     # and wait for such event to come. The on_channel_execute_complete
     # method will put that event in the queue, then we may continue working.
-    #
     # However, other events will still come, like for instance, DTMF.
     def on_channel_execute_complete(self, event):
         if event['Application'] in self.WAIT_FOR_ACTIONS:
