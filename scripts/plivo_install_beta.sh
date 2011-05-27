@@ -98,6 +98,7 @@ gpgcheck = 1
         mkdir -p $REAL_PATH/deploy
         DEPLOY=$REAL_PATH/deploy
 	cd $DEPLOY
+        cd $REAL_PATH/deploy
 
         # Install Isolated copy of python
         mkdir source
