@@ -20,15 +20,14 @@ from plivo.rest.freeswitch import elements
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
                                     UnrecognizedElementException, \
-                                    RESTRedirectException
+                                    RESTRedirectException, \
+                                    RESTHangup
 
 
 MAX_REDIRECT = 1000
 EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM"
 
 
-
-class Hangup(Exception): pass
 
 
 class RequestLogger(object):
@@ -129,7 +128,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                                                 command, args)
         self.log.debug("Response: %s" % str(response))
         if self.has_hangup():
-            raise Hangup()
+            raise RESTHangup()
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid='', lock=False, loops=1):
@@ -141,7 +140,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                                 name, args, uuid, lock, loops)
         self.log.debug("Response: %s" % str(response))
         if self.has_hangup():
-            raise Hangup()
+            raise RESTHangup()
         return response
 
     def wait_for_action(self):
@@ -296,7 +295,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.info("Processing Call")
         try:
             self.process_call()
-        except Hangup:
+        except RESTHangup:
             self.log.warn("Channel has hung up, breaking Processing Call")
         except Exception, e:
             self.log.error("Processing Call Failure !")
@@ -316,7 +315,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         for x in range(MAX_REDIRECT):
             try:
                 if self.has_hangup():
-                    raise Hangup()
+                    raise RESTHangup()
                 self.fetch_xml(params=params)
                 if not self.xml_response:
                     self.log.warn("No XML Response")
@@ -328,7 +327,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 return
             except RESTRedirectException, redirect:
                 if self.has_hangup():
-                    raise Hangup()
+                    raise RESTHangup()
                 # Set target URL to Redirect URL
                 # Set method to Redirect method
                 # Set additional params to Redirect params

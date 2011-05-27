@@ -11,7 +11,8 @@ from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
-                                            RESTNoExecuteException
+                                            RESTNoExecuteException, \
+                                            RESTHangup
 
 
 ELEMENTS_DEFAULT_PARAMS = {
@@ -114,7 +115,11 @@ class Element(object):
         if not execute:
             outbound_socket.log.error("[%s] Element cannot be executed !" % self.name)
             raise RESTNoExecuteException("Element %s cannot be executed !" % self.name)
-        result = execute(outbound_socket)
+        try:
+            result = execute(outbound_socket)
+        except RESTHangup:
+            outbound_socket.log.info("[%s] Done (Hangup)" % self.name)
+            raise
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
         else:
