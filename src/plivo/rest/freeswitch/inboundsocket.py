@@ -262,6 +262,8 @@ class RESTInboundSocket(InboundEventSocket):
             return
 
         _options = []
+        # Set plivo app flag
+        _options.append("plivo_app=true")
         if gw.codecs:
             _options.append("absolute_codec_string=%s" % gw.codecs)
         if gw.timeout:

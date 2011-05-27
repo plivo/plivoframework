@@ -208,10 +208,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def run(self):
         self.resume()
         # Only catch events for this channel Unique-ID
-        self.eventplain(EVENT_FILTER)
+        #self.eventplain(EVENT_FILTER)
         self.filter('Unique-ID %s' % self.get_channel_unique_id())
         # Linger to get all remaining events before closing
         self.linger()
+        # Set plivo app flag
+        self.set("plivo_app=true")
         # Don't hangup after bridge
         self.set("hangup_after_bridge=false")
 
