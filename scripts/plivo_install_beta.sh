@@ -65,10 +65,12 @@ case $DIST in
             apt-get -y update
             apt-get -y upgrade
             apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
+            easy_install virtualenv
+            easy_install pip
         ;;
         'CENTOS')
             yum -y update
-            yum -y install python-setuptools python-tools python-devel libevent
+            yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel
 
         which git &>/dev/null
         if [ $? -ne 0 ]; then
@@ -91,11 +93,34 @@ gpgcheck = 1
 
             yum -y --enablerepo=rpmforge install git-core
         fi
+
+        # Setup Env
+        mkdir -p $REAL_PATH/deploy
+        DEPLOY=$REAL_PATH/deploy
+	cd $DEPLOY
+
+        # Install Isolated copy of python
+        mkdir source
+        cd source
+        wget http://www.python.org/ftp/python/2.6.6/Python-2.6.6.tgz
+        tar -xvf Python-2.6.6.tgz
+        cd Python-2.6.6
+        ./configure --prefix=$DEPLOY
+        make && make install
+        # This is what does all the magic by setting upgraded python
+        export PATH=$DEPLOY/bin:$PATH
+
+        # Install easy_install
+        cd $DEPLOY/source
+        wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+        $DEPLOY/bin/python ez_setup.py
+
+	EASY_INSTALL=$(which easy_install)
+	$DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
+	$DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
         ;;
 esac
 
-easy_install virtualenv
-easy_install pip
 
 # Setup virtualenv
 virtualenv --no-site-packages $REAL_PATH
