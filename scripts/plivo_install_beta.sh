@@ -62,9 +62,16 @@ fi
 echo "Setting up Prerequisites and Dependencies"
 case $DIST in
         'DEBIAN')
-            apt-get -y update
-            apt-get -y upgrade
-            apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
+            DEBIAN_VERSION=$(cat /etc/debian_version |cut -d'.' -f1)
+            if [ "$DEBIAN_VERSION" = "5" ]; then
+                echo "deb http://backports.debian.org/debian-backports lenny-backports main" >> /etc/apt/sources.list
+	        apt-get -y update
+		apt-get -y install git-core python-setuptools python-dev build-essential 
+                apt-get -y install -t lenny-backports libevent-1.4-2 libevent-dev
+            else
+	        apt-get -y update
+		apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
+            fi
             easy_install virtualenv
             easy_install pip
         ;;
