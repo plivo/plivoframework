@@ -90,9 +90,9 @@ class EventSocket(Commands):
                 # Gets event and dispatches to handler.
                 ev = self.get_event()
                 # Only dispatches event if Event-Name header found.
-                if ev and ev.get_header('Event-Name'):
+                if ev and ev['Event-Name']:
                     self._spawn(self.dispatch_event, ev)
-                    gevent.sleep(0.005)
+                    gevent.sleep(0.025)
             except (LimitExceededError, ConnectError, socket.error):
                 self.connected = False
                 break
@@ -226,7 +226,7 @@ class EventSocket(Commands):
 
         E.g. Receives Background_Job event and calls on_background_job function.
         '''
-        method = 'on_' + event.get_header('Event-Name').lower()
+        method = 'on_' + event['Event-Name'].lower()
         callback = getattr(self, method, None)
         # When no callbacks found, call unbound_event.
         if not callback:

@@ -23,7 +23,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTRedirectException
 
 
-MAX_REDIRECT = 10000
+MAX_REDIRECT = 1000
 EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM"
 
 

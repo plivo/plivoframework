@@ -12,7 +12,7 @@ def opt():
     parser = optparse.OptionParser()
     parser.add_option("-c", "--config", action="store", type="string",
                       dest="filename", help="set config file to FILE", metavar="FILE",
-                      default="./plivo_rest.conf")
+                      default="./etc/plivo/default.conf")
 
     parser.add_option("-f", "--foreground",
                       action="store_true", dest="foreground", default=False,
