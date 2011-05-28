@@ -212,12 +212,12 @@ class EventSocket(Commands):
         '''
         Receives text/event-json callback.
         '''
-        # Gets raw data for this event
-        raw = self.read_raw(event)
+        # Gets json data for this event
+        json_data = self.read_raw(event)
         # If raw was found drops current event
-        # and replaces with Event created from raw
-        if raw:
-            event = JsonEvent(raw)
+        # and replaces with JsonEvent created from json_data
+        if json_data:
+            event = JsonEvent(json_data)
         # Returns Event
         return event
 
