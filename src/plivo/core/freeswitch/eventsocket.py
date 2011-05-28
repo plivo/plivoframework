@@ -13,7 +13,7 @@ import gevent.pool
 from gevent import GreenletExit
 from gevent.coros import RLock
 from plivo.core.freeswitch.commands import Commands
-from plivo.core.freeswitch.eventtypes import Event, CommandResponse, ApiResponse, BgapiResponse
+from plivo.core.freeswitch.eventtypes import Event, CommandResponse, ApiResponse, BgapiResponse, JsonEvent
 from plivo.core.errors import LimitExceededError, ConnectError
 
 
@@ -24,14 +24,17 @@ MAXLINES_PER_EVENT = 2000
 
 class EventSocket(Commands):
     '''EventSocket class'''
-    def __init__(self, filter="ALL", pool_size=500):
+    def __init__(self, filter="ALL", pool_size=500, eventjson=True):
         # Callbacks for reading events and sending responses.
         self._response_callbacks = {'api/response':self._api_response,
                                     'command/reply':self._command_reply,
-                                    'text/event-plain':self._event_plain,
                                     'auth/request':self._auth_request,
                                     'text/disconnect-notice':self._disconnect_notice
                                    }
+        if eventjson:
+            self._response_callbacks['text/event-json'] = self._event_json
+        else:
+            self._response_callbacks['text/event-plain'] = self._event_plain
         # Closing state flag
         self._closing_state = False
         # Default event filter.
@@ -202,6 +205,19 @@ class EventSocket(Commands):
             # If rawresponse was found, this is our Event body
             if raw_response:
                 event.set_body(raw_response)
+        # Returns Event
+        return event
+
+    def _event_json(self, event):
+        '''
+        Receives text/event-json callback.
+        '''
+        # Gets raw data for this event
+        raw = self.read_raw(event)
+        # If raw was found drops current event
+        # and replaces with Event created from raw
+        if raw:
+            event = JsonEvent(raw)
         # Returns Event
         return event
 

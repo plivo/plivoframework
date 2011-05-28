@@ -21,8 +21,9 @@ class OutboundEventSocket(EventSocket):
 
     A new instance of this class is created for every call/ session from FreeSWITCH.
     '''
-    def __init__(self, socket, address, filter="ALL", pool_size=500, connect_timeout=5):
-        EventSocket.__init__(self, filter, pool_size)
+    def __init__(self, socket, address, filter="ALL", 
+                 pool_size=500, connect_timeout=5, eventjson=True):
+        EventSocket.__init__(self, filter, pool_size, eventjson)
         self.transport = OutboundTransport(socket, address, connect_timeout)
         self._uuid = None
         self._channel = None
@@ -62,7 +63,7 @@ class OutboundEventSocket(EventSocket):
 
         # Sets event filter or raises ConnectError
         if self._filter:
-            filter_response = self.eventplain(self._filter)
+            filter_response = self.eventjson(self._filter)
             if not filter_response.is_success():
                 self.disconnect()
                 raise ConnectError("Event filter failure")

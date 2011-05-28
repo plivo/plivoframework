@@ -51,16 +51,15 @@ class RESTInboundSocket(InboundEventSocket):
             except ValueError:
                 return
             request_uuid = self.bk_jobs.pop(job_uuid, None)
-            # Handle failure case of originate - USER_NOT_REGISTERED
-            # This case does not raise a on_channel_hangup event.
-            # All other failures will be captured by on_channel_hangup
             if not request_uuid:
-                self.log.debug("No RequestUUID found !")
                 return
             try:
                 call_req = self.call_requests[request_uuid]
             except KeyError:
                 return
+            # Handle failure case of originate
+            # This case does not raise a on_channel_hangup event.
+            # All other failures will be captured by on_channel_hangup
             status = status.strip()
             reason = reason.strip()
             if status[:3] != '+OK':
