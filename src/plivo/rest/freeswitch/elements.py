@@ -714,12 +714,12 @@ class GetDigits(Element):
         event = outbound_socket.wait_for_action()
         digits = outbound_socket.get_var('pagd_input')
         if digits is not None and self.action:
-            outbound_socket.info("GetDigits, Digits '%s' Pressed" % str(digits))
+            outbound_socket.log.info("GetDigits, Digits '%s' Pressed" % str(digits))
             # Redirect
             params = {'Digits': digits}
             self.fetch_rest_xml(self.action, params, self.method)
         else:
-            outbound_socket.info("GetDigits, No Digits Pressed" % str(digits))
+            outbound_socket.log.info("GetDigits, No Digits Pressed" % str(digits))
 
 
 class Hangup(Element):
