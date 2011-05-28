@@ -73,8 +73,10 @@ class InboundEventSocket(EventSocket):
 
         # Sets event filter or raises ConnectError
         if self._filter:
-            #filter_response = self.eventplain(self._filter)
-            filter_response = self.eventjson(self._filter)
+            if self._is_eventjson:
+                filter_response = self.eventjson(self._filter)
+            else:
+                filter_response = self.eventplain(self._filter)
             if not filter_response.is_reply_text_success():
                 self.disconnect()
                 raise ConnectError("Event filter failure")

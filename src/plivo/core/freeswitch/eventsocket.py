@@ -25,13 +25,14 @@ MAXLINES_PER_EVENT = 2000
 class EventSocket(Commands):
     '''EventSocket class'''
     def __init__(self, filter="ALL", pool_size=500, eventjson=True):
+        self._is_eventjson = eventjson
         # Callbacks for reading events and sending responses.
         self._response_callbacks = {'api/response':self._api_response,
                                     'command/reply':self._command_reply,
                                     'auth/request':self._auth_request,
                                     'text/disconnect-notice':self._disconnect_notice
                                    }
-        if eventjson:
+        if self._is_eventjson:
             self._response_callbacks['text/event-json'] = self._event_json
         else:
             self._response_callbacks['text/event-plain'] = self._event_plain
