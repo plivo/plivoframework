@@ -162,8 +162,11 @@ class ApiResponse(Event):
         '''
         Makes an ApiResponse instance from Event instance.
         '''
-        cls = ApiResponse(event.get_raw_headers())
-        cls.set_body(event.get_body())
+        cls = ApiResponse()
+        cls._headers = event._headers
+        cls._raw_headers = event._raw_headers
+        cls._u_raw_headers = event._u_raw_headers
+        cls._raw_body = event._raw_body
         return cls
 
     def get_response(self):
@@ -190,8 +193,11 @@ class BgapiResponse(Event):
         '''
         Makes a BgapiResponse instance from Event instance.
         '''
-        cls = BgapiResponse(event.get_raw_headers())
-        cls.set_body(event.get_body())
+        cls = BgapiResponse()
+        cls._headers = event._headers
+        cls._raw_headers = event._raw_headers
+        cls._u_raw_headers = event._u_raw_headers
+        cls._raw_body = event._raw_body
         return cls
 
     def get_response(self):
@@ -224,8 +230,11 @@ class CommandResponse(Event):
         '''
         Makes a CommandResponse instance from Event instance.
         '''
-        cls = CommandResponse(event.get_raw_headers())
-        cls.set_body(event.get_body())
+        cls = CommandResponse()
+        cls._headers = event._headers
+        cls._raw_headers = event._raw_headers
+        cls._u_raw_headers = event._u_raw_headers
+        cls._raw_body = event._raw_body
         return cls
 
     def get_response(self):
