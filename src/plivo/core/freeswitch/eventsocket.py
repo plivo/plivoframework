@@ -273,8 +273,6 @@ class EventSocket(Commands):
     def connect(self):
         '''
         Connects to eventsocket.
-
-        Must be implemented by subclass.
         '''
         self._closing_state = False
 
