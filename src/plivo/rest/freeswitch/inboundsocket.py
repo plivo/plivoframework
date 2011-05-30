@@ -17,8 +17,6 @@ EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_H
 class RESTInboundSocket(InboundEventSocket):
     """
     Interface between REST API and the InboundSocket
-    ...
-    ...
     """
     def __init__(self, host, port, password,
                  outbound_address='',
