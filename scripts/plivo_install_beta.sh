@@ -20,7 +20,14 @@ if [ ! $1 ] || [ -z "$1" ] ; then
     echo ""
     exit 1
 fi
-[ -d $PLIVO_ENV ] && echo "Abort. $PLIVO_ENV already exists !" && exit 1
+
+if [ -d $PLIVO_ENV ] ; then
+
+    echo "$PLIVO_ENV already exists!"
+    echo "Press any key to continue to update the existing environment or CTRL-C to exit"
+    echo ""
+    read INPUT
+fi
 
 # Set full path
 echo "$PLIVO_ENV" |grep '^/' -q && REAL_PATH=$PLIVO_ENV || REAL_PATH=$PWD/$PLIVO_ENV
@@ -65,12 +72,12 @@ case $DIST in
             DEBIAN_VERSION=$(cat /etc/debian_version |cut -d'.' -f1)
             if [ "$DEBIAN_VERSION" = "5" ]; then
                 echo "deb http://backports.debian.org/debian-backports lenny-backports main" >> /etc/apt/sources.list
-	        apt-get -y update
-		apt-get -y install git-core python-setuptools python-dev build-essential 
+            apt-get -y update
+        apt-get -y install git-core python-setuptools python-dev build-essential
                 apt-get -y install -t lenny-backports libevent-1.4-2 libevent-dev
             else
-	        apt-get -y update
-		apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
+            apt-get -y update
+        apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
             fi
             easy_install virtualenv
             easy_install pip
@@ -104,7 +111,7 @@ gpgcheck = 1
         # Setup Env
         mkdir -p $REAL_PATH/deploy
         DEPLOY=$REAL_PATH/deploy
-	cd $DEPLOY
+    cd $DEPLOY
         cd $REAL_PATH/deploy
 
         # Install Isolated copy of python
@@ -123,9 +130,9 @@ gpgcheck = 1
         wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
         $DEPLOY/bin/python ez_setup.py
 
-	EASY_INSTALL=$(which easy_install)
-	$DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
-	$DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
+    EASY_INSTALL=$(which easy_install)
+    $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
+    $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
         ;;
 esac
 
