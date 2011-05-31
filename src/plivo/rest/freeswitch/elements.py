@@ -918,18 +918,23 @@ class Play(Element):
                 outbound_socket.log.info("Infinite Play started")
                 outbound_socket.wait_for_action()
             else:
-                for i in range(self.loop_times):
-                    res = outbound_socket.playback(self.sound_file_path)
-                    if res.is_success():
-                        gevent.sleep(0)
+                res = outbound_socket.playback(self.sound_file_path, 
+                                            loops=self.loop_times)
+                if res.is_success():
+                    for i in range(self.loop_times):
+                        outbound_socket.log.debug("Playing %d times ..." % i+1)
                         event = outbound_socket.wait_for_action()
+                        if event.is_empty():
+                            outbound_socket.log.warn("Play Break (empty event)")
+                            return
+                        outbound_socket.log.debug("Play %d times done (%s)" \
+                                % ((i+1), str(event['Application-Response'])))
                         gevent.sleep(0.01)
-                    else:
-                        outbound_socket.log.error("Play Failed - %s" \
-                                        % str(res.get_response()))
-                        return
-                # Log playback execute response
-                outbound_socket.log.info("Play finished")
+                else:
+                    outbound_socket.log.error("Play Failed - %s" \
+                                    % str(res.get_response()))
+                    return
+                outbound_socket.log.info("Play Finished")
         else:
             outbound_socket.log.error("Invalid Sound File - Ignoring Play")
 
@@ -952,7 +957,6 @@ class PreAnswer(Element):
     def prepare(self):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
-                # :TODO Prepare element concurrently
                 child_instance.prepare()
 
     def execute(self, outbound_socket):
@@ -1127,13 +1131,23 @@ class Speak(Element):
                            self.method, self.text)
         else:
             say_args = "%s|%s|%s" % (self.engine, self.voice, self.text)
-
-        for i in range(self.loop_times):
-            if self.item_type and self.method:
-                outbound_socket.say(say_args)
-            else:
-                outbound_socket.speak(say_args)
-            event = outbound_socket.wait_for_action()
-            # Log Speak execute response
-            outbound_socket.log.info("Speak %d times - (%s)" \
-                    % ((i+1), str(event.get_header('Application-Response'))))
+        if self.item_type and self.method:
+            res = outbound_socket.say(say_args, loops=self.loop_times)
+        else:
+            res = outbound_socket.speak(say_args, loops=self.loop_times)
+        if res.is_success():
+            for i in range(self.loop_times):
+                outbound_socket.log.debug("Speaking %d times ..." % (i+1))
+                event = outbound_socket.wait_for_action()
+                if event.is_empty():
+                    outbound_socket.log.warn("Speak Break (empty event)")
+                    return
+                outbound_socket.log.debug("Speak %d times done (%s)" \
+                            % ((i+1), str(event['Application-Response'])))
+                gevent.sleep(0.01)
+            outbound_socket.log.info("Speak Finished")
+            return
+        else:
+            outbound_socket.log.error("Speak Failed - %s" \
+                            % str(res.get_response()))
+            return

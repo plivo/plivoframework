@@ -114,6 +114,24 @@ class Event(object):
         '''
         self._raw_body = data
 
+    def is_empty(self):
+        '''Return True if no headers and no body.'''
+        return not self._raw_body and not self._headers
+
+    def get_response(self):
+        '''
+        Gets response (body).
+        '''
+        return self.get_body().strip()
+
+    def is_success(self):
+        '''
+        Returns True if body begins with +OK.
+
+        Otherwise returns False.
+        '''
+        return self._raw_body and self._raw_body[:3] == '+OK'
+
     def __str__(self):
         return '<%s headers=%s, body=%s>' \
                % (self.__class__.__name__,
@@ -134,20 +152,6 @@ class ApiResponse(Event):
         cls._headers = event._headers
         cls._raw_body = event._raw_body
         return cls
-
-    def get_response(self):
-        '''
-        Gets response for api command.
-        '''
-        return self.get_body().strip()
-
-    def is_success(self):
-        '''
-        Returns True if api command is a success.
-
-        Otherwise returns False.
-        '''
-        return self._raw_body and self._raw_body[:3] == '+OK'
 
 
 class BgapiResponse(Event):
@@ -316,6 +320,10 @@ class JsonEvent(object):
         Sets raw Event body.
         '''
         self._raw_body = data
+
+    def is_empty(self):
+        '''Return True if no headers and no body.'''
+        return not self._raw_body and not self._headers
 
     def __str__(self):
         return '<%s headers=%s, body=%s>' \
