@@ -387,10 +387,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
         xml_str = xml_str.decode("utf-8")
+        xml_str = xml_str.encode("utf-8")
         try:
             #convert the string into an Element instance
-            utf8_parser = etree.XMLParser(encoding='utf-8')
-            doc = etree.fromstring(xml_str, parser=utf8_parser)
+            doc = etree.fromstring(xml_str)
         except Exception, e:
             raise RESTSyntaxException("Invalid RESTXML Response Syntax: %s" \
                         % str(e))
