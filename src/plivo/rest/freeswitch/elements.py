@@ -922,7 +922,7 @@ class Play(Element):
                                             loops=self.loop_times)
                 if res.is_success():
                     for i in range(self.loop_times):
-                        outbound_socket.log.debug("Playing %d times ..." % i+1)
+                        outbound_socket.log.debug("Playing %d times ..." % (i+1))
                         event = outbound_socket.wait_for_action()
                         if event.is_empty():
                             outbound_socket.log.warn("Play Break (empty event)")
