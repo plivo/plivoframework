@@ -21,17 +21,8 @@ if [ ! $1 ] || [ -z "$1" ] ; then
     exit 1
 fi
 
-if [ -d $PLIVO_ENV ] ; then
-
-    echo "$PLIVO_ENV already exists!"
-    echo "Press any key to continue to update the existing environment or CTRL-C to exit"
-    echo ""
-    read INPUT
-fi
-
 # Set full path
 echo "$PLIVO_ENV" |grep '^/' -q && REAL_PATH=$PLIVO_ENV || REAL_PATH=$PWD/$PLIVO_ENV
-
 
 # Identify Linix Distribution type
 if [ -f /etc/debian_version ] ; then
@@ -45,12 +36,18 @@ else
     exit 1
 fi
 
-
 clear
-echo ""
-echo "Plivo Framework will be installed at \"$REAL_PATH\""
-echo "Press any key to continue or CTRL-C to exit"
-echo ""
+if [ -d $PLIVO_ENV ] ; then
+    echo ""
+    echo "$PLIVO_ENV already exists!"
+    echo "Press any key to continue to update the existing environment or CTRL-C to exit"
+    echo ""
+else
+    echo ""
+    echo "Plivo Framework will be installed at \"$REAL_PATH\""
+    echo "Press any key to continue or CTRL-C to exit"
+    echo ""
+fi
 read INPUT
 
 declare -i PY_MAJOR_VERSION
