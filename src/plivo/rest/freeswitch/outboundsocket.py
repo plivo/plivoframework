@@ -42,26 +42,18 @@ class RequestLogger(object):
 
     def info(self, msg):
         """Log info level"""
-        msg = msg.decode("utf-8")
-        msg = msg.encode("utf-8")
         self.logger.info('(%s) %s' % (self.request_id, str(msg)))
 
     def warn(self, msg):
         """Log warn level"""
-        msg = msg.decode("utf-8")
-        msg = msg.encode("utf-8")
         self.logger.warn('(%s) %s' % (self.request_id, str(msg)))
 
     def error(self, msg):
         """Log error level"""
-        msg = msg.decode("utf-8")
-        msg = msg.encode("utf-8")
         self.logger.error('(%s) %s' % (self.request_id, str(msg)))
 
     def debug(self, msg):
         """Log debug level"""
-        msg = msg.decode("utf-8")
-        msg = msg.encode("utf-8")
         self.logger.debug('(%s) %s' % (self.request_id, str(msg)))
 
 
@@ -394,8 +386,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         # Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
-        xml_str = xml_str.decode("utf-8")
-        xml_str = xml_str.encode("utf-8")
         try:
             #convert the string into an Element instance
             doc = etree.fromstring(xml_str)
