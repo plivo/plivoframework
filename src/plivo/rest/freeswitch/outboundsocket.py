@@ -75,10 +75,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         'conference',
                         'park',
                        )
-    NO_ANSWER_ELEMENTS = ('Wait', 
-                          'PreAnswer', 
-                          'Dial', 
-                          'Hangup', 
+    NO_ANSWER_ELEMENTS = ('Wait',
+                          'PreAnswer',
+                          'Dial',
+                          'Hangup',
                          )
 
     def __init__(self, socket, address, log,
@@ -398,6 +398,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         # Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
+        xml_str = xml_str.decode("utf-8")
         try:
             #convert the string into an Element instance
             doc = etree.fromstring(xml_str)
@@ -422,7 +423,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def parse_xml(self):
         """
-        This method will parse the XML 
+        This method will parse the XML
         and add the Elements into parsed_element
         """
         # Check all Elements tag name
@@ -490,4 +491,3 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     gevent.spawn(self.send_to_url, hangup_url)
             else:
                 self.log.warn("No more Elements, Transfer In Progress !")
-
