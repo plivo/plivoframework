@@ -390,8 +390,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         # Parse XML into a doctring
         xml_str = ' '.join(self.xml_response.split())
-        #xml_str = xml_str.decode("utf-8")
-        #xml_str = xml_str.encode("utf-8")
+        xml_str = xml_str.decode("utf-8")
+        xml_str = xml_str.encode("utf-8")
         try:
             #convert the string into an Element instance
             doc = etree.fromstring(xml_str)
