@@ -30,7 +30,7 @@ This server is listening by default on 127.0.0.1:8084
 
 class PlivoOutboundServer(OutboundServer):
     def __init__(self, configfile, daemon=False,
-                            pidfile='/tmp/plivo_outbound.pid', filter=None):
+                            pidfile='/tmp/plivo_outbound.pid'):
         self._request_id = 0
         self._daemon = daemon
         self._run = False
@@ -60,7 +60,7 @@ class PlivoOutboundServer(OutboundServer):
         # This is where we define the connection with the
         # Plivo XML element Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
-                                        PlivoOutboundEventSocket, filter)
+                                        PlivoOutboundEventSocket, filter=None)
 
     def _get_request_id(self):
         try:
@@ -78,8 +78,7 @@ class PlivoOutboundServer(OutboundServer):
                            default_http_method = self.default_http_method,
                            auth_id=self.auth_id,
                            auth_token=self.auth_token,
-                           request_id=request_id,
-                           filter=self._filter
+                           request_id=request_id
                            )
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 

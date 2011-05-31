@@ -13,7 +13,7 @@ import gevent.pool
 from gevent import GreenletExit
 from gevent.coros import RLock
 from plivo.core.freeswitch.commands import Commands
-from plivo.core.freeswitch.eventtypes import Event, CommandResponse, ApiResponse, BgapiResponse
+from plivo.core.freeswitch.eventtypes import Event, CommandResponse, ApiResponse, BgapiResponse, JsonEvent
 from plivo.core.errors import LimitExceededError, ConnectError
 
 
@@ -24,14 +24,18 @@ MAXLINES_PER_EVENT = 2000
 
 class EventSocket(Commands):
     '''EventSocket class'''
-    def __init__(self, filter="ALL", pool_size=500):
+    def __init__(self, filter="ALL", pool_size=500, eventjson=True):
+        self._is_eventjson = eventjson
         # Callbacks for reading events and sending responses.
         self._response_callbacks = {'api/response':self._api_response,
                                     'command/reply':self._command_reply,
-                                    'text/event-plain':self._event_plain,
                                     'auth/request':self._auth_request,
                                     'text/disconnect-notice':self._disconnect_notice
                                    }
+        if self._is_eventjson:
+            self._response_callbacks['text/event-json'] = self._event_json
+        else:
+            self._response_callbacks['text/event-plain'] = self._event_plain
         # Closing state flag
         self._closing_state = False
         # Default event filter.
@@ -90,9 +94,9 @@ class EventSocket(Commands):
                 # Gets event and dispatches to handler.
                 ev = self.get_event()
                 # Only dispatches event if Event-Name header found.
-                if ev and ev.get_header('Event-Name'):
+                if ev and ev['Event-Name']:
                     self._spawn(self.dispatch_event, ev)
-                    gevent.sleep(0.005)
+                    gevent.sleep(0.025)
             except (LimitExceededError, ConnectError, socket.error):
                 self.connected = False
                 break
@@ -205,6 +209,19 @@ class EventSocket(Commands):
         # Returns Event
         return event
 
+    def _event_json(self, event):
+        '''
+        Receives text/event-json callback.
+        '''
+        # Gets json data for this event
+        json_data = self.read_raw(event)
+        # If raw was found drops current event
+        # and replaces with JsonEvent created from json_data
+        if json_data:
+            event = JsonEvent(json_data)
+        # Returns Event
+        return event
+
     def _disconnect_notice(self, event):
         '''
         Receives text/disconnect-notice callback.
@@ -226,7 +243,7 @@ class EventSocket(Commands):
 
         E.g. Receives Background_Job event and calls on_background_job function.
         '''
-        method = 'on_' + event.get_header('Event-Name').lower()
+        method = 'on_' + event['Event-Name'].lower()
         callback = getattr(self, method, None)
         # When no callbacks found, call unbound_event.
         if not callback:
@@ -256,8 +273,6 @@ class EventSocket(Commands):
     def connect(self):
         '''
         Connects to eventsocket.
-
-        Must be implemented by subclass.
         '''
         self._closing_state = False
 

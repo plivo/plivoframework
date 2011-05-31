@@ -20,14 +20,14 @@ from plivo.rest.freeswitch import elements
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
                                     UnrecognizedElementException, \
-                                    RESTRedirectException
+                                    RESTRedirectException, \
+                                    RESTHangup
 
 
-MAX_REDIRECT = 10000
+MAX_REDIRECT = 1000
+EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM"
 
 
-
-class Hangup(Exception): pass
 
 
 class RequestLogger(object):
@@ -87,8 +87,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  default_http_method='POST',
                  auth_id='',
                  auth_token='',
-                 request_id=0,
-                 filter=None):
+                 request_id=0):
         # the request id
         self._request_id = request_id
         # set logger
@@ -106,7 +105,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.session_params = {}
         self._hangup_cause = ''
         # create queue for waiting actions
-        self._action_queue = gevent.queue.Queue()
+        self._action_queue = gevent.queue.Queue(50)
         # set default answer url
         self.default_answer_url = default_answer_url
         # set default hangup_url
@@ -119,7 +118,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         # inherits from outboundsocket
-        OutboundEventSocket.__init__(self, socket, address, filter)
+        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER)
 
     def _protocol_send(self, command, args=''):
         """Access parent method _protocol_send
@@ -129,7 +128,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                                                 command, args)
         self.log.debug("Response: %s" % str(response))
         if self.has_hangup():
-            raise Hangup()
+            raise RESTHangup()
         return response
 
     def _protocol_sendmsg(self, name, args=None, uuid='', lock=False, loops=1):
@@ -141,7 +140,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                                 name, args, uuid, lock, loops)
         self.log.debug("Response: %s" % str(response))
         if self.has_hangup():
-            raise Hangup()
+            raise RESTHangup()
         return response
 
     def wait_for_action(self):
@@ -151,17 +150,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         return self._action_queue.get()
 
-    # Commands like `playback`, `record` etc. return +OK "immediately".
-    # However, the only way to know if the audio file played has finished,
-    # is by handling CHANNEL_EXECUTE_COMPLETE events.
-    #
-    # Such events are received by the on_channel_execute_complete method
-    #
     # In order to "block" the execution of our service until the
-    # playback is finished, we use a synchronized queue from gevent
+    # command is finished, we use a synchronized queue from gevent
     # and wait for such event to come. The on_channel_execute_complete
     # method will put that event in the queue, then we may continue working.
-    #
     # However, other events will still come, like for instance, DTMF.
     def on_channel_execute_complete(self, event):
         if event['Application'] in self.WAIT_FOR_ACTIONS:
@@ -182,12 +174,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['CallStatus'] = 'completed'
             self.log.info("Sending hangup to %s" % hangup_url)
             gevent.spawn(self.send_to_url, hangup_url)
-
-    def on_channel_hangup_complete(self, event):
-        if not self._hangup_cause:
-            self._hangup_cause = event['Hangup-Cause']
-        self.log.info('Event: channel %s hangup completed (%s)' %
-                      (self.get_channel_unique_id(), self._hangup_cause))
 
     def on_custom(self, event):
         # special case to get Member-ID for conference
@@ -214,10 +200,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def run(self):
         self.resume()
         # Only catch events for this channel Unique-ID
-        self.eventplain('ALL')
+        #self.eventplain(EVENT_FILTER)
         self.filter('Unique-ID %s' % self.get_channel_unique_id())
         # Linger to get all remaining events before closing
         self.linger()
+        # Set plivo app flag
+        self.set("plivo_app=true")
         # Don't hangup after bridge
         self.set("hangup_after_bridge=false")
 
@@ -307,7 +295,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.info("Processing Call")
         try:
             self.process_call()
-        except Hangup:
+        except RESTHangup:
             self.log.warn("Channel has hung up, breaking Processing Call")
         except Exception, e:
             self.log.error("Processing Call Failure !")
@@ -327,7 +315,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         for x in range(MAX_REDIRECT):
             try:
                 if self.has_hangup():
-                    raise Hangup()
+                    raise RESTHangup()
                 self.fetch_xml(params=params)
                 if not self.xml_response:
                     self.log.warn("No XML Response")
@@ -339,7 +327,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 return
             except RESTRedirectException, redirect:
                 if self.has_hangup():
-                    raise Hangup()
+                    raise RESTHangup()
                 # Set target URL to Redirect URL
                 # Set method to Redirect method
                 # Set additional params to Redirect params

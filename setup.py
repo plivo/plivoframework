@@ -55,10 +55,10 @@ setup_args = {
 
 try:
     from setuptools import setup
-    setup_args['install_requires'] = ['gevent', 'flask']
+    setup_args['install_requires'] = ['gevent', 'flask', 'ujson']
 except ImportError:
     from distutils.core import setup
-    setup_args['requires'] = ['gevent', 'flask']
+    setup_args['requires'] = ['gevent', 'flask', 'ujson']
 
 # setup
 setup(**setup_args)

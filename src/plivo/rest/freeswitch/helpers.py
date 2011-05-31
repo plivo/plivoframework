@@ -38,9 +38,9 @@ def get_config(filename):
     return config
 
 
-def get_post_param(request, str):
+def get_post_param(request, key):
     try:
-        return request.form[str]
+        return request.form[key]
     except MultiDict.KeyError:
         return ""
 

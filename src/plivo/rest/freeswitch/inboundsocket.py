@@ -11,18 +11,18 @@ from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.rest.freeswitch.helpers import HTTPRequest
 
 
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP CHANNEL_STATE"
+
+
 class RESTInboundSocket(InboundEventSocket):
     """
     Interface between REST API and the InboundSocket
-    ...
-    ...
     """
     def __init__(self, host, port, password,
                  outbound_address='',
                  auth_id='', auth_token='',
-                 filter='ALL', log=None,
-                 default_http_method='POST'):
-        InboundEventSocket.__init__(self, host, port, password, filter)
+                 log=None, default_http_method='POST'):
+        InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER)
         self.fs_outbound_address = outbound_address
         self.log = log
         self.auth_id = auth_id
@@ -49,16 +49,15 @@ class RESTInboundSocket(InboundEventSocket):
             except ValueError:
                 return
             request_uuid = self.bk_jobs.pop(job_uuid, None)
-            # Handle failure case of originate - USER_NOT_REGISTERED
-            # This case does not raise a on_channel_hangup event.
-            # All other failures will be captured by on_channel_hangup
             if not request_uuid:
-                self.log.debug("No RequestUUID found !")
                 return
             try:
                 call_req = self.call_requests[request_uuid]
             except KeyError:
                 return
+            # Handle failure case of originate
+            # This case does not raise a on_channel_hangup event.
+            # All other failures will be captured by on_channel_hangup
             status = status.strip()
             reason = reason.strip()
             if status[:3] != '+OK':
@@ -260,6 +259,8 @@ class RESTInboundSocket(InboundEventSocket):
             return
 
         _options = []
+        # Set plivo app flag
+        _options.append("plivo_app=true")
         if gw.codecs:
             _options.append("absolute_codec_string=%s" % gw.codecs)
         if gw.timeout:
@@ -317,19 +318,26 @@ class RESTInboundSocket(InboundEventSocket):
     def hangup_call(self, call_uuid="", request_uuid=""):
         if not call_uuid and not request_uuid:
             self.log.error("Call Hangup Failed -- Missing CallUUID or RequestUUID")
-            return
+            return False
         if call_uuid:
             callid = "CallUUID %s" % call_uuid
-            args = "NORMAL_CLEARING uuid %s" % call_uuid
+            cmd = "uuid_kill %s NORMAL_CLEARING" % call_uuid
         else:  # Use request uuid
             callid = "RequestUUID %s" % request_uuid
-            args = "NORMAL_CLEARING plivo_request_uuid %s" % request_uuid
-        bg_api_response = self.bgapi("hupall %s" % args)
-        job_uuid = bg_api_response.get_job_uuid()
-        if not job_uuid:
-            self.log.error("Call Hangup Failed for %s -- JobUUID not received" % callid)
+            try:
+                call_req = self.call_requests[request_uuid]
+            except (KeyError, AttributeError):
+                self.log.error("Call Hangup Failed -- %s not found" \
+                            % (callid))
+                return False
+            callid = "RequestUUID %s" % request_uuid
+            cmd = "hupall NORMAL_CLEARING plivo_request_uuid %s" % request_uuid
+        res = self.api(cmd)
+        if not res.is_success():
+            self.log.error("Call Hangup Failed for %s -- %s" \
+                % (callid, res.get_response()))
             return False
-        self.log.info("Executed Call hangup for %s" % callid)
+        self.log.info("Executed Call Hangup for %s" % callid)
         return True
 
     def hangup_all_calls(self):

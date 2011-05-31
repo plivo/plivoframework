@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
+import gevent
 import os.path
 from datetime import datetime
 import re
@@ -10,7 +11,8 @@ from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
-                                            RESTNoExecuteException
+                                            RESTNoExecuteException, \
+                                            RESTHangup
 
 
 ELEMENTS_DEFAULT_PARAMS = {
@@ -113,7 +115,11 @@ class Element(object):
         if not execute:
             outbound_socket.log.error("[%s] Element cannot be executed !" % self.name)
             raise RESTNoExecuteException("Element %s cannot be executed !" % self.name)
-        result = execute(outbound_socket)
+        try:
+            result = execute(outbound_socket)
+        except RESTHangup:
+            outbound_socket.log.info("[%s] Done (Hangup)" % self.name)
+            raise
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
         else:
@@ -708,9 +714,12 @@ class GetDigits(Element):
         event = outbound_socket.wait_for_action()
         digits = outbound_socket.get_var('pagd_input')
         if digits is not None and self.action:
+            outbound_socket.log.info("GetDigits, Digits '%s' Pressed" % str(digits))
             # Redirect
             params = {'Digits': digits}
             self.fetch_rest_xml(self.action, params, self.method)
+        else:
+            outbound_socket.log.info("GetDigits, No Digits Pressed" % str(digits))
 
 
 class Hangup(Element):
@@ -863,7 +872,6 @@ class Play(Element):
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
-
         # Extract Loop attribute
         try:
             loop = int(self.extract_attribute_value("loop", 1))
@@ -911,13 +919,19 @@ class Play(Element):
                 outbound_socket.wait_for_action()
             else:
                 for i in range(self.loop_times):
-                    outbound_socket.playback(self.sound_file_path)
-                    event = outbound_socket.wait_for_action()
-                    # Log playback execute response
-                    outbound_socket.log.info("Play finished once (%s)" \
-                            % str(event.get_header('Application-Response')))
+                    res = outbound_socket.playback(self.sound_file_path)
+                    if res.is_success():
+                        gevent.sleep(0)
+                        event = outbound_socket.wait_for_action()
+                        gevent.sleep(0.01)
+                    else:
+                        outbound_socket.log.error("Play Failed - %s" \
+                                        % str(res.get_response()))
+                        return
+                # Log playback execute response
+                outbound_socket.log.info("Play finished")
         else:
-            outbound_socket.log.info("Invalid Sound File - Ignoring Play")
+            outbound_socket.log.error("Invalid Sound File - Ignoring Play")
 
     def is_infinite(self):
         if self.loop_times <= 0:

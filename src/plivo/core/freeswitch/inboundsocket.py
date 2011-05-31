@@ -16,8 +16,9 @@ class InboundEventSocket(EventSocket):
     '''
     FreeSWITCH Inbound Event Socket
     '''
-    def __init__(self, host, port, password, filter="ALL", pool_size=500, connect_timeout=5):
-        EventSocket.__init__(self, filter, pool_size)
+    def __init__(self, host, port, password, filter="ALL", 
+                 pool_size=500, connect_timeout=5, eventjson=True):
+        EventSocket.__init__(self, filter, pool_size, eventjson)
         self.password = password
         self.transport = InboundTransport(host, port, connect_timeout=connect_timeout)
 
@@ -72,7 +73,10 @@ class InboundEventSocket(EventSocket):
 
         # Sets event filter or raises ConnectError
         if self._filter:
-            filter_response = self.eventplain(self._filter)
+            if self._is_eventjson:
+                filter_response = self.eventjson(self._filter)
+            else:
+                filter_response = self.eventplain(self._filter)
             if not filter_response.is_reply_text_success():
                 self.disconnect()
                 raise ConnectError("Event filter failure")
