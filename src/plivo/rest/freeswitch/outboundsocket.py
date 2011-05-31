@@ -42,21 +42,25 @@ class RequestLogger(object):
 
     def info(self, msg):
         """Log info level"""
+        msg = msg.decode("utf-8")
         msg = msg.encode("utf-8")
         self.logger.info('(%s) %s' % (self.request_id, str(msg)))
 
     def warn(self, msg):
         """Log warn level"""
+        msg = msg.decode("utf-8")
         msg = msg.encode("utf-8")
         self.logger.warn('(%s) %s' % (self.request_id, str(msg)))
 
     def error(self, msg):
         """Log error level"""
+        msg = msg.decode("utf-8")
         msg = msg.encode("utf-8")
         self.logger.error('(%s) %s' % (self.request_id, str(msg)))
 
     def debug(self, msg):
         """Log debug level"""
+        msg = msg.decode("utf-8")
         msg = msg.encode("utf-8")
         self.logger.debug('(%s) %s' % (self.request_id, str(msg)))
 
