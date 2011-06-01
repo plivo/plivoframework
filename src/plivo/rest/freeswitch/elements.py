@@ -478,7 +478,7 @@ class Dial(Element):
             dial_options.append(caller_id)
         else:
             outbound_socket.unset("effective_caller_id_number")
-        # Set ring flag if dial will ring. 
+        # Set ring flag if dial will ring.
         # But first set plivo_dial_rang to false
         # to be sure we don't get it from an old Dial
         outbound_socket.set("plivo_dial_rang=false")
@@ -714,12 +714,12 @@ class GetDigits(Element):
         event = outbound_socket.wait_for_action()
         digits = outbound_socket.get_var('pagd_input')
         if digits is not None and self.action:
-            outbound_socket.log.info("GetDigits, Digits '%s' Pressed" % str(digits))
+            outbound_socket.log.info("GetDigits, Digits '%s' Received" % str(digits))
             # Redirect
             params = {'Digits': digits}
             self.fetch_rest_xml(self.action, params, self.method)
         else:
-            outbound_socket.log.info("GetDigits, No Digits Pressed" % str(digits))
+            outbound_socket.log.info("GetDigits, No Digits Received")
 
 
 class Hangup(Element):
@@ -826,7 +826,7 @@ class Wait(Element):
     """Wait for some time to further process the call
 
     length: length of wait time in seconds
-    transferEnabled: break Wait on transfer or hangup 
+    transferEnabled: break Wait on transfer or hangup
                     (true/false default false)
     """
     def __init__(self):
