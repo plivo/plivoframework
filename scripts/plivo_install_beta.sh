@@ -65,31 +65,30 @@ fi
 
 echo "Setting up Prerequisites and Dependencies"
 case $DIST in
-        'DEBIAN')
-            DEBIAN_VERSION=$(cat /etc/debian_version |cut -d'.' -f1)
-            if [ "$DEBIAN_VERSION" = "5" ]; then
-                echo "deb http://backports.debian.org/debian-backports lenny-backports main" >> /etc/apt/sources.list
+    'DEBIAN')
+        DEBIAN_VERSION=$(cat /etc/debian_version |cut -d'.' -f1)
+        if [ "$DEBIAN_VERSION" = "5" ]; then
+            echo "deb http://backports.debian.org/debian-backports lenny-backports main" >> /etc/apt/sources.list
             apt-get -y update
-        apt-get -y install git-core python-setuptools python-dev build-essential
-                apt-get -y install -t lenny-backports libevent-1.4-2 libevent-dev
-            else
+            apt-get -y install git-core python-setuptools python-dev build-essential
+            apt-get -y install -t lenny-backports libevent-1.4-2 libevent-dev
+        else
             apt-get -y update
-        apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
-            fi
-            easy_install virtualenv
-            easy_install pip
-        ;;
-        'CENTOS')
-            yum -y update
-            yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel
+            apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
+        fi
+        easy_install virtualenv
+        easy_install pip
+    ;;
+    'CENTOS')
+        yum -y update
+        yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel
 
         which git &>/dev/null
         if [ $? -ne 0 ]; then
-
             #install the RPMFORGE Repository
             if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
             then
-                        # Install RPMFORGE Repo
+                # Install RPMFORGE Repo
                 rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
 echo '
 [rpmforge]
@@ -101,14 +100,13 @@ gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
 gpgcheck = 1
 ' > /etc/yum.repos.d/rpmforge.repo
             fi
-
             yum -y --enablerepo=rpmforge install git-core
         fi
 
         # Setup Env
         mkdir -p $REAL_PATH/deploy
         DEPLOY=$REAL_PATH/deploy
-    cd $DEPLOY
+        cd $DEPLOY
         cd $REAL_PATH/deploy
 
         # Install Isolated copy of python
@@ -127,10 +125,10 @@ gpgcheck = 1
         wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
         $DEPLOY/bin/python ez_setup.py
 
-    EASY_INSTALL=$(which easy_install)
-    $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
-    $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
-        ;;
+        EASY_INSTALL=$(which easy_install)
+        $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
+        $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
+    ;;
 esac
 
 
