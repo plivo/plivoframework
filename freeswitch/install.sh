@@ -72,35 +72,39 @@ git clone $FS_GIT_REPO
 cd $FS_BASE_PATH/freeswitch
 sh bootstrap.sh && ./configure
 [ -f modules.conf ] && cp modules.conf modules.conf.bak
-sed -i "s/#applications\/mod_curl/applications\/mod_curl/g" modules.conf
-sed -i "s/#asr_tts\/mod_flite/asr_tts\/mod_flite/g" modules.conf
-sed -i "s/#asr_tts\/mod_tts_commandline/asr_tts\/mod_tts_commandline/g" modules.conf
-sed -i "s/#formats\/mod_shout/formats\/mod_shout/g" modules.conf
-sed -i "s/#endpoints\/mod_dingaling/endpoints\/mod_dingaling/g" modules.conf
-sed -i "s/#formats\/mod_shell_stream/formats\/mod_shell_stream/g" modules.conf
-sed -i "s/#say\/mod_say_de/say\/mod_say_de/g" modules.conf
-sed -i "s/#say\/mod_say_es/say\/mod_say_es/g" modules.conf
-sed -i "s/#say\/mod_say_fr/say\/mod_say_fr/g" modules.conf
-sed -i "s/#say\/mod_say_it/say\/mod_say_it/g" modules.conf
-sed -i "s/#say\/mod_say_nl/say\/mod_say_nl/g" modules.conf
-sed -i "s/#say\/mod_say_ru/say\/mod_say_ru/g" modules.conf
-sed -i "s/#say\/mod_say_zh/say\/mod_say_zh/g" modules.conf
-sed -i "s/#say\/mod_say_hu/say\/mod_say_hu/g" modules.conf
-sed -i "s/#say\/mod_say_th/say\/mod_say_th/g" modules.conf
+sed -i -e \
+"s/#applications\/mod_curl/applications\/mod_curl/g" \
+-e "s/#asr_tts\/mod_flite/asr_tts\/mod_flite/g" \
+-e "s/#asr_tts\/mod_tts_commandline/asr_tts\/mod_tts_commandline/g" \
+-e "s/#formats\/mod_shout/formats\/mod_shout/g" \
+-e "s/#endpoints\/mod_dingaling/endpoints\/mod_dingaling/g" \
+-e "s/#formats\/mod_shell_stream/formats\/mod_shell_stream/g" \
+-e "s/#say\/mod_say_de/say\/mod_say_de/g" \
+-e "s/#say\/mod_say_es/say\/mod_say_es/g" \
+-e "s/#say\/mod_say_fr/say\/mod_say_fr/g" \
+-e "s/#say\/mod_say_it/say\/mod_say_it/g" \
+-e "s/#say\/mod_say_nl/say\/mod_say_nl/g" \
+-e "s/#say\/mod_say_ru/say\/mod_say_ru/g" \
+-e "s/#say\/mod_say_zh/say\/mod_say_zh/g" \
+-e "s/#say\/mod_say_hu/say\/mod_say_hu/g" \
+-e "s/#say\/mod_say_th/say\/mod_say_th/g" \
+modules.conf
 make && make install && make sounds-install && make moh-install
 
 # Enable FreeSWITCH modules
 cd $FS_INSTALLED_PATH/conf/autoload_configs/
 [ -f modules.conf.xml ] && cp modules.conf.xml modules.conf.xml.bak
-sed -i "s/<\!-- <load module=\"mod_xml_curl\"\/> -->/<load module=\"mod_xml_curl\"\/>/g" modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_xml_cdr\"\/> -->/<load module=\"mod_xml_cdr\"\/>/g" modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_dingaling\"\/> -->/<load module=\"mod_dingaling\"\/>/g" modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_shout\"\/> -->/<load module=\"mod_shout\"\/>/g" modules.conf.xml
-sed -i "s/<\!--<load module=\"mod_tts_commandline\"\/>-->/<load module=\"mod_tts_commandline\"\/>/g" modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_flite\"\/> -->/<load module=\"mod_flite\"\/>/g" modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_say_ru\"\/> -->/<load module=\"mod_say_ru\"\/>/g" modules.conf.xml
-sed -i "s/<\!-- <load module=\"mod_say_zh\"\/> -->/<load module=\"mod_say_zh\"\/>/g" modules.conf.xml
-sed -i 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' modules.conf.xml
+sed -i -r \
+-e "s/<\!--\s?<load module=\"mod_xml_curl\"\/>\s?-->/<load module=\"mod_xml_curl\"\/>/g" \
+-e "s/<\!--i\s?<load module=\"mod_xml_cdr\"\/>\s?-->/<load module=\"mod_xml_cdr\"\/>/g" \
+-e  "s/<\!--\s?<load module=\"mod_dingaling\"\/>\s?-->/<load module=\"mod_dingaling\"\/>/g" \
+-e "s/<\!--\s?<load module=\"mod_shout\"\/>\s?-->/<load module=\"mod_shout\"\/>/g" \
+-e "s/<\!--\s?<load module=\"mod_tts_commandline\"\/>\s?-->/<load module=\"mod_tts_commandline\"\/>/g" \
+-e "s/<\!--\s?<load module=\"mod_flite\"\/>\s?-->/<load module=\"mod_flite\"\/>/g" \
+-e "s/<\!--\s?<load module=\"mod_say_ru\"\/>\s?-->/<load module=\"mod_say_ru\"\/>/g" \
+-e "s/<\!--\s?<load module=\"mod_say_zh\"\/>\s?-->/<load module=\"mod_say_zh\"\/>/g" \
+-e 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' \
+modules.conf.xml
 
 
 #Configure Dialplan
