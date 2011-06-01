@@ -25,7 +25,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 
 
 MAX_REDIRECT = 1000
-EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM"
+EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM conference::maintenance"
 
 
 
@@ -157,7 +157,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     # However, other events will still come, like for instance, DTMF.
     def on_channel_execute_complete(self, event):
         if event['Application'] in self.WAIT_FOR_ACTIONS:
-            self._action_queue.put(event)
+            # If transfer has begun, put empty event to break current action
+            if event['variable_plivo_transfer_progress'] == 'true':
+                self._action_queue.put(Event())
+            else:
+                self._action_queue.put(event)
 
     def on_channel_hangup(self, event):
         self._hangup_cause = event['Hangup-Cause']
@@ -174,6 +178,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['CallStatus'] = 'completed'
             self.log.info("Sending hangup to %s" % hangup_url)
             gevent.spawn(self.send_to_url, hangup_url)
+        # Prevent command to be stuck while waiting response
+        self._action_queue.put_nowait(Event())
 
     def on_custom(self, event):
         # special case to get Member-ID for conference

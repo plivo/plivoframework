@@ -463,7 +463,7 @@ class Commands(object):
         """
         return self._protocol_sendmsg("conference", args, uuid, lock)
 
-    def speak(self, text, uuid="", lock=True):
+    def speak(self, text, uuid="", lock=True, loops=1):
         """Please refer to http://wiki.freeswitch.org/wiki/TTS
 
         >>> "set" data="tts_engine=flite"
@@ -472,7 +472,7 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("speak", text, uuid, lock)
+        return self._protocol_sendmsg("speak", text, uuid, lock, loops)
 
     def hupall(self, args):
         "Please refer to http://wiki.freeswitch.org/wiki/Mod_commands#hupall"
