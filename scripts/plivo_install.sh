@@ -27,9 +27,9 @@ echo "$PLIVO_ENV" |grep '^/' -q && REAL_PATH=$PLIVO_ENV || REAL_PATH=$PWD/$PLIVO
 
 # Identify Linix Distribution type
 if [ -f /etc/debian_version ] ; then
-        DIST='DEBIAN'
+    DIST='DEBIAN'
 elif [ -f /etc/redhat-release ] ; then
-        DIST='CENTOS'
+    DIST='CENTOS'
 else
     echo ""
     echo "This Installer should be run on a CentOS or a Debian based system"
@@ -60,12 +60,12 @@ fi
 
 echo "Setting up Prerequisites and Dependencies"
 case $DIST in
-        'DEBIAN')
-            apt-get -y install python-setuptools python-dev build-essential libevent-dev
-        ;;
-        'CENTOS')
-            yum -y install python-setuptools python-tools python-devel libevent
-        ;;
+    'DEBIAN')
+        apt-get -y install python-setuptools python-dev build-essential libevent-dev
+    ;;
+    'CENTOS')
+        yum -y install python-setuptools python-tools python-devel libevent
+    ;;
 esac
 
 easy_install virtualenv
