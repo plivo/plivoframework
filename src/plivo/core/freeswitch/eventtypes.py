@@ -6,7 +6,7 @@ Event Types classes
 """
 
 from urllib import unquote
-import ujson
+import ujson as json
 
 
 class Event(object):
@@ -224,7 +224,7 @@ class JsonEvent(Event):
         self._headers = {}
         self._raw_body = ''
         if buffer:
-            self._headers = ujson.loads(buffer)
+            self._headers = json.loads(buffer)
             try:
                 self._raw_body = self._headers['_body']
             except KeyError:
