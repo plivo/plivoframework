@@ -18,13 +18,13 @@ from plivo.core.errors import LimitExceededError, ConnectError
 
 
 EOL = "\n"
-MAXLINES_PER_EVENT = 2000
+MAXLINES_PER_EVENT = 1000
 
 
 
 class EventSocket(Commands):
     '''EventSocket class'''
-    def __init__(self, filter="ALL", pool_size=500, eventjson=True):
+    def __init__(self, filter="ALL", pool_size=5000, eventjson=True):
         self._is_eventjson = eventjson
         # Callbacks for reading events and sending responses.
         self._response_callbacks = {'api/response':self._api_response,
@@ -62,7 +62,7 @@ class EventSocket(Commands):
         if self.pool:
             self.pool.spawn(func, *args, **kwargs)
         else:
-            gevent.spawn(func, *args, **kwargs)
+            gevent.spawn_raw(func, *args, **kwargs)
 
     def is_connected(self):
         '''
@@ -96,7 +96,7 @@ class EventSocket(Commands):
                 # Only dispatches event if Event-Name header found.
                 if ev and ev['Event-Name']:
                     self._spawn(self.dispatch_event, ev)
-                    gevent.sleep(0.025)
+                gevent.sleep(0.0001)
             except (LimitExceededError, ConnectError, socket.error):
                 self.connected = False
                 break
@@ -116,6 +116,7 @@ class EventSocket(Commands):
         buff = ''
         for x in range(MAXLINES_PER_EVENT):
             line = self.transport.read_line()
+            gevent.sleep(0.0001)
             if line == '':
                 raise ConnectError("connection closed")
             elif line == EOL:
@@ -135,7 +136,9 @@ class EventSocket(Commands):
         length = event.get_content_length()
         # Reads length bytes if length > 0
         if length:
-            return self.transport.read(int(length))
+            res = self.transport.read(int(length))
+            gevent.sleep(0.0001)
+            return res
         return None
 
     def read_raw_response(self, event, raw):
@@ -329,6 +332,7 @@ class EventSocket(Commands):
         # Casts to CommandResponse by default
         else:
             event = CommandResponse.cast(event)
+        gevent.sleep(0.0001)
         return event
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
@@ -340,5 +344,6 @@ class EventSocket(Commands):
             event = self._response_queue.get()
         finally:
             self._lock.release()
+        gevent.sleep(0.0001)
         # Always casts Event to CommandResponse
         return CommandResponse.cast(event)

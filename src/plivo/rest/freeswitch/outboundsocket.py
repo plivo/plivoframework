@@ -118,7 +118,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         # inherits from outboundsocket
-        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER)
+        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER, 
+                                     eventjson=True, pool_size=0)
 
     def _protocol_send(self, command, args=''):
         """Access parent method _protocol_send
