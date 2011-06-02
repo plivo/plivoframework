@@ -420,10 +420,14 @@ class Dial(Element):
                     mohs.append("shout://%s" % audio_path)
         return mohs
 
-    def create_number(self, number_instance):
+    def create_number(self, number_instance, outbound_socket):
         num_gw = []
         # skip number object without gateway or number
-        if not number_instance.gateways or not number_instance.number:
+        if not number_instance.gateways:
+            outbound_socket.log.error("Gateway not defined on Number object !")
+            return ''
+        if not number_instance.number:
+            outbound_socket.log.error("Number not defined on Number object  !")
             return ''
         if number_instance.send_digits:
             option_send_digits = "api_on_answer='uuid_recv_dtmf ${uuid} %s'" \
@@ -487,7 +491,7 @@ class Dial(Element):
         # Set numbers to dial from Number nouns
         for child in self.children:
             if isinstance(child, Number):
-                dial_num = self.create_number(child)
+                dial_num = self.create_number(child, outbound_socket)
                 if not dial_num:
                     continue
                 numbers.append(dial_num)
@@ -779,14 +783,14 @@ class Number(Element):
     number: number to dial
     sendDigits: key to press after connecting to the number
     gateways: gateway string separated by comma to dialout the number
-    gatewayCodecs: codecs for each gatway separated by comma
+    gatewayCodecs: codecs for each gateway separated by comma
     gatewayTimeouts: timeouts for each gateway separated by comma
     gatewayRetries: number of times to retry each gateway separated by comma
     extraDialString: extra freeswitch dialstring to be added while dialing out to number
     """
     def __init__(self):
         Element.__init__(self)
-        self.number = ""
+        self.number = ''
         self.gateways = []
         self.gateway_codecs = []
         self.gateway_timeouts = []
@@ -866,9 +870,9 @@ class Play(Element):
     """
     def __init__(self):
         Element.__init__(self)
-        self.audio_directory = ""
+        self.audio_directory = ''
         self.loop_times = 1
-        self.sound_file_path = ""
+        self.sound_file_path = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
