@@ -791,8 +791,8 @@ class Number(Element):
         self.gateway_codecs = []
         self.gateway_timeouts = []
         self.gateway_retries = []
-        self.extra_dial_string = ""
-        self.send_digits = ""
+        self.extra_dial_string = ''
+        self.send_digits = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -800,13 +800,13 @@ class Number(Element):
         # don't allow "|" and "," in a number noun to avoid call injection
         self.number = re.split(',|\|', self.number)[0]
         self.extra_dial_string = \
-                                self.extract_attribute_value("extraDialString")
-        self.send_digits = self.extract_attribute_value("sendDigits")
+                                self.extract_attribute_value('extraDialString')
+        self.send_digits = self.extract_attribute_value('sendDigits')
 
-        gateways = self.extract_attribute_value("gateways")
-        gateway_codecs = self.extract_attribute_value("gatewayCodecs")
-        gateway_timeouts = self.extract_attribute_value("gatewayTimeouts")
-        gateway_retries = self.extract_attribute_value("gatewayRetries")
+        gateways = self.extract_attribute_value('gateways')
+        gateway_codecs = self.extract_attribute_value('gatewayCodecs')
+        gateway_timeouts = self.extract_attribute_value('gatewayTimeouts')
+        gateway_retries = self.extract_attribute_value('gatewayRetries')
 
         if gateways:
             self.gateways = gateways.split(',')
@@ -836,7 +836,7 @@ class Wait(Element):
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
         try:
-            length = int(self.extract_attribute_value("length"))
+            length = int(self.extract_attribute_value('length'))
         except ValueError:
             raise RESTFormatException("Wait 'length' must be an integer")
         self.transfer = self.extract_attribute_value("transferEnabled") \
