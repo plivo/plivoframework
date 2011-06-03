@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2011 Plivo Team. See LICENSE for details.
+
 from gevent import monkey; monkey.patch_all()
 import socket
 import sys
@@ -20,11 +23,9 @@ class Process(multiprocessing.Process):
                 return
 
 
-
 class OutboundServer(object):
-    def __init__(self, address, handle_class, filter='ALL', log=None):
+    def __init__(self, address, handle_class, filter='ALL'):
         self.hostname, self.port = address
-        self.log = log
         self.running = False
         self._filter = filter
         # Define the Class that will handle process when receiving message
@@ -37,7 +38,7 @@ class OutboundServer(object):
         self.socket.bind((self.hostname, self.port))
         self.socket.listen(5)
 
-    def run(self):
+    def loop(self):
         self._run = True
         try:
             while self._run:
@@ -53,8 +54,4 @@ class OutboundServer(object):
         pass
 
     def do_handle(self, conn, address):
-        self.log.debug("%r Started" \
-            % multiprocessing.current_process())
         self._handle_class(socket, address, self._filter)
-        self.log.debug("%r Ended" \
-            % multiprocessing.current_process())

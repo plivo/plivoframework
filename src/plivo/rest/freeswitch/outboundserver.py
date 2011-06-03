@@ -67,7 +67,7 @@ class PlivoOutboundServer(OutboundServer):
         # This is where we define the connection with the
         # Plivo XML element Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
-                        PlivoOutboundEventSocket, filter=None, log=self.log)
+                        PlivoOutboundEventSocket, filter=None)
 
     def _get_request_id(self):
         try:
@@ -95,10 +95,10 @@ class PlivoOutboundServer(OutboundServer):
             self.log.set_debug()
         else:
             logtype = helpers.get_conf_value(self._config,
-                                                    'freeswitch', 'LOG_TYPE')
+                                                'freeswitch', 'LOG_TYPE')
             if logtype == 'file':
                 logfile = helpers.get_conf_value(self._config,
-                                                    'freeswitch', 'LOG_FILE')
+                                                'freeswitch', 'LOG_FILE')
                 self.log = FileLogger(logfile)
             elif logtype == 'syslog':
                 syslogaddress = helpers.get_conf_value(self._config,
@@ -109,7 +109,7 @@ class PlivoOutboundServer(OutboundServer):
             else:
                 self.log = StdoutLogger()
             debug_mode = helpers.get_conf_value(self._config,
-                                                    'freeswitch', 'DEBUG')
+                                                'freeswitch', 'DEBUG')
             if debug_mode == 'true':
                 self.log.set_debug()
             else:
@@ -118,9 +118,9 @@ class PlivoOutboundServer(OutboundServer):
     def do_daemon(self):
         # get user/group from config
         user = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'FS_OUTBOUND_USER')
+                                    'freeswitch', 'FS_OUTBOUND_USER')
         group = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'FS_OUTBOUND_GROUP')
+                                    'freeswitch', 'FS_OUTBOUND_GROUP')
         if not user or not group:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
@@ -140,22 +140,27 @@ class PlivoOutboundServer(OutboundServer):
         self.kill()
 
     def start(self):
-        self.log.info("Starting OutboundServer ...")
+        if USE_PROCS:
+            msg = "with procs"
+        else:
+            msg = "without procs"
+        self.log.info("Starting OutboundServer (%s) ..." \
+                        % msg)
         # catch SIG_TERM
         gevent.signal(signal.SIGTERM, self.sig_term)
         # run
         self._run = True
         if self._daemon:
             self.do_daemon()
-        self.log.info("OutboundServer started at '%s'"
-                                            % str(self.fs_outbound_address))
         super(PlivoOutboundServer, self).start()
-        super(PlivoOutboundServer, self).run()
+        self.log.info("OutboundServer started at '%s'" \
+                                    % str(self.fs_outbound_address))
+        self.loop()
         self.log.info("OutboundServer Exited")
 
 
 if __name__ == '__main__':
     outboundserver = PlivoOutboundServer(
-                                configfile='../../../config/default.conf',
+                                configfile='./etc/plivo/default.conf',
                                 daemon=False)
     outboundserver.start()

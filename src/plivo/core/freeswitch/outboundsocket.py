@@ -100,7 +100,7 @@ class OutboundServer(StreamServer):
     def do_handle(self, socket, address):
         self._handle_class(socket, address, self._filter)
 
-    def run(self):
+    def loop(self):
         self._run = True
         try:
             while self._run:
