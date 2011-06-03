@@ -157,6 +157,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     # method will put that event in the queue, then we may continue working.
     # However, other events will still come, like for instance, DTMF.
     def on_channel_execute_complete(self, event):
+        if not event['Unique-ID'] == self.get_channel_unique_id():
+            return
         if event['Application'] in self.WAIT_FOR_ACTIONS:
             # If transfer has begun, put empty event to break current action
             if event['variable_plivo_transfer_progress'] == 'true':
@@ -165,6 +167,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self._action_queue.put(event)
 
     def on_channel_hangup(self, event):
+        if not event['Unique-ID'] == self.get_channel_unique_id():
+            return
         self._hangup_cause = event['Hangup-Cause']
         self.log.info('Event: channel %s has hung up (%s)' %
                       (self.get_channel_unique_id(), self._hangup_cause))
