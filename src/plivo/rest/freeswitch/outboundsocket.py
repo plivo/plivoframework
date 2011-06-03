@@ -105,7 +105,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.session_params = {}
         self._hangup_cause = ''
         # create queue for waiting actions
-        self._action_queue = gevent.queue.Queue(50)
+        self._action_queue = gevent.queue.Queue()
         # set default answer url
         self.default_answer_url = default_answer_url
         # set default hangup_url
@@ -201,7 +201,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.debug("Releasing Connection ...")
         super(PlivoOutboundEventSocket, self).disconnect()
         # Prevent command to be stuck while waiting response
-        self._action_queue.put_nowait(Event())
+        try:
+            self._action_queue.put_nowait(Event())
+        except gevent.queue.Full:
+            pass
         self.log.debug("Releasing Connection Done")
 
     def run(self):

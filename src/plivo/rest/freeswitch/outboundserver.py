@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
+
+USE_PROCS = True
+
 from gevent import monkey
 monkey.patch_all()
 
@@ -12,7 +15,11 @@ import sys
 
 import gevent
 
-from plivo.core.freeswitch.outboundsocket import OutboundServer
+if USE_PROCS:
+    from plivo.core.freeswitch.multiprocserver import OutboundServer
+else:
+    from plivo.core.freeswitch.outboundsocket import OutboundServer
+
 from plivo.rest.freeswitch.outboundsocket import PlivoOutboundEventSocket
 from plivo.rest.freeswitch import helpers
 import plivo.utils.daemonize
@@ -60,7 +67,7 @@ class PlivoOutboundServer(OutboundServer):
         # This is where we define the connection with the
         # Plivo XML element Processor
         OutboundServer.__init__(self, (fs_host, fs_port),
-                                        PlivoOutboundEventSocket, filter=None)
+                        PlivoOutboundEventSocket, filter=None, log=self.log)
 
     def _get_request_id(self):
         try:
@@ -140,14 +147,10 @@ class PlivoOutboundServer(OutboundServer):
         self._run = True
         if self._daemon:
             self.do_daemon()
-        super(PlivoOutboundServer, self).start()
         self.log.info("OutboundServer started at '%s'"
                                             % str(self.fs_outbound_address))
-        try:
-            while self._run:
-                gevent.sleep(1.0)
-        except (SystemExit, KeyboardInterrupt):
-            pass
+        super(PlivoOutboundServer, self).start()
+        super(PlivoOutboundServer, self).run()
         self.log.info("OutboundServer Exited")
 
 
