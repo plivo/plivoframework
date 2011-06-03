@@ -19,8 +19,8 @@ class Process(multiprocessing.Process):
         if self._target:
             try:
                 self._target(*self._args, **self._kwargs)
-            except (SystemExit, KeyboardInterrupt):
-                return
+            except KeyboardInterrupt:
+                raise SystemExit()
 
 
 class OutboundServer(object):
@@ -49,9 +49,9 @@ class OutboundServer(object):
         except (SystemExit, KeyboardInterrupt):
             pass
 
-
     def kill(self):
         pass
 
     def do_handle(self, conn, address):
         self._handle_class(socket, address, self._filter)
+
