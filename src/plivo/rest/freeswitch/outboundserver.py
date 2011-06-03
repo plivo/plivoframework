@@ -2,7 +2,7 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 
-USE_PROCS = True
+USE_PROCS = False
 
 from gevent import monkey
 monkey.patch_all()
