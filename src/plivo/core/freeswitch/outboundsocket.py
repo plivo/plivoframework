@@ -7,6 +7,7 @@ Outbound Event Socket class
 This manage Event Socket communication with the Freeswitch Server
 """
 
+import gevent
 from gevent.server import StreamServer
 from gevent.timeout import Timeout
 from plivo.core.freeswitch.eventsocket import EventSocket
@@ -98,6 +99,15 @@ class OutboundServer(StreamServer):
 
     def do_handle(self, socket, address):
         self._handle_class(socket, address, self._filter)
+
+    def loop(self):
+        self._run = True
+        try:
+            while self._run:
+                gevent.sleep(1.0)
+        except (SystemExit, KeyboardInterrupt):
+            pass
+
 
 
 

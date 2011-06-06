@@ -236,6 +236,6 @@ class PlivoRestServer(PlivoRestApi):
 
 
 if __name__ == '__main__':
-    server = PlivoRestServer(configfile='../../../config/default.conf',
-                                                                daemon=False)
+    server = PlivoRestServer(configfile='./etc/plivo/default.conf',
+                                                        daemon=False)
     server.start()

@@ -1,6 +1,11 @@
 from setuptools import find_packages
 import sys
 
+requires = ['gevent', 'flask', 'ujson']
+
+if sys.version_info < (2, 6):
+    requires.append('processing')
+
 if sys.prefix == '/usr':
     etc_prefix = '/etc'
 else:
@@ -55,10 +60,10 @@ setup_args = {
 
 try:
     from setuptools import setup
-    setup_args['install_requires'] = ['gevent', 'flask', 'ujson']
+    setup_args['install_requires'] = requires
 except ImportError:
     from distutils.core import setup
-    setup_args['requires'] = ['gevent', 'flask', 'ujson']
+    setup_args['requires'] = requires
 
 # setup
 setup(**setup_args)
