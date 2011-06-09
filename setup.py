@@ -1,7 +1,7 @@
 from setuptools import find_packages
 import sys
 
-requires = ['gevent==0.13.6', 'flask', 'ujson']
+requires = ['gevent==0.13.6', 'flask==0.6.1', 'ujson']
 
 if sys.version_info < (2, 6):
     requires.append('processing')
