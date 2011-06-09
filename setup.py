@@ -1,7 +1,7 @@
 from setuptools import find_packages
 import sys
 
-requires = ['gevent', 'flask', 'ujson']
+requires = ['gevent (==0.13.6)', 'flask', 'ujson']
 
 if sys.version_info < (2, 6):
     requires.append('processing')
@@ -67,5 +67,3 @@ except ImportError:
 
 # setup
 setup(**setup_args)
-
-
