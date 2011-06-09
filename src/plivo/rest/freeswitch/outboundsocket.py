@@ -14,7 +14,7 @@ import gevent
 import gevent.queue
 
 from plivo.core.freeswitch.eventtypes import Event
-from plivo.rest.freeswitch.helpers import HTTPRequest
+from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import elements
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
@@ -235,7 +235,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.session_params["Direction"] = channel.get_header('Call-Direction')
         aleg_uuid = ""
         aleg_request_uuid = ""
-        forwarded_from = channel.get_header('variable_divertTo')
+        forwarded_from = get_substring(':', '@',
+                                channel.get_header('variable_sip_h_Diversion'))
 
         if self.session_params["Direction"] == 'outbound':
             # Look for variables in channel headers

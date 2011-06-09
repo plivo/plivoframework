@@ -16,6 +16,16 @@ import urlparse
 from werkzeug.datastructures import MultiDict
 
 
+def get_substring(start_char, end_char, data):
+    start_pos = data.find(start_char)
+    if start_pos < 0:
+        return ""
+    end_pos = data.find(end_char)
+    if end_pos < 0:
+        return ""
+    print data[start_pos+len(start_char):end_pos]
+
+
 def url_exists(url):
     p = urlparse.urlparse(url)
     try:
@@ -171,4 +181,3 @@ class HTTPRequest:
         request = self._prepare_http_request(uri, params, method)
         response = urllib2.urlopen(request).read()
         return response
-
