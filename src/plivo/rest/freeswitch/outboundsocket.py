@@ -28,8 +28,6 @@ MAX_REDIRECT = 1000
 EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM conference::maintenance"
 
 
-
-
 class RequestLogger(object):
     """
     Class RequestLogger
@@ -118,7 +116,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         # inherits from outboundsocket
-        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER, 
+        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER,
                                      eventjson=True, pool_size=0)
 
     def _protocol_send(self, command, args=''):
@@ -237,6 +235,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.session_params["Direction"] = channel.get_header('Call-Direction')
         aleg_uuid = ""
         aleg_request_uuid = ""
+        forwarded_from = channel.get_header('variable_divertTo')
 
         if self.session_params["Direction"] == 'outbound':
             # Look for variables in channel headers
@@ -300,6 +299,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['ALegRequestUUID'] = aleg_request_uuid
         if sched_hangup_id:
             self.session_params['ScheduledHangupId'] = sched_hangup_id
+        if forwarded_from:
+            self.session_params['ForwardedFrom'] = forwarded_from
 
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
