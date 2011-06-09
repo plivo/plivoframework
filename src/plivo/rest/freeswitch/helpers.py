@@ -17,6 +17,8 @@ from werkzeug.datastructures import MultiDict
 
 
 def get_substring(start_char, end_char, data):
+    if data is None or not data:
+        return ""
     start_pos = data.find(start_char)
     if start_pos < 0:
         return ""
