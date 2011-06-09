@@ -23,7 +23,7 @@ def get_substring(start_char, end_char, data):
     end_pos = data.find(end_char)
     if end_pos < 0:
         return ""
-    print data[start_pos+len(start_char):end_pos]
+    return data[start_pos+len(start_char):end_pos]
 
 
 def url_exists(url):
