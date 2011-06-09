@@ -42,11 +42,13 @@ if [ -d $PLIVO_ENV ] ; then
     echo "$PLIVO_ENV already exists!"
     echo "Press any key to continue to update the existing environment or CTRL-C to exit"
     echo ""
+    ACTION='UPDATE'
 else
     echo ""
     echo "Plivo Framework will be installed at \"$REAL_PATH\""
     echo "Press any key to continue or CTRL-C to exit"
     echo ""
+    ACTION='INSTALL'
 fi
 read INPUT
 
@@ -138,10 +140,12 @@ source $REAL_PATH/bin/activate
 
 pip install -e git+${PLIVO_GIT_REPO}#egg=plivo
 
-mkdir -p $REAL_PATH/etc/plivo &>/dev/null
-wget --no-check-certificate $PLIVO_CONF_PATH -O $REAL_PATH/etc/plivo/default.conf
-$REAL_PATH/bin/plivo-postinstall &>/dev/null
 
+if [ $ACTION = 'INSTALL' ]; then
+    mkdir -p $REAL_PATH/etc/plivo &>/dev/null
+    wget --no-check-certificate $PLIVO_CONF_PATH -O $REAL_PATH/etc/plivo/default.conf
+    $REAL_PATH/bin/plivo-postinstall &>/dev/null
+fi
 
 # Install Complete
 #clear
