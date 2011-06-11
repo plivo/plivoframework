@@ -144,8 +144,9 @@ pip install -e git+${PLIVO_GIT_REPO}#egg=plivo
 if [ $ACTION = 'INSTALL' ]; then
     mkdir -p $REAL_PATH/etc/plivo &>/dev/null
     wget --no-check-certificate $PLIVO_CONF_PATH -O $REAL_PATH/etc/plivo/default.conf
-    $REAL_PATH/bin/plivo-postinstall &>/dev/null
 fi
+
+$REAL_PATH/bin/plivo-postinstall &>/dev/null
 
 # Install Complete
 #clear
