@@ -8,6 +8,8 @@ import os
 import threading
 
 
+BACKLOG = 2048
+
 
 class OutboundServer(object):
     def __init__(self, address, handle_class, filter='ALL'):
@@ -22,7 +24,7 @@ class OutboundServer(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.hostname, self.port))
-        self.socket.listen(5)
+        self.socket.listen(BACKLOG)
 
     def loop(self):
         self._run = True

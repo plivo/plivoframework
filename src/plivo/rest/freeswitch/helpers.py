@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
+from gevent import monkey
+monkey.patch_all()
 import base64
 import ConfigParser
 from hashlib import sha1

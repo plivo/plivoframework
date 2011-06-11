@@ -210,6 +210,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.debug("Releasing Connection Done")
 
     def run(self):
+        try:
+            self._run()
+        except RESTHangup:
+            self.log.warn("Hangup")
+
+    def _run(self):
         self.resume()
         # Only catch events for this channel Unique-ID
         #self.eventplain(EVENT_FILTER)
@@ -220,7 +226,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.set("plivo_app=true")
         # Don't hangup after bridge
         self.set("hangup_after_bridge=false")
-
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
         called_no = channel.get_header('Caller-Destination-Number')
