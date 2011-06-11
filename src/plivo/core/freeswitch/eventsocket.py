@@ -41,7 +41,7 @@ class EventSocket(Commands):
         # Default event filter.
         self._filter = filter
         # Synchronized Gevent based Queue for response events.
-        self._response_queue = queue.Queue(1)
+        self._response_queue = queue.Queue(0)
         # Lock to force eventsocket commands to be sequential.
         self._lock = RLock()
         # Sets connected to False.
@@ -96,7 +96,6 @@ class EventSocket(Commands):
                 # Only dispatches event if Event-Name header found.
                 if ev and ev['Event-Name']:
                     self._spawn(self.dispatch_event, ev)
-                gevent.sleep(0.0001)
             except (LimitExceededError, ConnectError, socket.error):
                 self.connected = False
                 break
@@ -116,7 +115,6 @@ class EventSocket(Commands):
         buff = ''
         for x in range(MAXLINES_PER_EVENT):
             line = self.transport.read_line()
-            gevent.sleep(0.0001)
             if line == '':
                 raise ConnectError("connection closed")
             elif line == EOL:
@@ -137,7 +135,6 @@ class EventSocket(Commands):
         # Reads length bytes if length > 0
         if length:
             res = self.transport.read(int(length))
-            gevent.sleep(0.0001)
             return res
         return None
 
@@ -332,7 +329,6 @@ class EventSocket(Commands):
         # Casts to CommandResponse by default
         else:
             event = CommandResponse.cast(event)
-        gevent.sleep(0.0001)
         return event
 
     def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
@@ -344,6 +340,5 @@ class EventSocket(Commands):
             event = self._response_queue.get()
         finally:
             self._lock.release()
-        gevent.sleep(0.0001)
         # Always casts Event to CommandResponse
         return CommandResponse.cast(event)
