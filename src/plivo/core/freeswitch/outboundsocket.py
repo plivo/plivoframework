@@ -117,7 +117,7 @@ class OutboundServer(StreamServer):
         self._run = True
         try:
             while self._run:
-                gevent.sleep(1.0)
+                gevent.sleep(0.1)
         except (SystemExit, KeyboardInterrupt):
             pass
 

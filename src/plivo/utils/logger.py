@@ -161,3 +161,26 @@ class FileLogger(StdoutLogger):
         h.setFormatter(fmt)
         self._logger = RootLogger(loglevel)
         self._logger.addHandler(h)
+
+
+class DummyLogger(object):
+    def set_debug(self):
+        pass
+
+    def set_info(self):
+        pass
+
+    def info(self, msg):
+        pass
+
+    def debug(self, msg):
+        pass
+
+    def warn(self, msg):
+        pass
+
+    def error(self, msg):
+        pass
+
+    def write(self, msg):
+        pass

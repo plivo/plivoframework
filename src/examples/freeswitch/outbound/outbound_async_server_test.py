@@ -45,7 +45,6 @@ class AsyncOutboundEventSocket(OutboundEventSocket):
         # answer channel
         self.answer()
         self.log.info("Wait answer")
-        event = self._action_queue.get()
         gevent.sleep(1) # sleep 1 sec: sometimes sound is truncated after answer
         self.log.info("Channel answered")
 

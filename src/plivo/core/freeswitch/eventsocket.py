@@ -41,7 +41,7 @@ class EventSocket(Commands):
         # Default event filter.
         self._filter = filter
         # Synchronized Gevent based Queue for response events.
-        self._response_queue = queue.Queue(1)
+        self._response_queue = queue.Queue()
         # Lock to force eventsocket commands to be sequential.
         self._lock = RLock()
         # Sets connected to False.

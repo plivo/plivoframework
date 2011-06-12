@@ -231,9 +231,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         called_no = channel.get_header('Caller-Destination-Number')
         from_no = channel.get_header('Caller-Caller-ID-Number')
         # Set To to Session Params
-        self.session_params['To'] = called_no
+        self.session_params['To'] = called_no.lstrip('+')
         # Set From to Session Params
-        self.session_params['From'] = from_no
+        self.session_params['From'] = from_no.lstrip('+')
         # Set CallUUID to Session Params
         self.session_params['CallUUID'] = self.call_uuid
         # Set Direction to Session Params
@@ -306,7 +306,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if sched_hangup_id:
             self.session_params['ScheduledHangupId'] = sched_hangup_id
         if forwarded_from:
-            self.session_params['ForwardedFrom'] = forwarded_from
+            self.session_params['ForwardedFrom'] = forwarded_from.lstrip('+')
 
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
