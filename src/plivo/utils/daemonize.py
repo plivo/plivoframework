@@ -11,6 +11,7 @@ import grp
 import pwd
 from subprocess import Popen
 import optparse
+import gevent
 
 
 __default_servicename__ = os.path.splitext(os.path.basename(sys.argv[0]))[0]
@@ -31,13 +32,13 @@ def daemon(user, group, path='/', pidfile='/tmp/%s.pid' % __default_servicename_
         except:
             pass
     # First fork
-    pid = os.fork()
+    pid = gevent.fork()
     if not pid == 0:
         os._exit(0)
     # Creates a session and sets the process group ID
     os.setsid()
     # Second fork
-    pid = os.fork()
+    pid = gevent.fork()
     if not pid == 0:
         os._exit(0)
     # Change directoty
@@ -54,6 +55,7 @@ def daemon(user, group, path='/', pidfile='/tmp/%s.pid' % __default_servicename_
     os.setuid(uid)
     # Redirect stdout/stderr to /dev/null
     sys.stdout = sys.stderr = open(os.devnull, 'a+')
+    gevent.reinit()
 
 
 def daemon_script(script, user, group, path='/', pidfile=None, script_args=(), other_groups=(), python_bin=None):
