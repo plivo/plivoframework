@@ -15,6 +15,8 @@ from plivo.core.freeswitch.transport import OutboundTransport
 from plivo.core.errors import ConnectError
 
 
+BACKLOG = 2048
+
 
 class OutboundEventSocket(EventSocket):
     '''
@@ -22,8 +24,8 @@ class OutboundEventSocket(EventSocket):
 
     A new instance of this class is created for every call/ session from FreeSWITCH.
     '''
-    def __init__(self, socket, address, filter="ALL", 
-                 pool_size=500, connect_timeout=20, eventjson=True):
+    def __init__(self, socket, address, filter="ALL",
+                 pool_size=5000, connect_timeout=20, eventjson=True):
         EventSocket.__init__(self, filter, pool_size, eventjson)
         self.transport = OutboundTransport(socket, address, connect_timeout)
         self._uuid = None
@@ -91,11 +93,22 @@ class OutboundServer(StreamServer):
     '''
     FreeSWITCH Outbound Event Server
     '''
+    # Sets the maximum number of consecutive accepts that a process may perform on
+    # a single wake up. High values give higher priority to high connection rates,
+    # while lower values give higher priority to already established connections.
+    max_accept = 50000
+
+    # the number of seconds to sleep in case there was an error in accept() call
+    # for consecutive errors the delay will double until it reaches max_delay
+    # when accept() finally succeeds the delay will be reset to min_delay again
+    min_delay = 0.001
+    max_delay = 0.01
+
     def __init__(self, address, handle_class, filter="ALL"):
         self._filter = filter
         #Define the Class that will handle process when receiving message
         self._handle_class = handle_class
-        StreamServer.__init__(self, address, self.do_handle)
+        StreamServer.__init__(self, address, self.do_handle, backlog=BACKLOG)
 
     def do_handle(self, socket, address):
         self._handle_class(socket, address, self._filter)
@@ -104,7 +117,7 @@ class OutboundServer(StreamServer):
         self._run = True
         try:
             while self._run:
-                gevent.sleep(1.0)
+                gevent.sleep(0.1)
         except (SystemExit, KeyboardInterrupt):
             pass
 

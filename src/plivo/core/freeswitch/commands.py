@@ -55,10 +55,15 @@ class Commands(object):
         For Inbound connection, uuid argument is mandatory.
         """
         if not uuid:
-            uuid = self.get_channel_unique_id()
+            try:
+                uuid = self.get_channel_unique_id()
+            except AttributeError:
+                uuid = None
+        if not uuid:
+            return None
         api_response = self.api("uuid_getvar %s %s" % (uuid, var))
         result = api_response.get_body().strip()
-        if result == '_undef_':
+        if result == '_undef_' or result[:4] == '-ERR':
             result = None
         return result
 
@@ -71,10 +76,15 @@ class Commands(object):
         if not value:
             value = ''
         if not uuid:
-            uuid = self.get_channel_unique_id()
+            try:
+                uuid = self.get_channel_unique_id()
+            except AttributeError:
+                uuid = None
+        if not uuid:
+            return None
         api_response = self.api("uuid_setvar %s %s %s" % (uuid, var, str(value)))
         result = api_response.get_body()
-        if not result:
+        if not result == '_undef_' or result[:4] == '-ERR':
             result = ''
         result = result.strip()
         return result

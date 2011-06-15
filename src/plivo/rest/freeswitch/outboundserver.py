@@ -20,7 +20,7 @@ from plivo.core.freeswitch import outboundsocket
 from plivo.rest.freeswitch.outboundsocket import PlivoOutboundEventSocket
 from plivo.rest.freeswitch import helpers
 import plivo.utils.daemonize
-from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
+from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger
 
 """
 PlivoOutboundServer is our event_socket server listening for connection
@@ -111,7 +111,12 @@ class PlivoProcessOutboundServer(multiprocserver.OutboundServer):
 
     def create_logger(self):
         if self._daemon is False:
-            self.log = StdoutLogger()
+            logtype = helpers.get_conf_value(self._config,
+                                                'freeswitch', 'LOG_TYPE')
+            if logtype == 'dummy':
+                self.log = DummyLogger()
+            else:
+                self.log = StdoutLogger()
             self.log.set_debug()
         else:
             logtype = helpers.get_conf_value(self._config,
@@ -126,6 +131,8 @@ class PlivoProcessOutboundServer(multiprocserver.OutboundServer):
                 syslogfacility = helpers.get_conf_value(self._config,
                                             'freeswitch', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
+            elif logtype == 'dummy':
+                self.log = DummyLogger()
             else:
                 self.log = StdoutLogger()
             debug_mode = helpers.get_conf_value(self._config,
@@ -233,7 +240,12 @@ class PlivoThreadOutboundServer(multithreadserver.OutboundServer):
 
     def create_logger(self):
         if self._daemon is False:
-            self.log = StdoutLogger()
+            logtype = helpers.get_conf_value(self._config,
+                                                'freeswitch', 'LOG_TYPE')
+            if logtype == 'dummy':
+                self.log = DummyLogger()
+            else:
+                self.log = StdoutLogger()
             self.log.set_debug()
         else:
             logtype = helpers.get_conf_value(self._config,
@@ -248,6 +260,8 @@ class PlivoThreadOutboundServer(multithreadserver.OutboundServer):
                 syslogfacility = helpers.get_conf_value(self._config,
                                             'freeswitch', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
+            elif logtype == 'dummy':
+                self.log = DummyLogger()
             else:
                 self.log = StdoutLogger()
             debug_mode = helpers.get_conf_value(self._config,
@@ -356,7 +370,12 @@ class PlivoSpawnOutboundServer(outboundsocket.OutboundServer):
 
     def create_logger(self):
         if self._daemon is False:
-            self.log = StdoutLogger()
+            logtype = helpers.get_conf_value(self._config,
+                                                'freeswitch', 'LOG_TYPE')
+            if logtype == 'dummy':
+                self.log = DummyLogger()
+            else:
+                self.log = StdoutLogger()
             self.log.set_debug()
         else:
             logtype = helpers.get_conf_value(self._config,
@@ -371,6 +390,8 @@ class PlivoSpawnOutboundServer(outboundsocket.OutboundServer):
                 syslogfacility = helpers.get_conf_value(self._config,
                                             'freeswitch', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
+            elif logtype == 'dummy':
+                self.log = DummyLogger()
             else:
                 self.log = StdoutLogger()
             debug_mode = helpers.get_conf_value(self._config,

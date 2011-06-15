@@ -14,7 +14,7 @@ import gevent
 import gevent.queue
 
 from plivo.core.freeswitch.eventtypes import Event
-from plivo.rest.freeswitch.helpers import HTTPRequest
+from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
 from plivo.rest.freeswitch import elements
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
@@ -26,8 +26,6 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 
 MAX_REDIRECT = 1000
 EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM conference::maintenance"
-
-
 
 
 class RequestLogger(object):
@@ -118,7 +116,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         # inherits from outboundsocket
-        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER, 
+        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER,
                                      eventjson=True, pool_size=0)
 
     def _protocol_send(self, command, args=''):
@@ -212,6 +210,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.debug("Releasing Connection Done")
 
     def run(self):
+        try:
+            self._run()
+        except RESTHangup:
+            self.log.warn("Hangup")
+
+    def _run(self):
         self.resume()
         # Only catch events for this channel Unique-ID
         #self.eventplain(EVENT_FILTER)
@@ -222,21 +226,22 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.set("plivo_app=true")
         # Don't hangup after bridge
         self.set("hangup_after_bridge=false")
-
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
         called_no = channel.get_header('Caller-Destination-Number')
         from_no = channel.get_header('Caller-Caller-ID-Number')
         # Set To to Session Params
-        self.session_params['To'] = called_no
+        self.session_params['To'] = called_no.lstrip('+')
         # Set From to Session Params
-        self.session_params['From'] = from_no
+        self.session_params['From'] = from_no.lstrip('+')
         # Set CallUUID to Session Params
         self.session_params['CallUUID'] = self.call_uuid
         # Set Direction to Session Params
         self.session_params["Direction"] = channel.get_header('Call-Direction')
         aleg_uuid = ""
         aleg_request_uuid = ""
+        forwarded_from = get_substring(':', '@',
+                                channel.get_header('variable_sip_h_Diversion'))
 
         if self.session_params["Direction"] == 'outbound':
             # Look for variables in channel headers
@@ -300,6 +305,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['ALegRequestUUID'] = aleg_request_uuid
         if sched_hangup_id:
             self.session_params['ScheduledHangupId'] = sched_hangup_id
+        if forwarded_from:
+            self.session_params['ForwardedFrom'] = forwarded_from.lstrip('+')
 
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:

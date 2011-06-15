@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
+from gevent import monkey
+monkey.patch_all()
 import base64
 import ConfigParser
 from hashlib import sha1
@@ -14,6 +16,18 @@ import urlparse
 
 
 from werkzeug.datastructures import MultiDict
+
+
+def get_substring(start_char, end_char, data):
+    if data is None or not data:
+        return ""
+    start_pos = data.find(start_char)
+    if start_pos < 0:
+        return ""
+    end_pos = data.find(end_char)
+    if end_pos < 0:
+        return ""
+    return data[start_pos+len(start_char):end_pos]
 
 
 def url_exists(url):
@@ -171,4 +185,3 @@ class HTTPRequest:
         request = self._prepare_http_request(uri, params, method)
         response = urllib2.urlopen(request).read()
         return response
-

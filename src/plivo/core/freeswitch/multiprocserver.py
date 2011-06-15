@@ -11,6 +11,9 @@ except ImportError:
     import processing as multiprocessing
 
 
+BACKLOG = 2048
+
+
 class Process(multiprocessing.Process):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
         multiprocessing.Process.__init__(self, group, target, name, args, kwargs)
@@ -36,7 +39,7 @@ class OutboundServer(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.hostname, self.port))
-        self.socket.listen(5)
+        self.socket.listen(BACKLOG)
 
     def loop(self):
         self._run = True

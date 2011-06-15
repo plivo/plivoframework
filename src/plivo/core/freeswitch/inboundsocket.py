@@ -16,8 +16,8 @@ class InboundEventSocket(EventSocket):
     '''
     FreeSWITCH Inbound Event Socket
     '''
-    def __init__(self, host, port, password, filter="ALL", 
-                 pool_size=500, connect_timeout=20, eventjson=True):
+    def __init__(self, host, port, password, filter="ALL",
+                 pool_size=5000, connect_timeout=20, eventjson=True):
         EventSocket.__init__(self, filter, pool_size, eventjson)
         self.password = password
         self.transport = InboundTransport(host, port, connect_timeout=connect_timeout)
@@ -95,4 +95,3 @@ class InboundEventSocket(EventSocket):
         """
         while self.is_connected():
             gevent.sleep(0.1)
-

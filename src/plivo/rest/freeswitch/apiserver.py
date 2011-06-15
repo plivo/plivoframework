@@ -19,7 +19,7 @@ from plivo.rest.freeswitch.api import PlivoRestApi
 from plivo.rest.freeswitch.inboundsocket import RESTInboundSocket
 from plivo.rest.freeswitch import urls, helpers
 import plivo.utils.daemonize
-from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger
+from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger
 
 
 class PlivoRestServer(PlivoRestApi):
@@ -117,7 +117,12 @@ class PlivoRestServer(PlivoRestApi):
         """
 
         if self._daemon is False:
-            self.log = StdoutLogger()
+            logtype = helpers.get_conf_value(self._config,
+                                                'freeswitch', 'LOG_TYPE')
+            if logtype == 'dummy':
+                self.log = DummyLogger()
+            else:
+                self.log = StdoutLogger()
             self.log.set_debug()
             self.app.debug = True
         else:
@@ -133,6 +138,8 @@ class PlivoRestServer(PlivoRestApi):
                 syslogfacility = helpers.get_conf_value(self._config,
                                             'rest_server', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
+            elif logtype == 'dummy':
+                self.log = DummyLogger()
             else:
                 self.log = StdoutLogger()
 
