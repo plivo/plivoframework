@@ -22,7 +22,7 @@ class RESTInboundSocket(InboundEventSocket):
                  outbound_address='',
                  auth_id='', auth_token='',
                  log=None, default_http_method='POST',
-                 trace=trace):
+                 trace=False):
         InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER, 
                                     trace=trace)
         self.fs_outbound_address = outbound_address
