@@ -10,6 +10,7 @@ import os
 import pwd
 import signal
 import sys
+import optparse
 
 import gevent
 
@@ -442,8 +443,30 @@ class PlivoSpawnOutboundServer(outboundsocket.OutboundServer):
         self.log.info("OutboundServer Exited")
 
 
-if __name__ == '__main__':
-    outboundserver = PlivoOutboundServer(
-                                configfile='./etc/plivo/default.conf',
-                                daemon=False)
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-c", "--configfile", action="store", type="string",
+                      dest="configfile", 
+                      help="use plivo config file (argument is mandatory)",
+                      metavar="CONFIGFILE")
+    parser.add_option("-p", "--pidfile", action="store", type="string",
+                      dest="pidfile", 
+                      help="write pid to PIDFILE (argument is mandatory)",
+                      metavar="PIDFILE")
+    (options, args) = parser.parse_args()
+
+    configfile = options.configfile
+    pidfile = options.pidfile
+    
+    if not configfile:
+        configfile = './etc/plivo/default.conf'
+    if not pidfile:
+        pidfile='/tmp/plivo_outbound.pid'
+
+    outboundserver = PlivoOutboundServer(configfile=configfile, 
+                                    pidfile=pidfile, daemon=False)
     outboundserver.start()
+    
+
+if __name__ == '__main__':
+    main()
