@@ -16,6 +16,7 @@ class InboundTransport(Transport):
         self.port = port
         self.timeout = connect_timeout
         self.sockfd = None
+        self.closed = True
 
     def connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -23,9 +24,10 @@ class InboundTransport(Transport):
         self.sock.connect((self.host, self.port))
         self.sock.settimeout(None)
         self.sockfd = self.sock.makefile()
+        self.closed = False
 
     def write(self, data):
-        if not self.sockfd:
+        if self.closed:
             raise ConnectError('not connected')
         self.sockfd.write(data)
         self.sockfd.flush()
@@ -38,4 +40,5 @@ class OutboundTransport(Transport):
         self.sockfd = socket.makefile()
         self.address = address
         self.timeout = connect_timeout
+        self.closed = False
 

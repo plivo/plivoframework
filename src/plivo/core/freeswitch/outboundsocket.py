@@ -10,6 +10,7 @@ This manage Event Socket communication with the Freeswitch Server
 import gevent
 from gevent.server import StreamServer
 from gevent.timeout import Timeout
+
 from plivo.core.freeswitch.eventsocket import EventSocket
 from plivo.core.freeswitch.transport import OutboundTransport
 from plivo.core.errors import ConnectError
@@ -25,18 +26,21 @@ class OutboundEventSocket(EventSocket):
     A new instance of this class is created for every call/ session from FreeSWITCH.
     '''
     def __init__(self, socket, address, filter="ALL",
-                 pool_size=5000, connect_timeout=20, eventjson=True):
-        EventSocket.__init__(self, filter, pool_size, eventjson)
+                 connect_timeout=20, eventjson=True, 
+                 pool_size=5000, trace=False):
+        EventSocket.__init__(self, filter, eventjson, pool_size, trace=trace)
         self.transport = OutboundTransport(socket, address, connect_timeout)
         self._uuid = None
         self._channel = None
-        # Connects.
-        self.connect()
         # Runs the main function .
         try:
+            self.trace("run now")
             self.run()
+            self.trace("run done")
         finally:
+            self.trace("disconnect now")
             self.disconnect()
+            self.trace("disconnect done")
 
     def connect(self):
         super(OutboundEventSocket, self).connect()
@@ -49,10 +53,8 @@ class OutboundEventSocket(EventSocket):
         try:
             connect_response = self._protocol_send("connect")
             if not connect_response.is_success():
-                self.disconnect()
                 raise ConnectError("Error while connecting")
         except Timeout:
-            self.disconnect()
             raise ConnectError("Timeout connecting")
         finally:
             timer.cancel()
@@ -67,11 +69,12 @@ class OutboundEventSocket(EventSocket):
         # Sets event filter or raises ConnectError
         if self._filter:
             if self._is_eventjson:
+                self.trace("using eventjson")
                 filter_response = self.eventjson(self._filter)
             else:
+                self.trace("using eventplain")
                 filter_response = self.eventplain(self._filter)
             if not filter_response.is_success():
-                self.disconnect()
                 raise ConnectError("Event filter failure")
 
     def get_channel(self):
@@ -107,19 +110,31 @@ class OutboundServer(StreamServer):
     def __init__(self, address, handle_class, filter="ALL"):
         self._filter = filter
         #Define the Class that will handle process when receiving message
-        self._handle_class = handle_class
-        StreamServer.__init__(self, address, self.do_handle, backlog=BACKLOG)
+        self._requestClass = handle_class
+        StreamServer.__init__(self, address, self.do_handle, 
+                        backlog=BACKLOG, spawn=gevent.spawn_raw)
 
     def do_handle(self, socket, address):
-        self._handle_class(socket, address, self._filter)
-
-    def loop(self):
-        self._run = True
         try:
-            while self._run:
-                gevent.sleep(0.1)
-        except (SystemExit, KeyboardInterrupt):
+            self.handle_request(socket, address)
+        finally:
+            self.finish_request(socket, address)
+
+    def finish_request(self, socket, address):
+        try: 
+            socket.shutdown(2)
+        except:
             pass
+        try: 
+            socket.close()
+        except:
+            pass
+
+    def handle_request(self, socket, address):
+        self._requestClass(socket, address, self._filter)
+        
+
+
 
 
 

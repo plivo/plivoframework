@@ -25,9 +25,9 @@ CONTACTS = (
 
 class MyEventSocket(InboundEventSocket):
     def __init__(self, host, port, password, filter="ALL", log=None):
-        InboundEventSocket.__init__(self, host, port, password, filter)
         self.log = log
         self.jobs = {}
+        InboundEventSocket.__init__(self, host, port, password, filter)
 
     def track_job(self, job_uuid):
         self.jobs[job_uuid] = gevent.event.AsyncResult()

@@ -4,7 +4,7 @@
 from gevent import monkey
 monkey.patch_all()
 
-from gevent import spawn
+from gevent import spawn_raw
 from gevent import pool
 
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
@@ -21,8 +21,10 @@ class RESTInboundSocket(InboundEventSocket):
     def __init__(self, host, port, password,
                  outbound_address='',
                  auth_id='', auth_token='',
-                 log=None, default_http_method='POST'):
-        InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER)
+                 log=None, default_http_method='POST',
+                 trace=trace):
+        InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER, 
+                                    trace=trace)
         self.fs_outbound_address = outbound_address
         self.log = log
         self.auth_id = auth_id
@@ -113,7 +115,7 @@ class RESTInboundSocket(InboundEventSocket):
                             'CallStatus': 'ringing',
                             'From': caller_num
                         }
-                    spawn(self.send_to_url, ring_url, params)
+                    spawn_raw(self.send_to_url, ring_url, params)
 
     def on_channel_progress_media(self, ev):
         request_uuid = ev['variable_plivo_request_uuid']
@@ -145,7 +147,7 @@ class RESTInboundSocket(InboundEventSocket):
                             'CallStatus': 'ringing',
                             'From': caller_num
                         }
-                    spawn(self.send_to_url, ring_url, params)
+                    spawn_raw(self.send_to_url, ring_url, params)
 
     def on_channel_hangup(self, ev):
         """
@@ -219,7 +221,7 @@ class RESTInboundSocket(InboundEventSocket):
                     'CallStatus': 'completed',
                     'From': caller_num
                 }
-            spawn(self.send_to_url, hangup_url, params)
+            spawn_raw(self.send_to_url, hangup_url, params)
         else:
             self.log.debug("No hangupUrl for RequestUUID %s" % request_uuid)
 

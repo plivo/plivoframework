@@ -7,6 +7,9 @@ Transport class
 """
 
 class Transport(object):
+    def __init__(self):
+        self.closed = True
+
     def write(self, data):
         self.sockfd.write(data)
         self.sockfd.flush()
@@ -18,6 +21,8 @@ class Transport(object):
         return self.sockfd.read(length)
 
     def close(self):
+        if self.closed:
+            return
         try:
             self.sock.shutdown(2)
         except:
@@ -26,6 +31,7 @@ class Transport(object):
             self.sock.close()
         except:
             pass
+        self.closed = True
 
     def get_connect_timeout(self):
         return self.timeout

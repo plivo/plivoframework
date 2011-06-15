@@ -37,8 +37,8 @@ class SyncOutboundEventSocket(OutboundEventSocket):
         self._action_queue.put(event)
 
     def run(self):
+        self.connect()
         self.log.info("Channel Unique ID => %s" % self.get_channel_unique_id())
-
         # only catch events for this channel
         self.myevents()
         # answer channel
@@ -60,9 +60,9 @@ class SyncOutboundServer(OutboundServer):
         self.log.info("Start server %s ..." % str(address))
         OutboundServer.__init__(self, address, handle_class, filter)
 
-    def do_handle(self, socket, address):
+    def handle_request(self, socket, address):
         self.log.info("New request from %s" % str(address))
-        self._handle_class(socket, address, self.log, filter=self._filter)
+        self._requestClass(socket, address, self.log, filter=self._filter)
         self.log.info("End request from %s" % str(address))
 
 

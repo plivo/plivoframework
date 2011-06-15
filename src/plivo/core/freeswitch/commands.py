@@ -144,7 +144,10 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_send("myevents", uuid)
+        if self._is_eventjson:
+            return self._protocol_send("myevents json", uuid)
+        else:
+            return self._protocol_send("myevents", uuid)
 
     def linger(self):
         """Tell Freeswitch to wait for the last channel event before ending the connection

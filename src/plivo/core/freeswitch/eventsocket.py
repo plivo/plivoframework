@@ -5,13 +5,15 @@
 Event Socket class
 """
 
-import types
+from uuid import uuid1
+
 import gevent
+import gevent.event
 import gevent.socket as socket
-import gevent.queue as queue
+from gevent.coros import RLock
 import gevent.pool
 from gevent import GreenletExit
-from gevent.coros import RLock
+
 from plivo.core.freeswitch.commands import Commands
 from plivo.core.freeswitch.eventtypes import Event, CommandResponse, ApiResponse, BgapiResponse, JsonEvent
 from plivo.core.errors import LimitExceededError, ConnectError
@@ -22,47 +24,64 @@ MAXLINES_PER_EVENT = 1000
 
 
 
+class InternalSyncError(Exception):
+    pass
+
+
 class EventSocket(Commands):
     '''EventSocket class'''
-    def __init__(self, filter="ALL", pool_size=5000, eventjson=True):
+    def __init__(self, filter="ALL", eventjson=True, pool_size=5000, trace=False):
         self._is_eventjson = eventjson
         # Callbacks for reading events and sending responses.
         self._response_callbacks = {'api/response':self._api_response,
                                     'command/reply':self._command_reply,
-                                    'auth/request':self._auth_request,
-                                    'text/disconnect-notice':self._disconnect_notice
+                                    'text/disconnect-notice':self._disconnect_notice,
+                                    'text/event-json':self._event_json,
+                                    'text/event-plain':self._event_plain
                                    }
-        if self._is_eventjson:
-            self._response_callbacks['text/event-json'] = self._event_json
-        else:
-            self._response_callbacks['text/event-plain'] = self._event_plain
         # Closing state flag
         self._closing_state = False
         # Default event filter.
         self._filter = filter
-        # Synchronized Gevent based Queue for response events.
-        self._response_queue = queue.Queue()
+        # Commands pool list
+        self._commands_pool = []
         # Lock to force eventsocket commands to be sequential.
         self._lock = RLock()
         # Sets connected to False.
         self.connected = False
-        self._running = True
-        # Creates pool for spawning if pool_size > 0
+        # Sets greenlet handler to None
+        self._g_handler = None
+        # Build events callbacks dict
+        self._event_callbacks = {}
+        for meth in dir(self):
+            if meth[:3] == 'on_':
+                event_name = meth[3:].upper()
+                func = getattr(self, meth, None)
+                if func:
+                    self._event_callbacks[event_name] = func
+        unbound = getattr(self, 'unbound_event', None)
+        self._event_callbacks['unbound_event'] = unbound
+        # Set greenlet spawner
         if pool_size > 0:
             self.pool = gevent.pool.Pool(pool_size)
+            self._spawn = self.pool.spawn
         else:
-            self.pool = None
-        # Handler thread
-        self._handler_thread = None
+            self._spawn = gevent.spawn_raw
+        # set tracer
+        try:
+            logger = self.log
+        except AttributeError:
+            logger = None
+        if logger and trace is True:
+            self.trace = self._trace
+        else:
+            self.trace = self._notrace
 
-    def _spawn(self, func, *args, **kwargs):
-        '''
-        Spawns with or without pool.
-        '''
-        if self.pool:
-            self.pool.spawn(func, *args, **kwargs)
-        else:
-            gevent.spawn_raw(func, *args, **kwargs)
+    def _trace(self, msg):
+        self.log.debug("[TRACE] %s" % str(msg))
+
+    def _notrace(self, msg):
+        pass
 
     def is_connected(self):
         '''
@@ -76,32 +95,44 @@ class EventSocket(Commands):
         '''
         Starts Event handler in background.
         '''
-        self._handler_thread = gevent.spawn(self.handle_events)
+        self._g_handler = gevent.spawn(self.handle_events)
 
     def stop_event_handler(self):
         '''
         Stops Event handler.
         '''
-        if self._handler_thread:
-            self._handler_thread.kill()
+        if self._g_handler and not self._g_handler.ready():
+            self._g_handler.kill()
 
     def handle_events(self):
         '''
         Gets and Dispatches events in an endless loop using gevent spawn.
         '''
+        self.trace("handle_events started")
         while True:
+            # Gets event and dispatches to handler.
             try:
-                # Gets event and dispatches to handler.
-                ev = self.get_event()
-                # Only dispatches event if Event-Name header found.
-                if ev and ev['Event-Name']:
-                    self._spawn(self.dispatch_event, ev)
-            except (LimitExceededError, ConnectError, socket.error):
-                self.connected = False
+                self.get_event()
+                gevent.sleep(0)
+                if not self.connected:
+                    self.trace("Not connected !")
+                    break
+            except LimitExceededError:
+                self._send('exit')
+                break
+            except ConnectError:
+                break
+            except socket.error, se:
                 break
             except GreenletExit, e:
-                self.connected = False
+                self.exit()
                 break
+            except Exception, ex:
+                self.trace("handle_events error => %s" % str(ex))
+        self.trace("handle_events stopped now")
+        self.connected = False
+        # prevent any pending request to be stuck
+        self._flush_commands()
         return
 
     def read_event(self):
@@ -116,13 +147,14 @@ class EventSocket(Commands):
         for x in range(MAXLINES_PER_EVENT):
             line = self.transport.read_line()
             if line == '':
+                self.trace("no more data in read_event !")
                 raise ConnectError("connection closed")
             elif line == EOL:
                 # When matches EOL, creates Event and returns it.
                 return Event(buff)
             else:
                 # Else appends line to current buffer.
-                buff += line
+                buff = "%s%s" % (buff, line)
         raise LimitExceededError("max lines per event (%d) reached" % MAXLINES_PER_EVENT)
 
     def read_raw(self, event):
@@ -135,6 +167,8 @@ class EventSocket(Commands):
         # Reads length bytes if length > 0
         if length:
             res = self.transport.read(int(length))
+            if not res or len(res) != int(length):
+                raise ConnectError("no more data in read_raw !")
             return res
         return None
 
@@ -153,21 +187,23 @@ class EventSocket(Commands):
         '''
         Gets complete Event, and processes response callback.
         '''
+        self.trace("read_event")
         event = self.read_event()
-        # Gets callback response for this event (sets to self._unknown_event, if no matching callable)
-        _get_response = self._response_callbacks.get(event.get_content_type(), self._unknown_event)
+        self.trace("read_event done")
+        # Gets callback response for this event
+        try:
+            func = self._response_callbacks[event.get_content_type()]
+        except KeyError:
+            self.trace("no callback for %s" % str(event))
+            return
+        self.trace("callback %s" % str(func))
         # If callback response found, starts this method to get final event.
-        if _get_response:
-            event = _get_response(event)
-        return event
-
-    def _auth_request(self, event):
-        '''
-        Receives auth/request callback.
-        '''
-        # Pushes Event to response events queue and returns Event.
-        self._response_queue.put(event)
-        return event
+        event = func(event)
+        self.trace("callback %s done" % str(func))
+        if event and event['Event-Name']:
+            self.trace("dispatch")
+            self._spawn(self.dispatch_event, event)
+            self.trace("dispatch done")
 
     def _api_response(self, event):
         '''
@@ -178,17 +214,25 @@ class EventSocket(Commands):
         # If raw was found, this is our Event body.
         if raw:
             event.set_body(raw)
-        # Pushes Event to response events queue and returns Event.
-        self._response_queue.put(event)
-        return event
+        # Wake up waiting command.
+        try:
+            _cmd_uuid, _async_res = self._commands_pool.pop(0)
+        except (IndexError, ValueError):
+            raise InternalSyncError("Cannot wakeup command !")
+        _async_res.set((_cmd_uuid, event))
+        return None
 
     def _command_reply(self, event):
         '''
         Receives command/reply callback.
         '''
-        # Pushes Event to response events queue and returns Event.
-        self._response_queue.put(event)
-        return event
+        # Wake up waiting command.
+        try:
+            _cmd_uuid, _async_res = self._commands_pool.pop(0)
+        except (IndexError, ValueError):
+            raise InternalSyncError("Cannot wakeup command !")
+        _async_res.set((_cmd_uuid, event))
+        return None
 
     def _event_plain(self, event):
         '''
@@ -227,15 +271,17 @@ class EventSocket(Commands):
         Receives text/disconnect-notice callback.
         '''
         self._closing_state = True
-
-
-    def _unknown_event(self, event):
-        '''
-        Receives unknown event type Callbacks.
-
-        Can be implemented in subclass to process unknown event types.
-        '''
-        pass
+        # Gets raw data for this event
+        raw = self.read_raw(event)
+        if raw:
+            event = Event(raw)
+            # Gets raw response from Event Content-Length header
+            # and raw buffer
+            raw_response = self.read_raw_response(event, raw)
+            # If rawresponse was found, this is our Event body
+            if raw_response:
+                event.set_body(raw_response)
+        return None
 
     def dispatch_event(self, event):
         '''
@@ -243,11 +289,13 @@ class EventSocket(Commands):
 
         E.g. Receives Background_Job event and calls on_background_job function.
         '''
-        method = 'on_' + event['Event-Name'].lower()
-        callback = getattr(self, method, None)
-        # When no callbacks found, call unbound_event.
+        # When no callbacks found, try unbound_event.
+        try:
+            callback = self._event_callbacks[event['Event-Name']]
+        except KeyError:
+            callback = self._event_callbacks['unbound_event']
         if not callback:
-            callback = self.unbound_event
+            return
         # Calls callback.
         try:
             callback(event)
@@ -257,14 +305,6 @@ class EventSocket(Commands):
     def callback_failure(self, event):
         '''
         Called when callback to an event fails.
-
-        Can be implemented by the subclass.
-        '''
-        pass
-
-    def unbound_event(self, event):
-        '''
-        Catches all unbound events from FreeSWITCH.
 
         Can be implemented by the subclass.
         '''
@@ -280,31 +320,30 @@ class EventSocket(Commands):
         '''
         Disconnect and release socket and finally kill event handler.
         '''
-        try:
-            self.transport.close()
-        except:
-            pass
-        self._handler_thread.kill()
-        # prevent any pending request to be stuck
-        self._response_queue.put_nowait(Event())
         self.connected = False
+        self.trace("releasing ...")
+        self._g_handler.join()
+        self.trace("releasing done")
+        # prevent any pending request to be stuck
+        self._flush_commands()
+
+    def _flush_commands(self):
+        # Flush all commands pending
+        for _cmd_uuid, _async_res in self._commands_pool:
+            _async_res.set((_cmd_uuid, Event()))
 
     def _send(self, cmd):
-        if isinstance(cmd, types.UnicodeType):
-            cmd = cmd.encode("utf-8")
         self.transport.write(cmd + EOL*2)
 
-    def _sendmsg(self, name, arg=None, uuid="", lock=False, loops=1):
-        if isinstance(name, types.UnicodeType):
-            name = name.encode("utf-8")
-        if isinstance(arg, types.UnicodeType):
-            arg = arg.encode("utf-8")
-        msg = "sendmsg %s\ncall-command: execute\n" % uuid
-        msg += "execute-app-name: %s\n" % name
+    def _sendmsg(self, name, arg=None, uuid="", lock=False, loops=1, async=False):
+        msg = "sendmsg %s\ncall-command: execute\nexecute-app-name: %s\n" \
+                % (uuid, name)
         if lock is True:
             msg += "event-lock: true\n"
         if loops > 1:
             msg += "loops: %d\n" % loops
+        if async is True:
+            msg += "async: true\n"
         if arg:
             arglen = len(arg)
             msg += "content-type: text/plain\ncontent-length: %d\n\n%s\n" % (arglen, arg)
@@ -313,12 +352,18 @@ class EventSocket(Commands):
     def _protocol_send(self, command, args=""):
         if self._closing_state:
             return Event()
-        self._lock.acquire()
-        try:
+        self.trace("_protocol_send %s %s" % (command, args))
+        # Append command to pool
+        # and send it to eventsocket
+        _cmd_uuid = str(uuid1())
+        _async_res = gevent.event.AsyncResult()
+        with self._lock:
+            self._commands_pool.append((_cmd_uuid, _async_res))
             self._send("%s %s" % (command, args))
-            event = self._response_queue.get()
-        finally:
-            self._lock.release()
+        self.trace("_protocol_send %s wait ..." % command)
+        _uuid, event = _async_res.get()
+        if _cmd_uuid != _uuid:
+            raise InternalSyncError("in _protocol_send")
         # Casts Event to appropriate event type :
         # Casts to ApiResponse, if event is api
         if command == 'api':
@@ -329,16 +374,24 @@ class EventSocket(Commands):
         # Casts to CommandResponse by default
         else:
             event = CommandResponse.cast(event)
+        self.trace("_protocol_send %s done" % command)
         return event
 
-    def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1):
+    def _protocol_sendmsg(self, name, args=None, uuid="", lock=False, loops=1, async=False):
         if self._closing_state:
             return Event()
-        self._lock.acquire()
-        try:
-            self._sendmsg(name, args, uuid, lock, loops)
-            event = self._response_queue.get()
-        finally:
-            self._lock.release()
+        self.trace("_protocol_sendmsg %s" % name)
+        # Append command to pool
+        # and send it to eventsocket
+        _cmd_uuid = str(uuid1())
+        _async_res = gevent.event.AsyncResult()
+        with self._lock:
+            self._commands_pool.append((_cmd_uuid, _async_res))
+            self._sendmsg(name, args, uuid, lock, loops, async)
+        self.trace("_protocol_sendmsg %s wait ..." % name)
+        _uuid, event = _async_res.get()
+        if _cmd_uuid != _uuid:
+            raise InternalSyncError("in _protocol_sendmsg")
+        self.trace("_protocol_sendmsg %s done" % name)
         # Always casts Event to CommandResponse
         return CommandResponse.cast(event)

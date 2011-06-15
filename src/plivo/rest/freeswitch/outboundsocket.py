@@ -25,7 +25,6 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 
 
 MAX_REDIRECT = 1000
-EVENT_FILTER = "CHANNEL_EXECUTE_COMPLETE CHANNEL_HANGUP CUSTOM conference::maintenance"
 
 
 class RequestLogger(object):
@@ -85,7 +84,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  default_http_method='POST',
                  auth_id='',
                  auth_token='',
-                 request_id=0):
+                 request_id=0,
+                 trace=False):
         # the request id
         self._request_id = request_id
         # set logger
@@ -116,8 +116,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         # inherits from outboundsocket
-        OutboundEventSocket.__init__(self, socket, address, filter=EVENT_FILTER,
-                                     eventjson=True, pool_size=0)
+        OutboundEventSocket.__init__(self, socket, address, filter=None,
+                                     eventjson=True, pool_size=200, trace=trace)
 
     def _protocol_send(self, command, args=''):
         """Access parent method _protocol_send
@@ -216,12 +216,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.log.warn("Hangup")
 
     def _run(self):
+        self.connect()
+        self.myevents()
+        # Linger to get all remaining events before closing
+        self.linger()
         self.resume()
         # Only catch events for this channel Unique-ID
         #self.eventplain(EVENT_FILTER)
-        self.filter('Unique-ID %s' % self.get_channel_unique_id())
-        # Linger to get all remaining events before closing
-        self.linger()
+        #self.filter('Unique-ID %s' % self.get_channel_unique_id())
         # Set plivo app flag
         self.set("plivo_app=true")
         # Don't hangup after bridge

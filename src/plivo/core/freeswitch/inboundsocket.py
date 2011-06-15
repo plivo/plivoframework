@@ -6,7 +6,9 @@ Inbound Event Socket class
 """
 
 import gevent
+import gevent.event
 from gevent.timeout import Timeout
+
 from plivo.core.freeswitch.eventsocket import EventSocket
 from plivo.core.freeswitch.transport import InboundTransport
 from plivo.core.errors import ConnectError
@@ -17,10 +19,22 @@ class InboundEventSocket(EventSocket):
     FreeSWITCH Inbound Event Socket
     '''
     def __init__(self, host, port, password, filter="ALL",
-                 pool_size=5000, connect_timeout=20, eventjson=True):
-        EventSocket.__init__(self, filter, pool_size, eventjson)
+             eventjson=True, pool_size=5000, trace=False, connect_timeout=20):
+        EventSocket.__init__(self, filter, eventjson, pool_size, trace=trace)
+        # add the auth request event callback
+        self._response_callbacks['auth/request'] = self._auth_request
+        self._wait_auth_event = gevent.event.AsyncResult()
         self.password = password
         self.transport = InboundTransport(host, port, connect_timeout=connect_timeout)
+
+    def _auth_request(self, event):
+        '''
+        Receives auth/request callback.
+
+        Only used by InboundEventSocket.
+        '''
+        # Wake up waiting request
+        self._wait_auth_event.set(True)
 
     def _wait_auth_request(self):
         '''
@@ -31,9 +45,9 @@ class InboundEventSocket(EventSocket):
         timer.start()
         try:
             # When auth/request is received,
-            # _authRequest method in EventSocket will push this event to queue
+            # _auth_request method will wake up async result 
             # so we will just wait this event here.
-            return self._response_queue.get()
+            return self._wait_auth_event.get()
         except Timeout:
             raise ConnectError("Timeout waiting auth/request")
         finally:
@@ -45,18 +59,24 @@ class InboundEventSocket(EventSocket):
 
         Returns True on success or raises ConnectError exception on failure.
         '''
+        try:
+            self.run()
+        except ConnectError, e:
+            self.connected = False
+            raise
+
+    def run(self):
         super(InboundEventSocket, self).connect()
         # Connects transport, if connection fails, raise ConnectError
         try:
             self.transport.connect()
         except Exception, e:
             raise ConnectError("Transport failure: %s" % str(e))
+        # Sets connected flag to True
+        self.connected = True
 
-        # Be sure queue response is empty before starting
-        for x in range(1000):
-            if self._response_queue.empty():
-                break
-            self._response_queue.get_nowait()
+        # Be sure command pool is empty before starting
+        self._flush_commands()
 
         # Starts handling events
         self.start_event_handler()
@@ -68,7 +88,6 @@ class InboundEventSocket(EventSocket):
         # Authenticate or raise ConnectError
         auth_response = self.auth(self.password)
         if not auth_response.is_reply_text_success():
-            self.disconnect()
             raise ConnectError("Auth failure")
 
         # Sets event filter or raises ConnectError
@@ -78,16 +97,8 @@ class InboundEventSocket(EventSocket):
             else:
                 filter_response = self.eventplain(self._filter)
             if not filter_response.is_reply_text_success():
-                self.disconnect()
                 raise ConnectError("Event filter failure")
-
-        # Sets connected flag to True
-        self.connected = True
-        return True
-
-    def exit(self):
-        super(InboundEventSocket, self).exit()
-        self.disconnect()
+        return
 
     def serve_forever(self):
         """

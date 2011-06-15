@@ -183,7 +183,8 @@ Task-Runtime: 1294132816
 
 class TestInboundEventSocket(InboundEventSocket):
     def __init__(self, host, port, password, filter='ALL', pool_size=500, connect_timeout=5):
-        InboundEventSocket.__init__(self, host, port, password, filter, pool_size, connect_timeout)
+        InboundEventSocket.__init__(self, host, port, password, filter, pool_size=pool_size, 
+                                        connect_timeout=connect_timeout, eventjson=False)
         self.heartbeat_events = []
         self.re_schedule_events = []
 
@@ -225,9 +226,9 @@ class TestInboundCase(TestCase):
         self.assertRaises(ConnectError, isock.connect)
 
     def test_login_success(self):
-        isock = InboundEventSocket('127.0.0.1', 18021, 'ClueCon')
+        isock = InboundEventSocket('127.0.0.1', 18021, 'ClueCon', eventjson=False)
         try:
-            self.assertTrue(isock.connect())
+            isock.connect()
         except socket.error, se:
             self.fail("socket error: %s" % str(se))
         except ConnectError, e:
@@ -236,7 +237,7 @@ class TestInboundCase(TestCase):
     def test_events(self):
         isock = TestInboundEventSocket('127.0.0.1', 18021, 'ClueCon')
         try:
-            self.assertTrue(isock.connect())
+            isock.connect()
         except socket.error, se:
             self.fail("socket error: %s" % str(se))
         except ConnectError, e:

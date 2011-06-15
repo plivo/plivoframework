@@ -55,6 +55,10 @@ class PlivoRestServer(PlivoRestApi):
         self.app.secret_key = helpers.get_conf_value(self._config,
                                                 'rest_server', 'SECRET_KEY')
         self.app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
+
+        # set trace flag
+        self._trace = helpers.get_conf_value(self._config,
+                                'freeswitch', 'FS_INBOUND_TRACE') == 'true'
         # create logger
         self.create_logger()
         # create rest server
@@ -87,7 +91,9 @@ class PlivoRestServer(PlivoRestApi):
                             fs_password, outbound_address=fs_out_address,
                             auth_id=self.auth_id,
                             auth_token=self.auth_token,
-                            log=self.log, default_http_method=default_http_method)
+                            log=self.log, 
+                            default_http_method=default_http_method,
+                            trace=self._trace)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
             func, methods = func_desc
@@ -145,7 +151,7 @@ class PlivoRestServer(PlivoRestApi):
 
             debug_mode = helpers.get_conf_value(self._config,
                                                     'rest_server', 'DEBUG')
-            if  debug_mode == 'true':
+            if debug_mode == 'true' or self._trace is True:
                 self.log.set_debug()
                 self.app.debug = True
             else:
