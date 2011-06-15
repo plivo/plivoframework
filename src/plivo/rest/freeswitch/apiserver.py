@@ -9,6 +9,7 @@ import os
 import pwd
 import signal
 import sys
+import optparse
 
 from flask import Flask
 import gevent
@@ -248,7 +249,30 @@ class PlivoRestServer(PlivoRestApi):
         self.log.info("RESTServer Exited")
 
 
-if __name__ == '__main__':
-    server = PlivoRestServer(configfile='./etc/plivo/default.conf',
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-c", "--configfile", action="store", type="string",
+                      dest="configfile", 
+                      help="use plivo config file (argument is mandatory)",
+                      metavar="CONFIGFILE")
+    parser.add_option("-p", "--pidfile", action="store", type="string",
+                      dest="pidfile", 
+                      help="write pid to PIDFILE (argument is mandatory)",
+                      metavar="PIDFILE")
+    (options, args) = parser.parse_args()
+
+    configfile = options.configfile
+    pidfile = options.pidfile
+    
+    if not configfile:
+        configfile = './etc/plivo/default.conf'
+    if not pidfile:
+        pidfile='/tmp/plivo_rest.pid'
+
+    server = PlivoRestServer(configfile=configfile, pidfile=pidfile,
                                                         daemon=False)
     server.start()
+    
+
+if __name__ == '__main__':
+    main()

@@ -5,7 +5,7 @@ PREFIX=@PREFIX@
 
 if [ "$PREFIX" = "@PREFIX@" ]; then
 	echo "ERROR: run bin/plivo-postinstall to setup Plivo !"
-        exit 1
+    exit 1
 fi
 
 if [ "$PREFIX" = "/usr" ]; then
