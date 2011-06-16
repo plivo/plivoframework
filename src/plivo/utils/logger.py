@@ -14,6 +14,8 @@ from logging import RootLogger
 import sys
 import os
 
+monkey.patch_thread() # thread must be patched after import
+
 LOG_DEBUG = logging.DEBUG
 LOG_ERROR = logging.ERROR
 LOG_INFO = logging.INFO
