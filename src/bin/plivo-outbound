@@ -44,6 +44,6 @@ if __name__ == '__main__':
     if not os.path.isfile(configfile):
         print "Config file %s not found !" % configfile
         sys.exit(1)
-    rest_server = PlivoOutboundServer(configfile, daemon=daemon, pidfile=pidfile)
-    rest_server.start()
+    outbound_server = PlivoOutboundServer(configfile, daemon=daemon, pidfile=pidfile)
+    outbound_server.start()
     sys.exit(0)
