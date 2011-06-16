@@ -213,6 +213,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def _run(self):
         self.connect()
+        self.filter('Event-Name /(CHANNEL_HANGUP|CHANNEL_EXECUTE_COMPLETE|CUSTOM')
         self.resume()
         # Linger to get all remaining events before closing
         self.linger()
