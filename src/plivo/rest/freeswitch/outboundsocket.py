@@ -196,13 +196,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         return self._hangup_cause
 
     def disconnect(self):
-        self.log.debug("Releasing Connection ...")
-        super(PlivoOutboundEventSocket, self).disconnect()
         # Prevent command to be stuck while waiting response
         try:
             self._action_queue.put_nowait(Event())
         except gevent.queue.Full:
             pass
+        self.log.debug("Releasing Connection ...")
+        super(PlivoOutboundEventSocket, self).disconnect()
         self.log.debug("Releasing Connection Done")
 
     def run(self):
