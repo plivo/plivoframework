@@ -323,7 +323,8 @@ class EventSocket(Commands):
         self.connected = False
         self.trace("releasing ...")
         try:
-            self._g_handler.get(block=True, timeout=5.0)
+            # safe guard for inactivity timeout
+            self._g_handler.get(block=True, timeout=3600.0)
         except:
             self.trace("releasing forced")
             self._g_handler.kill()
