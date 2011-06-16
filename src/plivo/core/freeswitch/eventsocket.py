@@ -322,7 +322,11 @@ class EventSocket(Commands):
         '''
         self.connected = False
         self.trace("releasing ...")
-        self._g_handler.join()
+        try:
+            self._g_handler.get(block=True, timeout=5.0)
+        except:
+            self.trace("releasing forced")
+            self._g_handler.kill()
         self.trace("releasing done")
         # prevent any pending request to be stuck
         self._flush_commands()
