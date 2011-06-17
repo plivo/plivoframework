@@ -118,14 +118,12 @@ class EventSocket(Commands):
                     self.trace("Not connected !")
                     break
             except LimitExceededError:
-                self._send('exit')
                 break
             except ConnectError:
                 break
             except socket.error, se:
                 break
             except GreenletExit, e:
-                self.exit()
                 break
             except Exception, ex:
                 self.trace("handle_events error => %s" % str(ex))
@@ -323,8 +321,8 @@ class EventSocket(Commands):
         self.connected = False
         self.trace("releasing ...")
         try:
-            # safe guard for inactivity timeout
-            self._g_handler.get(block=True, timeout=3600.0)
+            # avoid handler stuck
+            self._g_handler.get(block=True, timeout=2.0)
         except:
             self.trace("releasing forced")
             self._g_handler.kill()
