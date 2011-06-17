@@ -36,7 +36,10 @@ class InboundTransport(Transport):
 
 class OutboundTransport(Transport):
     def __init__(self, socket, address, connect_timeout=5):
+        inactivity_timeout = 3600
         self.sock = socket
+        # safe guard inactivity timeout
+        self.sock.settimeout(inactivity_timeout)
         self.sockfd = socket.makefile()
         self.address = address
         self.timeout = connect_timeout
