@@ -36,18 +36,6 @@ do_help()
 
 do_start()
 {
-	ulimit -c 0 &>/dev/null # The maximum size of core files created.
-	ulimit -d unlimited &>/dev/null # The maximum size of a process's data segment.
-	ulimit -f unlimited &>/dev/null # The maximum size of files created by the shell (default option)
-	ulimit -i unlimited &>/dev/null # The maximum number of pending signals
-	ulimit -n 999999 &>/dev/null   # The maximum number of open file descriptors.
-	ulimit -q unlimited &>/dev/null # The maximum POSIX message queue size
-	ulimit -u unlimited &>/dev/null # The maximum number of processes available to a single user.
-	ulimit -v unlimited &>/dev/null # The maximum amount of virtual memory available to the process.
-	ulimit -x unlimited &>/dev/null # ???
-	ulimit -s 8192 &>/dev/null     # The maximum stack size
-	ulimit -l unlimited &>/dev/null # The maximum size that may be locked into memory.
-
 	NICE=$(which nice)
 	rest_already_running="false"
 	outbound_already_running="false"
