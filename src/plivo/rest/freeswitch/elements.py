@@ -467,7 +467,7 @@ class Dial(Element):
             dial_num = '|'.join([num_str for retry in range(gw_retries)])
             num_gw.append(dial_num)
             count += 1
-        result = ','.join(num_gw)
+        result = '|'.join(num_gw)
         return result
 
     def execute(self, outbound_socket):
