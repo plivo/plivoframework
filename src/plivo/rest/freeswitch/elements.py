@@ -478,8 +478,7 @@ class Dial(Element):
         outbound_socket.set("answer_timeout=%d" % self.timeout)
         # Set callerid or unset if not provided
         if self.caller_id:
-            caller_id = "effective_caller_id_number=%s" % self.caller_id
-            dial_options.append(caller_id)
+            outbound_socket.set("effective_caller_id_number=%s" % self.caller_id)
         else:
             outbound_socket.unset("effective_caller_id_number")
         # Set ring flag if dial will ring.
