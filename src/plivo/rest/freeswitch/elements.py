@@ -94,6 +94,9 @@ ELEMENTS_DEFAULT_PARAMS = {
     }
 
 
+MAX_LOOPS = 10000
+
+
 class Element(object):
     """Abstract Element Class to be inherited by all Element elements"""
 
@@ -673,12 +676,12 @@ class GetDigits(Element):
                 if sound_file:
                     loop = child_instance.loop_times
                     if loop == 0:
-                        loop = 99  # Add a high number to Play infinitely
+                        loop = MAX_LOOPS  # Add a high number to Play infinitely
                     # Play the file loop number of times
                     for i in range(loop):
                         self.sound_files.append(sound_file)
                     # Infinite Loop, so ignore other children
-                    if loop == 99:
+                    if loop == MAX_LOOPS:
                         break
             elif isinstance(child_instance, Wait):
                 pause_secs = child_instance.length
@@ -882,7 +885,10 @@ class Play(Element):
             loop = 1
         if loop < 0:
             raise RESTFormatException("Play 'loop' must be a positive integer or 0")
-        self.loop_times = loop
+        if loop == 0 or loop > MAX_LOOPS:
+            self.loop_times = MAX_LOOPS
+        else:
+            self.loop_times = loop
         # Pull out the text within the element
         audio_path = element.text.strip()
 
@@ -914,37 +920,28 @@ class Play(Element):
 
     def execute(self, outbound_socket):
         if self.sound_file_path:
-            if self.is_infinite():
-                # Play sound infinitely
-                outbound_socket.endless_playback(self.sound_file_path)
-                # Log playback execute response
-                outbound_socket.log.info("Infinite Play started")
-                outbound_socket.wait_for_action()
+            if self.loop_times == 1:
+                play_str = self.sound_file_path
             else:
-                res = outbound_socket.playback(self.sound_file_path, 
-                                            loops=self.loop_times)
-                if res.is_success():
-                    for i in range(self.loop_times):
-                        outbound_socket.log.debug("Playing %d times ..." % (i+1))
-                        event = outbound_socket.wait_for_action()
-                        if event.is_empty():
-                            outbound_socket.log.warn("Play Break (empty event)")
-                            return
-                        outbound_socket.log.debug("Play %d times done (%s)" \
-                                % ((i+1), str(event['Application-Response'])))
-                        gevent.sleep(0.01)
-                else:
-                    outbound_socket.log.error("Play Failed - %s" \
-                                    % str(res.get_response()))
+                outbound_socket.set("playback_delimiter=!")
+                play_str = "file_string://silence_stream://1!"
+                play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
+            outbound_socket.log.debug("Playing %d times" % self.loop_times)
+            res = outbound_socket.playback(play_str) 
+            if res.is_success():
+                event = outbound_socket.wait_for_action()
+                if event.is_empty():
+                    outbound_socket.log.warn("Play Break (empty event)")
                     return
-                outbound_socket.log.info("Play Finished")
+                outbound_socket.log.debug("Play done (%s)" \
+                        % str(event['Application-Response']))
+            else:
+                outbound_socket.log.error("Play Failed - %s" \
+                                % str(res.get_response()))
+            outbound_socket.log.info("Play Finished")
+            return
         else:
             outbound_socket.log.error("Invalid Sound File - Ignoring Play")
-
-    def is_infinite(self):
-        if self.loop_times <= 0:
-            return True
-        return False
 
 
 class PreAnswer(Element):
@@ -1097,7 +1094,6 @@ class Speak(Element):
                    'TELEPHONE_EXTENSION', 'URL', 'IP_ADDRESS', 'EMAIL_ADDRESS',
                    'POSTAL_ADDRESS', 'ACCOUNT_NUMBER', 'NAME_SPELLED',
                    'NAME_PHONETIC', 'SHORT_DATE_TIME')
-    DEFAULT_LOOP = 1
 
     def __init__(self):
         Element.__init__(self)
@@ -1111,12 +1107,17 @@ class Speak(Element):
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
+        # Extract Loop attribute
         try:
-            self.loop_times = int(self.extract_attribute_value("loop", self.DEFAULT_LOOP))
+            loop = int(self.extract_attribute_value("loop", 1))
         except ValueError:
-            self.loop_times = self.DEFAULT_LOOP
-        if self.loop_times <= 0:
-            self.loop_times = 999
+            loop = 1
+        if loop < 0:
+            raise RESTFormatException("Speak 'loop' must be a positive integer or 0")
+        if loop == 0 or loop > MAX_LOOPS:
+            self.loop_times = MAX_LOOPS
+        else:
+            self.loop_times = loop
         self.engine = self.extract_attribute_value("engine")
         self.language = self.extract_attribute_value("language")
         self.voice = self.extract_attribute_value("voice")
