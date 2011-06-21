@@ -21,6 +21,7 @@ VENV_ON=$PREFIX/bin/activate
 VENV_OFF=deactivate
 REST_SERVER=$EXEC_PREFIX/plivo-rest
 OUTBOUND_SERVER=$EXEC_PREFIX/plivo-outbound
+PRE_SCRIPT=$EXEC_PREFIX/etc/plivo/env.sh
 #####################################################
 
 
@@ -37,6 +38,7 @@ do_help()
 do_start()
 {
 	NICE=$(which nice)
+	[ -f $PRE_SCRIPT ] && source $PRE_SCRIPT
 	rest_already_running="false"
 	outbound_already_running="false"
 	$VENV_OFF &>/dev/null
