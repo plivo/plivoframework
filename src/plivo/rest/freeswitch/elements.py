@@ -26,7 +26,10 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'enterSound': '',
                 'exitSound': '',
                 'timeLimit': 0 ,
-                'hangupOnStar': 'false'
+                'hangupOnStar': 'false',
+                'recordFilePath': '',
+                'recordFileFormat': 'mp3',
+                'recordFilePrefix': ''
         },
         'Dial': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -98,7 +101,7 @@ MAX_LOOPS = 10000
 
 
 class Element(object):
-    """Abstract Element Class to be inherited by all Element elements"""
+    """Abstract Element Class to be inherited by all other elements"""
 
     def __init__(self):
         self.name = str(self.__class__.__name__)
@@ -182,6 +185,12 @@ class Conference(Element):
           (default 0, no timeLimit)
     hangupOnStar: exit conference when member press '*'
           (default false)
+    recordFilePath: path where recording is saved.
+        (default "" so recording wont happen)
+    recordFileFormat: file format in which recording tis saved
+        (default mp3)
+    recordFilePrefix: prefix added to the recorded file
+        (any custom prefix)
     """
     DEFAULT_TIMELIMIT = 0
     DEFAULT_MAXMEMBERS = 200
@@ -199,6 +208,9 @@ class Conference(Element):
         self.enter_sound = ''
         self.exit_sound = ''
         self.hangup_on_star = False
+        self.record_file_path = ""
+        self.record_file_format = "mp3"
+        self.record_file_prefix = ""
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -239,6 +251,17 @@ class Conference(Element):
         except ValueError:
             self.exit_sound = ''
 
+        self.record_file_path = self.extract_attribute_value("recordFilePath")
+        if self.record_file_path:
+            self.record_file_path = os.path.normpath(self.record_file_path)\
+                                                                    + os.sep
+        self.record_file_format = \
+                            self.extract_attribute_value("recordFileFormat")
+        if self.record_file_format not in ('wav', 'mp3'):
+            raise RESTFormatException("Format must be 'wav' or 'mp3'")
+        self.record_file_prefix = \
+                            self.extract_attribute_value("recordFilePrefix")
+
     def _prepare_moh(self):
         mohs = []
         if not self.moh_sound:
@@ -270,6 +293,15 @@ class Conference(Element):
             outbound_socket.set("max-members=%d" % self.max_members)
         else:
             outbound_socket.unset("max-members")
+
+        if self.record_file_path:
+            filename = "%s%s-%s" % (self.record_file_prefix,
+                                datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                self.room)
+            record_file = "%s%s.%s" % (self.record_file_path, filename,
+                                                    self.record_file_format)
+            outbound_socket.set("auto-record=%s" % record_file)
+
         # set moh sound
         mohs = self._prepare_moh()
         if not mohs:
@@ -927,7 +959,7 @@ class Play(Element):
                 play_str = "file_string://silence_stream://1!"
                 play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
             outbound_socket.log.debug("Playing %d times" % self.loop_times)
-            res = outbound_socket.playback(play_str) 
+            res = outbound_socket.playback(play_str)
             if res.is_success():
                 event = outbound_socket.wait_for_action()
                 if event.is_empty():
@@ -987,7 +1019,7 @@ class Record(Element):
         self.finish_on_key = ""
         self.file_path = ""
         self.play_beep = ""
-        self.format = ""
+        self.file_format = ""
         self.prefix = ""
         self.both_legs = False
 
@@ -1000,7 +1032,7 @@ class Record(Element):
         if self.file_path:
             self.file_path = os.path.normpath(self.file_path) + os.sep
         self.play_beep = self.extract_attribute_value("playBeep") == 'true'
-        self.format = self.extract_attribute_value("format")
+        self.file_format = self.extract_attribute_value("fileFormat")
         self.prefix = self.extract_attribute_value("prefix")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
 
@@ -1017,7 +1049,7 @@ class Record(Element):
         filename = "%s%s-%s" % (self.prefix,
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
-        record_file = "%s%s.%s" % (self.file_path, filename, self.format)
+        record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
