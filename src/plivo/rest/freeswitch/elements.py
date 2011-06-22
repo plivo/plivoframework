@@ -242,14 +242,9 @@ class Conference(Element):
             self.max_members = self.DEFAULT_MAXMEMBERS
         if self.max_members <= 0 or self.max_members > self.DEFAULT_MAXMEMBERS:
             self.max_members = self.DEFAULT_MAXMEMBERS
-        try:
-            self.enter_sound = self.extract_attribute_value('enterSound')
-        except ValueError:
-            self.enter_sound = ''
-        try:
-            self.exit_sound = self.extract_attribute_value('exitSound')
-        except ValueError:
-            self.exit_sound = ''
+
+        self.enter_sound = self.extract_attribute_value('enterSound')
+        self.exit_sound = self.extract_attribute_value('exitSound')
 
         self.record_file_path = self.extract_attribute_value("recordFilePath")
         if self.record_file_path:
