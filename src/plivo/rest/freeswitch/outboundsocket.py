@@ -82,6 +82,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  default_answer_url=None,
                  default_hangup_url=None,
                  default_http_method='POST',
+                 extra_fs_vars=None,
                  auth_id='',
                  auth_token='',
                  request_id=0,
@@ -113,6 +114,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.default_hangup_url = self.default_answer_url
         # set default http method POST or GET
         self.default_http_method = default_http_method
+        # identify the extra FS variables to be passed along
+        self.extra_fs_vars = extra_fs_vars
         # set answered flag
         self.answered = False
         # inherits from outboundsocket
@@ -194,6 +197,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def get_hangup_cause(self):
         return self._hangup_cause
+
+    def get_extra_fs_vars(self):
+        channel = self.get_channel()
+        if self.extra_fs_vars is not None:
+            extra_vars = self.extra_fs_vars.split(',')
+            for var in extra_vars:
+                self.session_params[var] = channel.get_header(var)
 
     def disconnect(self):
         # Prevent command to be stuck while waiting response
@@ -307,6 +317,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['ScheduledHangupId'] = sched_hangup_id
         if forwarded_from:
             self.session_params['ForwardedFrom'] = forwarded_from.lstrip('+')
+
+        self.get_extra_fs_vars()
 
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
