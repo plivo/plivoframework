@@ -12,6 +12,7 @@ PLIVO_GIT_REPO=git://github.com/plivo/plivo.git
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 PLIVO_ENV=$1
 
+CENTOS_PYTHON_VERSION=2.7.2
 
 # Check if Install Directory Present
 if [ ! $1 ] || [ -z "$1" ] ; then
@@ -114,9 +115,9 @@ gpgcheck = 1
         # Install Isolated copy of python
         mkdir source
         cd source
-        wget http://www.python.org/ftp/python/2.6.6/Python-2.6.6.tgz
-        tar -xvf Python-2.6.6.tgz
-        cd Python-2.6.6
+        wget http://www.python.org/ftp/python/$CENTOS_PYTHON_VERSION/Python-$CENTOS_PYTHON_VERSION.tgz
+        tar -xvf Python-$CENTOS_PYTHON_VERSION.tgz
+        cd Python-$CENTOS_PYTHON_VERSION
         ./configure --prefix=$DEPLOY
         make && make install
         # This is what does all the magic by setting upgraded python
