@@ -26,7 +26,10 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'enterSound': '',
                 'exitSound': '',
                 'timeLimit': 0 ,
-                'hangupOnStar': 'false'
+                'hangupOnStar': 'false',
+                'recordFilePath': '',
+                'recordFileFormat': 'mp3',
+                'recordFilePrefix': ''
         },
         'Dial': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -94,8 +97,11 @@ ELEMENTS_DEFAULT_PARAMS = {
     }
 
 
+MAX_LOOPS = 10000
+
+
 class Element(object):
-    """Abstract Element Class to be inherited by all Element elements"""
+    """Abstract Element Class to be inherited by all other elements"""
 
     def __init__(self):
         self.name = str(self.__class__.__name__)
@@ -179,6 +185,12 @@ class Conference(Element):
           (default 0, no timeLimit)
     hangupOnStar: exit conference when member press '*'
           (default false)
+    recordFilePath: path where recording is saved.
+        (default "" so recording wont happen)
+    recordFileFormat: file format in which recording tis saved
+        (default mp3)
+    recordFilePrefix: prefix added to the recorded file
+        (any custom prefix)
     """
     DEFAULT_TIMELIMIT = 0
     DEFAULT_MAXMEMBERS = 200
@@ -196,6 +208,9 @@ class Conference(Element):
         self.enter_sound = ''
         self.exit_sound = ''
         self.hangup_on_star = False
+        self.record_file_path = ""
+        self.record_file_format = "mp3"
+        self.record_file_prefix = ""
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -227,14 +242,20 @@ class Conference(Element):
             self.max_members = self.DEFAULT_MAXMEMBERS
         if self.max_members <= 0 or self.max_members > self.DEFAULT_MAXMEMBERS:
             self.max_members = self.DEFAULT_MAXMEMBERS
-        try:
-            self.enter_sound = self.extract_attribute_value('enterSound')
-        except ValueError:
-            self.enter_sound = ''
-        try:
-            self.exit_sound = self.extract_attribute_value('exitSound')
-        except ValueError:
-            self.exit_sound = ''
+
+        self.enter_sound = self.extract_attribute_value('enterSound')
+        self.exit_sound = self.extract_attribute_value('exitSound')
+
+        self.record_file_path = self.extract_attribute_value("recordFilePath")
+        if self.record_file_path:
+            self.record_file_path = os.path.normpath(self.record_file_path)\
+                                                                    + os.sep
+        self.record_file_format = \
+                            self.extract_attribute_value("recordFileFormat")
+        if self.record_file_format not in ('wav', 'mp3'):
+            raise RESTFormatException("Format must be 'wav' or 'mp3'")
+        self.record_file_prefix = \
+                            self.extract_attribute_value("recordFilePrefix")
 
     def _prepare_moh(self):
         mohs = []
@@ -267,6 +288,15 @@ class Conference(Element):
             outbound_socket.set("max-members=%d" % self.max_members)
         else:
             outbound_socket.unset("max-members")
+
+        if self.record_file_path:
+            filename = "%s%s-%s" % (self.record_file_prefix,
+                                datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                self.room)
+            record_file = "%s%s.%s" % (self.record_file_path, filename,
+                                                    self.record_file_format)
+            outbound_socket.set("auto-record=%s" % record_file)
+
         # set moh sound
         mohs = self._prepare_moh()
         if not mohs:
@@ -478,8 +508,7 @@ class Dial(Element):
         outbound_socket.set("answer_timeout=%d" % self.timeout)
         # Set callerid or unset if not provided
         if self.caller_id:
-            caller_id = "effective_caller_id_number=%s" % self.caller_id
-            dial_options.append(caller_id)
+            outbound_socket.set("effective_caller_id_number=%s" % self.caller_id)
         else:
             outbound_socket.unset("effective_caller_id_number")
         # Set ring flag if dial will ring.
@@ -674,12 +703,12 @@ class GetDigits(Element):
                 if sound_file:
                     loop = child_instance.loop_times
                     if loop == 0:
-                        loop = 99  # Add a high number to Play infinitely
+                        loop = MAX_LOOPS  # Add a high number to Play infinitely
                     # Play the file loop number of times
                     for i in range(loop):
                         self.sound_files.append(sound_file)
                     # Infinite Loop, so ignore other children
-                    if loop == 99:
+                    if loop == MAX_LOOPS:
                         break
             elif isinstance(child_instance, Wait):
                 pause_secs = child_instance.length
@@ -883,7 +912,10 @@ class Play(Element):
             loop = 1
         if loop < 0:
             raise RESTFormatException("Play 'loop' must be a positive integer or 0")
-        self.loop_times = loop
+        if loop == 0 or loop > MAX_LOOPS:
+            self.loop_times = MAX_LOOPS
+        else:
+            self.loop_times = loop
         # Pull out the text within the element
         audio_path = element.text.strip()
 
@@ -915,37 +947,28 @@ class Play(Element):
 
     def execute(self, outbound_socket):
         if self.sound_file_path:
-            if self.is_infinite():
-                # Play sound infinitely
-                outbound_socket.endless_playback(self.sound_file_path)
-                # Log playback execute response
-                outbound_socket.log.info("Infinite Play started")
-                outbound_socket.wait_for_action()
+            if self.loop_times == 1:
+                play_str = self.sound_file_path
             else:
-                res = outbound_socket.playback(self.sound_file_path, 
-                                            loops=self.loop_times)
-                if res.is_success():
-                    for i in range(self.loop_times):
-                        outbound_socket.log.debug("Playing %d times ..." % (i+1))
-                        event = outbound_socket.wait_for_action()
-                        if event.is_empty():
-                            outbound_socket.log.warn("Play Break (empty event)")
-                            return
-                        outbound_socket.log.debug("Play %d times done (%s)" \
-                                % ((i+1), str(event['Application-Response'])))
-                        gevent.sleep(0.01)
-                else:
-                    outbound_socket.log.error("Play Failed - %s" \
-                                    % str(res.get_response()))
+                outbound_socket.set("playback_delimiter=!")
+                play_str = "file_string://silence_stream://1!"
+                play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
+            outbound_socket.log.debug("Playing %d times" % self.loop_times)
+            res = outbound_socket.playback(play_str)
+            if res.is_success():
+                event = outbound_socket.wait_for_action()
+                if event.is_empty():
+                    outbound_socket.log.warn("Play Break (empty event)")
                     return
-                outbound_socket.log.info("Play Finished")
+                outbound_socket.log.debug("Play done (%s)" \
+                        % str(event['Application-Response']))
+            else:
+                outbound_socket.log.error("Play Failed - %s" \
+                                % str(res.get_response()))
+            outbound_socket.log.info("Play Finished")
+            return
         else:
             outbound_socket.log.error("Invalid Sound File - Ignoring Play")
-
-    def is_infinite(self):
-        if self.loop_times <= 0:
-            return True
-        return False
 
 
 class PreAnswer(Element):
@@ -991,7 +1014,7 @@ class Record(Element):
         self.finish_on_key = ""
         self.file_path = ""
         self.play_beep = ""
-        self.format = ""
+        self.file_format = ""
         self.prefix = ""
         self.both_legs = False
 
@@ -1004,7 +1027,9 @@ class Record(Element):
         if self.file_path:
             self.file_path = os.path.normpath(self.file_path) + os.sep
         self.play_beep = self.extract_attribute_value("playBeep") == 'true'
-        self.format = self.extract_attribute_value("format")
+        self.file_format = self.extract_attribute_value("fileFormat")
+        if self.file_format not in ('wav', 'mp3'):
+            raise RESTFormatException("Format must be 'wav' or 'mp3'")
         self.prefix = self.extract_attribute_value("prefix")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
 
@@ -1021,7 +1046,7 @@ class Record(Element):
         filename = "%s%s-%s" % (self.prefix,
                                 datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
-        record_file = "%s%s.%s" % (self.file_path, filename, self.format)
+        record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
@@ -1098,7 +1123,6 @@ class Speak(Element):
                    'TELEPHONE_EXTENSION', 'URL', 'IP_ADDRESS', 'EMAIL_ADDRESS',
                    'POSTAL_ADDRESS', 'ACCOUNT_NUMBER', 'NAME_SPELLED',
                    'NAME_PHONETIC', 'SHORT_DATE_TIME')
-    DEFAULT_LOOP = 1
 
     def __init__(self):
         Element.__init__(self)
@@ -1112,12 +1136,17 @@ class Speak(Element):
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
+        # Extract Loop attribute
         try:
-            self.loop_times = int(self.extract_attribute_value("loop", self.DEFAULT_LOOP))
+            loop = int(self.extract_attribute_value("loop", 1))
         except ValueError:
-            self.loop_times = self.DEFAULT_LOOP
-        if self.loop_times <= 0:
-            self.loop_times = 999
+            loop = 1
+        if loop < 0:
+            raise RESTFormatException("Speak 'loop' must be a positive integer or 0")
+        if loop == 0 or loop > MAX_LOOPS:
+            self.loop_times = MAX_LOOPS
+        else:
+            self.loop_times = loop
         self.engine = self.extract_attribute_value("engine")
         self.language = self.extract_attribute_value("language")
         self.voice = self.extract_attribute_value("voice")

@@ -491,7 +491,7 @@ class Commands(object):
         "Please refer to http://wiki.freeswitch.org/wiki/Mod_commands#hupall"
         return self._protocol_sendmsg("hupall", args, uuid='', lock=True)
 
-    def say(self, args, uuid="", lock=True):
+    def say(self, args, uuid="", lock=True, loops=1):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_say
 
         >>> say(en number pronounced 12345)

@@ -25,8 +25,7 @@ from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger
 PlivoOutboundServer is our event_socket server listening for connection
 with Freeswitch.
 
-This server is listening by default on 127.0.0.1:8084
-
+This server by default is listens on 127.0.0.1:8084
 """
 
 
@@ -62,6 +61,9 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         if not self.default_http_method in ('GET', 'POST'):
             self.default_http_method = 'POST'
 
+        self.extra_fs_vars = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'EXTRA_FS_VARS')
+
         # This is where we define the connection with the
         # Plivo XML element Processor
         outboundsocket.OutboundServer.__init__(self, (fs_host, fs_port),
@@ -80,7 +82,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self._requestClass(socket, address, self.log,
                            default_answer_url=self.default_answer_url,
                            default_hangup_url=self.default_hangup_url,
-                           default_http_method = self.default_http_method,
+                           default_http_method=self.default_http_method,
+                           extra_fs_vars=self.extra_fs_vars,
                            auth_id=self.auth_id,
                            auth_token=self.auth_token,
                            request_id=request_id,
@@ -159,27 +162,27 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
 def main():
     parser = optparse.OptionParser()
     parser.add_option("-c", "--configfile", action="store", type="string",
-                      dest="configfile", 
+                      dest="configfile",
                       help="use plivo config file (argument is mandatory)",
                       metavar="CONFIGFILE")
     parser.add_option("-p", "--pidfile", action="store", type="string",
-                      dest="pidfile", 
+                      dest="pidfile",
                       help="write pid to PIDFILE (argument is mandatory)",
                       metavar="PIDFILE")
     (options, args) = parser.parse_args()
 
     configfile = options.configfile
     pidfile = options.pidfile
-    
+
     if not configfile:
         configfile = './etc/plivo/default.conf'
     if not pidfile:
         pidfile='/tmp/plivo_outbound.pid'
 
-    outboundserver = PlivoOutboundServer(configfile=configfile, 
+    outboundserver = PlivoOutboundServer(configfile=configfile,
                                     pidfile=pidfile, daemon=False)
     outboundserver.start()
-    
+
 
 if __name__ == '__main__':
     main()
