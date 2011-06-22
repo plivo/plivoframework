@@ -1033,6 +1033,8 @@ class Record(Element):
             self.file_path = os.path.normpath(self.file_path) + os.sep
         self.play_beep = self.extract_attribute_value("playBeep") == 'true'
         self.file_format = self.extract_attribute_value("fileFormat")
+        if self.file_format not in ('wav', 'mp3'):
+            raise RESTFormatException("Format must be 'wav' or 'mp3'")
         self.prefix = self.extract_attribute_value("prefix")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
 
