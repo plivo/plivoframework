@@ -79,7 +79,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'maxLength': 60,
                 'playBeep': 'true',
                 'filePath': '/usr/local/freeswitch/recordings/',
-                'format': 'mp3',
+                'fileFormat': 'mp3',
                 'prefix': '',
                 'bothLegs': 'false'
         },
