@@ -203,7 +203,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if self.extra_fs_vars is not None:
             extra_vars = self.extra_fs_vars.split(',')
             for var in extra_vars:
-                self.session_params[var] = channel.get_header(var)
+                var = var.strip()
+                val = channel.get_header(var)
+                if var and val:
+                    self.session_params[var] = val
 
     def disconnect(self):
         # Prevent command to be stuck while waiting response
