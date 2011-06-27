@@ -37,17 +37,17 @@ class RESTInboundSocket(InboundEventSocket):
         self.call_requests = {}
         self.default_http_method = default_http_method
 
-    def on_background_job(self, ev):
+    def on_background_job(self, event):
         """
         Capture Job Event
         Capture background job only for originate,
         and ignore all other jobs
         """
-        job_cmd = ev['Job-Command']
-        job_uuid = ev['Job-UUID']
+        job_cmd = event['Job-Command']
+        job_uuid = event['Job-UUID']
         if job_cmd == 'originate' and job_uuid:
             try:
-                status, reason = ev.get_body().split(' ', 1)
+                status, reason = event.get_body().split(' ', 1)
             except ValueError:
                 return
             request_uuid = self.bk_jobs.pop(job_uuid, None)
@@ -77,7 +77,7 @@ class RESTInboundSocket(InboundEventSocket):
                     call_uuid = ''
                     hangup_url = call_req.hangup_url
                     self.set_hangup_complete(self, request_uuid, call_uuid,
-                                             reason, ev, hangup_url)
+                                             reason, event, hangup_url)
                     return
                 # If there are gateways and call request state_flag is not set
                 # try again a call
@@ -86,9 +86,9 @@ class RESTInboundSocket(InboundEventSocket):
                                                     % (request_uuid, reason))
                     self.spawn_originate(request_uuid)
 
-    def on_channel_progress(self, ev):
-        request_uuid = ev['variable_plivo_request_uuid']
-        direction = ev['Call-Direction']
+    def on_channel_progress(self, event):
+        request_uuid = event['variable_plivo_request_uuid']
+        direction = event['Call-Direction']
         # Detect ringing state
         if request_uuid and direction == 'outbound':
             try:
@@ -101,8 +101,8 @@ class RESTInboundSocket(InboundEventSocket):
                 call_req.state_flag = 'Ringing'
                 # clear gateways to avoid retry
                 call_req.gateways = [] 
-                called_num = ev['Caller-Destination-Number']
-                caller_num = ev['Caller-Caller-ID-Number']
+                called_num = event['Caller-Destination-Number']
+                caller_num = event['Caller-Caller-ID-Number']
                 self.log.info("Call from %s to %s Ringing for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
                 # send ring if ring_url found
@@ -117,9 +117,9 @@ class RESTInboundSocket(InboundEventSocket):
                         }
                     spawn_raw(self.send_to_url, ring_url, params)
 
-    def on_channel_progress_media(self, ev):
-        request_uuid = ev['variable_plivo_request_uuid']
-        direction = ev['Call-Direction']
+    def on_channel_progress_media(self, event):
+        request_uuid = event['variable_plivo_request_uuid']
+        direction = event['Call-Direction']
         # Detect early media state
         # See http://wiki.freeswitch.org/wiki/Early_media#Early_Media_And_Dialing_Out
         if request_uuid and direction == 'outbound':
@@ -133,8 +133,8 @@ class RESTInboundSocket(InboundEventSocket):
                 call_req.state_flag = 'EarlyMedia'
                 # clear gateways to avoid retry
                 call_req.gateways = [] 
-                called_num = ev['Caller-Destination-Number']
-                caller_num = ev['Caller-Caller-ID-Number']
+                called_num = event['Caller-Destination-Number']
+                caller_num = event['Caller-Caller-ID-Number']
                 self.log.info("Call from %s to %s in EarlyMedia for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
                 # send ring if ring_url found
@@ -149,16 +149,16 @@ class RESTInboundSocket(InboundEventSocket):
                         }
                     spawn_raw(self.send_to_url, ring_url, params)
 
-    def on_channel_hangup(self, ev):
+    def on_channel_hangup(self, event):
         """
         Capture Channel Hangup
         """
-        request_uuid = ev['variable_plivo_request_uuid']
-        direction = ev['Call-Direction']
+        request_uuid = event['variable_plivo_request_uuid']
+        direction = event['Call-Direction']
         if not request_uuid and direction != 'outbound':
             return
-        call_uuid = ev['Unique-ID']
-        reason = ev['Hangup-Cause']
+        call_uuid = event['Unique-ID']
+        reason = event['Hangup-Cause']
         try:
             call_req = self.call_requests[request_uuid]
         except KeyError:
@@ -171,14 +171,14 @@ class RESTInboundSocket(InboundEventSocket):
             return
         # Else clean call request
         hangup_url = call_req.hangup_url
-        self.set_hangup_complete(request_uuid, call_uuid, reason, ev,
+        self.set_hangup_complete(request_uuid, call_uuid, reason, event,
                                                     hangup_url)
 
-    def on_channel_state(self, ev):
+    def on_channel_state(self, event):
         # When tranfer is ready to start,
         # channel goes in state CS_RESET
-        if ev['Channel-State'] == 'CS_RESET':
-            call_uuid = ev['Unique-ID']
+        if event['Channel-State'] == 'CS_RESET':
+            call_uuid = event['Unique-ID']
             xfer = self.xfer_jobs.pop(call_uuid, None)
             if not xfer:
                 return
@@ -193,14 +193,14 @@ class RESTInboundSocket(InboundEventSocket):
                 self.log.info("TransferCall Failed for %s: %s" \
                                % (call_uuid, res.get_response()))
         # On state CS_HANGUP, remove transfer job linked to call_uuid
-        elif ev['Channel-State'] == 'CS_HANGUP':
-            call_uuid = ev['Unique-ID']
+        elif event['Channel-State'] == 'CS_HANGUP':
+            call_uuid = event['Unique-ID']
             # try to clean transfer call
             xfer = self.xfer_jobs.pop(call_uuid, None)
             if xfer:
                 self.log.warn("TransferCall Aborted (hangup) for %s" % call_uuid)
 
-    def set_hangup_complete(self, request_uuid, call_uuid, reason, ev, hangup_url):
+    def set_hangup_complete(self, request_uuid, call_uuid, reason, event, hangup_url):
         self.log.info("Call %s Completed, Reason %s, Request uuid %s"
                                         % (call_uuid, reason, request_uuid))
         try:
@@ -210,8 +210,8 @@ class RESTInboundSocket(InboundEventSocket):
             pass
         self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
         if hangup_url:
-            called_num = ev['Caller-Destination-Number']
-            caller_num = ev['Caller-Caller-ID-Number']
+            called_num = event['Caller-Destination-Number']
+            caller_num = event['Caller-Caller-ID-Number']
             params = {
                     'RequestUUID': request_uuid,
                     'CallUUID': call_uuid,
