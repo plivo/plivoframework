@@ -29,7 +29,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'hangupOnStar': 'false',
                 'recordFilePath': '',
                 'recordFileFormat': 'mp3',
-                'recordFilePrefix': ''
+                'recordFilename': ''
         },
         'Dial': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -189,8 +189,8 @@ class Conference(Element):
         (default "" so recording wont happen)
     recordFileFormat: file format in which recording tis saved
         (default mp3)
-    recordFilePrefix: prefix added to the recorded file
-        (any custom prefix)
+    recordFilename: By default empty, if provided this name will be used for the recording
+        (any unique name)
     """
     DEFAULT_TIMELIMIT = 0
     DEFAULT_MAXMEMBERS = 200
@@ -210,7 +210,7 @@ class Conference(Element):
         self.hangup_on_star = False
         self.record_file_path = ""
         self.record_file_format = "mp3"
-        self.record_file_prefix = ""
+        self.record_filename = ""
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -254,8 +254,8 @@ class Conference(Element):
                             self.extract_attribute_value("recordFileFormat")
         if self.record_file_format not in ('wav', 'mp3'):
             raise RESTFormatException("Format must be 'wav' or 'mp3'")
-        self.record_file_prefix = \
-                            self.extract_attribute_value("recordFilePrefix")
+        self.record_filename = \
+                            self.extract_attribute_value("recordFilename")
 
     def _prepare_moh(self):
         mohs = []
@@ -290,8 +290,10 @@ class Conference(Element):
             outbound_socket.unset("max-members")
 
         if self.record_file_path:
-            filename = "%s%s-%s" % (self.record_file_prefix,
-                                datetime.now().strftime("%Y%m%d-%H%M%S"),
+            if self.record_filename:
+                filename = self.record_filename
+            else:
+                filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 self.room)
             record_file = "%s%s.%s" % (self.record_file_path, filename,
                                                     self.record_file_format)
