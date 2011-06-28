@@ -80,7 +80,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'playBeep': 'true',
                 'filePath': '/usr/local/freeswitch/recordings/',
                 'fileFormat': 'mp3',
-                'prefix': '',
+                'filename': '',
                 'bothLegs': 'false'
         },
         'Redirect': {
@@ -1000,9 +1000,10 @@ class Record(Element):
     maxLength: maximum number of seconds to record (default 60)
     timeout: seconds of silence before considering the recording complete (default 500)
     playBeep: play a beep before recording (true/false, default true)
-    format: file format (default mp3)
+    file_format: file format (default mp3)
     filePath: complete file path to save the file to
     finishOnKey: Stop recording on this key
+    filename: Default empty, if given this will be used for the recording
     bothLegs: record both legs (true/false, default false)
               no beep will be played
     """
@@ -1015,7 +1016,7 @@ class Record(Element):
         self.file_path = ""
         self.play_beep = ""
         self.file_format = ""
-        self.prefix = ""
+        self.filename = ""
         self.both_legs = False
 
     def parse_element(self, element, uri=None):
@@ -1030,7 +1031,7 @@ class Record(Element):
         self.file_format = self.extract_attribute_value("fileFormat")
         if self.file_format not in ('wav', 'mp3'):
             raise RESTFormatException("Format must be 'wav' or 'mp3'")
-        self.prefix = self.extract_attribute_value("prefix")
+        self.filename = self.extract_attribute_value("filename")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
 
         if max_length < 1:
@@ -1043,8 +1044,10 @@ class Record(Element):
         self.finish_on_key = finish_on_key
 
     def execute(self, outbound_socket):
-        filename = "%s%s-%s" % (self.prefix,
-                                datetime.now().strftime("%Y%m%d-%H%M%S"),
+        if self.filename:
+            filename = self.filename
+        else:
+            filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
         if self.both_legs:
