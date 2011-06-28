@@ -166,6 +166,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self._action_queue.put(event)
 
     def on_channel_hangup(self, event):
+        """
+        Capture Channel Hangup
+        """
         self._hangup_cause = event['Hangup-Cause']
         self.log.info('Event: channel %s has hung up (%s)' %
                       (self.get_channel_unique_id(), self._hangup_cause))
@@ -214,15 +217,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self._action_queue.put_nowait(Event())
         except gevent.queue.Full:
             pass
-        self.log.debug("Releasing Connection ...")
+        self.log.debug('Releasing Connection ...')
         super(PlivoOutboundEventSocket, self).disconnect()
-        self.log.debug("Releasing Connection Done")
+        self.log.debug('Releasing Connection Done')
 
     def run(self):
         try:
             self._run()
         except RESTHangup:
-            self.log.warn("Hangup")
+            self.log.warn('Hangup')
 
     def _run(self):
         self.connect()
@@ -236,9 +239,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         else:
             self.eventplain('CUSTOM conference::maintenance')
         # Set plivo app flag
-        self.set("plivo_app=true")
+        self.set('plivo_app=true')
         # Don't hangup after bridge
-        self.set("hangup_after_bridge=false")
+        self.set('hangup_after_bridge=false')
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
         called_no = channel.get_header('Caller-Destination-Number')
@@ -250,13 +253,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # Set CallUUID to Session Params
         self.session_params['CallUUID'] = self.call_uuid
         # Set Direction to Session Params
-        self.session_params["Direction"] = channel.get_header('Call-Direction')
-        aleg_uuid = ""
-        aleg_request_uuid = ""
+        self.session_params['Direction'] = channel.get_header('Call-Direction')
+        aleg_uuid = ''
+        aleg_request_uuid = ''
         forwarded_from = get_substring(':', '@',
                                 channel.get_header('variable_sip_h_Diversion'))
 
-        if self.session_params["Direction"] == 'outbound':
+        if self.session_params['Direction'] == 'outbound':
             # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
             aleg_request_uuid = channel.get_header('variable_plivo_request_uuid')
@@ -272,7 +275,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.target_url = answer_url
                 self.log.info("Using AnswerUrl %s" % self.target_url)
             else:
-                self.log.error("Aborting -- No Call Url found !")
+                self.log.error('Aborting -- No Call Url found !')
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = channel.get_header('variable_plivo_sched_hangup_id')
@@ -299,7 +302,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.target_url = default_answer_url
                 self.log.info("Using DefaultAnswerUrl %s" % self.target_url)
             else:
-                self.log.error("Aborting -- No Call Url found !")
+                self.log.error('Aborting -- No Call Url found !')
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
@@ -325,22 +328,22 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
-            self.unset("plivo_sched_hangup_id")
+            self.unset('plivo_sched_hangup_id')
 
         # Run application
-        self.log.info("Processing Call")
+        self.log.info('Processing Call')
         try:
             self.process_call()
         except RESTHangup:
-            self.log.warn("Channel has hung up, breaking Processing Call")
+            self.log.warn('Channel has hung up, breaking Processing Call')
         except Exception, e:
-            self.log.error("Processing Call Failure !")
+            self.log.error('Processing Call Failure !')
             # If error occurs during xml parsing
             # log exception and break
             self.log.error(str(e))
             [ self.log.error(line) for line in \
                         traceback.format_exc().splitlines() ]
-        self.log.info("Processing Call Ended")
+        self.log.info('Processing Call Ended')
 
     def process_call(self):
         """Method to proceed on the call
@@ -354,12 +357,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     raise RESTHangup()
                 self.fetch_xml(params=params)
                 if not self.xml_response:
-                    self.log.warn("No XML Response")
+                    self.log.warn('No XML Response')
                     return
                 self.lex_xml()
                 self.parse_xml()
                 self.execute_xml()
-                self.log.info("End of RESTXML")
+                self.log.info('End of RESTXML')
                 return
             except RESTRedirectException, redirect:
                 if self.has_hangup():
@@ -380,7 +383,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                         % (fetch_method, self.target_url))
                 gevent.sleep(0.010)
                 continue
-        self.log.warn("Max Redirect Reached !")
+        self.log.warn('Max Redirect Reached !')
 
     def fetch_xml(self, params={}, method=None):
         """
@@ -430,8 +433,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         % str(e))
 
         # Make sure the document has a <Response> root
-        if doc.tag != "Response":
-            raise RESTFormatException("No Response Tag Present")
+        if doc.tag != 'Response':
+            raise RESTFormatException('No Response Tag Present')
 
         # Make sure we recognize all the Element in the xml
         for element in doc:
@@ -496,9 +499,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             element_instance.run(self)
         # If transfer is in progress, don't hangup call
         if not self.has_hangup():
-            xfer_progress = self.get_var("plivo_transfer_progress") == 'true'
+            xfer_progress = self.get_var('plivo_transfer_progress') == 'true'
             if not xfer_progress:
-                self.log.warn("No more Elements, Hangup Now !")
+                self.log.warn('No more Elements, Hangup Now !')
                 self.session_params['CallStatus'] = 'completed'
                 self.hangup()
                 if self.hangup_url:
@@ -513,4 +516,4 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.log.info("Sending hangup to %s" % hangup_url)
                     gevent.spawn(self.send_to_url, hangup_url)
             else:
-                self.log.warn("No more Elements, Transfer In Progress !")
+                self.log.warn('No more Elements, Transfer In Progress !')
