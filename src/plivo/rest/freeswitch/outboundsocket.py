@@ -110,10 +110,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set default answer url
         self.default_answer_url = default_answer_url
         # set default hangup_url
-        if default_hangup_url:
-            self.default_hangup_url = default_hangup_url
-        else:
-            self.default_hangup_url = self.default_answer_url
+        self.default_hangup_url = default_hangup_url
         # set default http method POST or GET
         self.default_http_method = default_http_method
         # identify the extra FS variables to be passed along
@@ -264,15 +261,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         aleg_uuid = ''
         aleg_request_uuid = ''
         forwarded_from = get_substring(':', '@',
-                                channel.get_header('variable_sip_h_Diversion'))
+                            channel.get_header('variable_sip_h_Diversion'))
 
         if self.session_params['Direction'] == 'outbound':
             # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
             aleg_request_uuid = channel.get_header('variable_plivo_request_uuid')
             # Look for target url in order below :
-            #  get transfer_url from channel variable
-            #  get answer_url from channel variable
+            #  get plivo_transfer_url from channel var
+            #  get plivo_answer_url from channel var
             xfer_url = channel.get_header('variable_plivo_transfer_url')
             answer_url = channel.get_header('variable_plivo_answer_url')
             if xfer_url:
@@ -286,35 +283,52 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = channel.get_header('variable_plivo_sched_hangup_id')
-            # Don't post hangup in outbound direction
+            # Don't post hangup in outbound direction 
+            # because it is handled by inboundsocket
             self.default_hangup_url = None
             self.hangup_url = None
+            self.log.info("HangupUrl not set for outbound call")
             # Set CallStatus to Session Params
             self.session_params['CallStatus'] = 'in-progress'
         else:
             # Look for target url in order below :
-            #  get transfer_url from channel variable
-            #  get answer_url from channel variable
-            #  get default answer_url
+            #  get plivo_transfer_url from channel var
+            #  get plivo_answer_url from channel var
+            #  get default answer_url from config
             xfer_url = self.get_var('plivo_transfer_url')
             answer_url = self.get_var('plivo_answer_url')
-            default_answer_url = self.default_answer_url
             if xfer_url:
                 self.target_url = xfer_url
                 self.log.info("Using TransferUrl %s" % self.target_url)
             elif answer_url:
                 self.target_url = answer_url
                 self.log.info("Using AnswerUrl %s" % self.target_url)
-            elif default_answer_url:
-                self.target_url = default_answer_url
+            elif self.default_answer_url:
+                self.target_url = self.default_answer_url
                 self.log.info("Using DefaultAnswerUrl %s" % self.target_url)
             else:
                 self.log.error('Aborting -- No Call Url found !')
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
-            # Look for hangup_url
-            self.hangup_url = self.get_var('plivo_hangup_url')
+            # Look for hangup_url in order below :
+            # get plivo_hangup_url from channel var if found
+            # get default_hangup_url from config if found
+            # get plivo_answer_url from channel var if found
+            # get default_answer_url from config if found
+            hangup_url = self.get_var('plivo_hangup_url')
+            if hangup_url:
+                self.hangup_url = hangup_url
+                self.log.info("Using HangupUrl %s from plivo_hangup_url channel var" % self.hangup_url)
+            elif self.default_hangup_url:
+                self.hangup_url = self.default_hangup_url
+                self.log.info("Using HangupUrl %s from hangup url in config" % self.hangup_url)
+            elif answer_url:
+                self.hangup_url = answer_url
+                self.log.info("Using HangupUrl %s from plivo_answer_url channel var" % self.hangup_url)
+            elif self.default_answer_url:
+                self.hangup_url = self.default_answer_url
+                self.log.info("Using HangupUrl %s from answer url in config" % self.hangup_url)
             # Set CallStatus to Session Params
             self.session_params['CallStatus'] = 'ringing'
 
