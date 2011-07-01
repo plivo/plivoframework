@@ -1083,6 +1083,16 @@ class Record(Element):
             filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
+        if self.action and self.method:
+            outbound_socket.set("plivo_record_file=%s" % record_file)
+            outbound_socket.set("plivo_record_action=%s" % self.action)
+            outbound_socket.set("plivo_record_method=%s" % self.method)
+            if self.both_legs:
+                outbound_socket.set("plivo_record_both_legs=true")
+            else:
+                outbound_socket.unset("plivo_record_both_legs")
+
+
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
@@ -1111,9 +1121,17 @@ class Record(Element):
             if not record_digits:
                 record_digits = ""
             outbound_socket.log.info("Record Completed")
+
+        # unset vars
+        outbound_socket.unset("plivo_record_file")
+        outbound_socket.unset("plivo_record_both_legs")
         # If action is set, redirect to this url
         # Otherwise, continue to next Element
         if self.action and is_valid_url(self.action):
+            outbound_socket.unset("plivo_record_file")
+            outbound_socket.unset("plivo_record_action")
+            outbound_socket.unset("plivo_record_method")
+            outbound_socket.unset("plivo_record_both_legs")
             params = {}
             params['RecordingFileFormat'] = self.file_format
             params['RecordingFilePath'] = self.file_path
