@@ -4,6 +4,7 @@
 from gevent import monkey
 monkey.patch_all()
 
+import os.path
 import traceback
 try:
     import xml.etree.cElementTree as etree
@@ -182,6 +183,34 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['CallStatus'] = 'completed'
             self.log.info("Sending hangup to %s" % hangup_url)
             gevent.spawn(self.send_to_url, hangup_url)
+        # post record if found
+        record_file = event['variable_plivo_record_file']
+        if record_file:
+            try:
+                params = {}
+                filepath, filename = os.path.split(record_file)
+                filename, fileformat = os.path.splitext(filename)
+                fileformat = fileformat.lstrip('.')
+                action = event["variable_plivo_record_action"]
+                method = event["variable_plivo_record_method"]
+                both_legs = event["variable_plivo_record_both_legs"]
+                try:
+                    record_ms = int(event["variable_record_ms"])
+                except ValueError:
+                    record_ms = "-1"
+                digits = event["variable_playback_terminator_used"]
+                if not digits:
+                    digits = ""
+                params['RecordingFileFormat'] = fileformat
+                params['RecordingFilePath'] = filepath
+                params['RecordingFilename'] = filename
+                params['RecordingFullFilePath'] = record_file
+                params['RecordingDuration'] = record_ms
+                params['Digits'] = digits
+                self.log.warn('Send record info after hangup: %s' % str(params))
+                gevent.spawn(self.send_to_url, action, params, method)
+            except Exception, e:
+                self.log.error('Failed to send record info after hangup: %s' % str(e))
         # Prevent command to be stuck while waiting response
         self._action_queue.put_nowait(Event())
 

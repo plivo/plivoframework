@@ -74,6 +74,8 @@ ELEMENTS_DEFAULT_PARAMS = {
         'PreAnswer': {
         },
         'Record': {
+                #action: DYNAMIC! MUST BE SET IN METHOD,
+                'method': 'POST',
                 'timeout': 15,
                 'finishOnKey': '1234567890*#',
                 'maxLength': 60,
@@ -1018,6 +1020,8 @@ class PreAnswer(Element):
 class Record(Element):
     """Record audio from caller
 
+    action: submit the result of the record to this URL
+    method: submit to 'action' url using GET or POST
     maxLength: maximum number of seconds to record (default 60)
     timeout: seconds of silence before considering the recording complete (default 500)
     playBeep: play a beep before recording (true/false, default true)
@@ -1039,6 +1043,8 @@ class Record(Element):
         self.file_format = ""
         self.filename = ""
         self.both_legs = False
+        self.action = ''
+        self.method = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1054,6 +1060,12 @@ class Record(Element):
             raise RESTFormatException("Format must be 'wav' or 'mp3'")
         self.filename = self.extract_attribute_value("filename")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
+
+        self.action = self.extract_attribute_value("action")
+        method = self.extract_attribute_value("method")
+        if not method in ('GET', 'POST'):
+            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
+        self.method = method
 
         if max_length < 1:
             raise RESTFormatException("Record 'maxLength' must be a positive integer")
@@ -1071,6 +1083,16 @@ class Record(Element):
             filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
+        if self.action and self.method:
+            outbound_socket.set("plivo_record_file=%s" % record_file)
+            outbound_socket.set("plivo_record_action=%s" % self.action)
+            outbound_socket.set("plivo_record_method=%s" % self.method)
+            if self.both_legs:
+                outbound_socket.set("plivo_record_both_legs=true")
+            else:
+                outbound_socket.unset("plivo_record_both_legs")
+
+
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
@@ -1091,7 +1113,40 @@ class Record(Element):
                                 self.finish_on_key)
             event = outbound_socket.wait_for_action()
             outbound_socket.stop_dtmf()
+            try:
+                record_ms = str(int(outbound_socket.get_var("record_ms")))
+            except ValueError:
+                record_ms = "-1"
+            record_digits = self.get_var("playback_terminator_used")
+            if not record_digits:
+                record_digits = ""
             outbound_socket.log.info("Record Completed")
+
+        # unset vars
+        outbound_socket.unset("plivo_record_file")
+        outbound_socket.unset("plivo_record_both_legs")
+        # If action is set, redirect to this url
+        # Otherwise, continue to next Element
+        if self.action and is_valid_url(self.action):
+            outbound_socket.unset("plivo_record_file")
+            outbound_socket.unset("plivo_record_action")
+            outbound_socket.unset("plivo_record_method")
+            outbound_socket.unset("plivo_record_both_legs")
+            params = {}
+            params['RecordingFileFormat'] = self.file_format
+            params['RecordingFilePath'] = self.file_path
+            params['RecordingFilename'] = filename
+            params['RecordingFullFilePath'] = record_file
+            if self.both_legs:
+                # RecordingDuration not available for bothLegs 
+                # because recording is in progress 
+                # Digits is empty for the same reason
+                params['RecordingDuration'] = "-1" 
+                params['Digits'] = ""
+            else:
+                params['RecordingDuration'] = record_ms
+                params['Digits'] = record_digits
+            self.fetch_rest_xml(self.action, params, method=self.method)
 
 
 class Redirect(Element):
