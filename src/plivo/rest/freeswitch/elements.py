@@ -122,7 +122,9 @@ class Element(object):
             outbound_socket.log.error("[%s] Element cannot be executed !" % self.name)
             raise RESTNoExecuteException("Element %s cannot be executed !" % self.name)
         try:
+            outbound_socket.current_element = self.name
             result = execute(outbound_socket)
+            outbound_socket.current_element = None
         except RESTHangup:
             outbound_socket.log.info("[%s] Done (Hangup)" % self.name)
             raise
@@ -262,22 +264,21 @@ class Conference(Element):
         if not self.moh_sound:
             return mohs
         for audio_path in self.moh_sound.split(','):
-            if not is_valid_url(audio_path):
-                if file_exists(audio_path):
+            # local file case :
+            if not is_valid_url(audio_path) and file_exists(audio_path):
                     mohs.append(audio_path)
+            # remote file case :
             else:
                 if url_exists(audio_path):
-                    if audio_path[-4:].lower() != '.mp3':
-                        raise RESTFormatException("Only mp3 files allowed for remote file play")
                     if audio_path[:7].lower() == 'http://':
                         audio_path = audio_path[7:]
+                        mohs.append("shout://%s" % audio_path)
                     elif audio_path[:8].lower() == 'https://':
                         audio_path = audio_path[8:]
+                        mohs.append("shout://%s" % audio_path)
                     elif audio_path[:6].lower() == 'ftp://':
                         audio_path = audio_path[6:]
-                    else:
-                        pass
-                    mohs.append("shout://%s" % audio_path)
+                        mohs.append("shout://%s" % audio_path)
         return mohs
 
     def execute(self, outbound_socket):
@@ -343,7 +344,13 @@ class Conference(Element):
                                 % (self.room))
             return
         # wait for action event
-        event = outbound_socket.wait_for_action()
+        # drop all dtmf events until we get another event
+        for x in range(1000):
+            event = outbound_socket.wait_for_action()
+            if event['Event-Name'] == 'DTMF':
+                continue
+            else:
+                break
         # if event is add-member, get Member-ID
         # and set extra features for conference
         if event['Event-Subclass'] == 'conference::maintenance' \
@@ -351,23 +358,28 @@ class Conference(Element):
             member_id = event['Member-ID']
             outbound_socket.log.debug("Entered Conference: Room %s with Member-ID %s" \
                             % (self.room, member_id))
-            # set digit binding if hangupOnStar is enabled
-            if member_id and self.hangup_on_star:
-                bind_digit_realm = "conf_%s" % outbound_socket.get_channel_unique_id()
-                outbound_socket.bind_digit_action("%s,*,exec:conference,%s kick %s" \
-                            % (bind_digit_realm, self.room, member_id), lock=True)
-            # set beep on enter/exit if enabled
+            # play beep on enter if enabled
             if member_id:
                 if self.enter_sound == 'beep:1':
-                    outbound_socket.api("conference %s enter_sound file tone_stream://%%(300,200,700)" % self.room)
+                    outbound_socket.api("conference %s play tone_stream://%%(300,200,700) async" % self.room)
                 elif self.enter_sound == 'beep:2':
-                    outbound_socket.api("conference %s enter_sound file tone_stream://L=2;%%(300,200,700)" % self.room)
-                if self.exit_sound == 'beep:1':
-                    outbound_socket.api("conference %s exit_sound file tone_stream://%%(300,200,700)" % self.room)
-                elif self.exit_sound == 'beep:2':
-                    outbound_socket.api("conference %s exit_sound file tone_stream://L=2;%%(300,200,700)" % self.room)
-            # now really wait conference ending for this member
+                    outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
+            # wait conference ending for this member
             event = outbound_socket.wait_for_action()
+            # case '*' dtmf was catched and hangupOnStar is set
+            if self.hangup_on_star and event['Event-Name'] == 'DTMF' \
+                and event['DTMF-Digit'] == '*':
+                outbound_socket.bgapi("conference %s kick %s" % (self.room, member_id))
+                outbound_socket.log.info("Conference: Room %s, Dtmf '*' pressed, kick Member-ID %s" \
+                                % (self.room, member_id))
+                # now really wait conference ending for this member
+                event = outbound_socket.wait_for_action()
+            # play beep on exit if enabled
+            if member_id:
+                if self.exit_sound == 'beep:1':
+                    outbound_socket.api("conference %s play tone_stream://%%(300,200,700) async" % self.room)
+                elif self.exit_sound == 'beep:2':
+                    outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
         outbound_socket.log.info("Leaving Conference: Room %s" % self.room)
 
 
@@ -434,22 +446,21 @@ class Dial(Element):
         if not self.dial_music:
             return mohs
         for audio_path in self.dial_music.split(','):
-            if not is_valid_url(audio_path):
-                if file_exists(audio_path):
-                    mohs.append(audio_path)
+            # local file case :
+            if not is_valid_url(audio_path) and file_exists(audio_path):
+                mohs.append(audio_path)
+            # remote file case :
             else:
                 if url_exists(audio_path):
-                    if audio_path[-4:].lower() != '.mp3':
-                        raise RESTFormatException("Only mp3 files allowed for remote file play")
                     if audio_path[:7].lower() == "http://":
                         audio_path = audio_path[7:]
+                        mohs.append("shout://%s" % audio_path)
                     elif audio_path[:8].lower() == "https://":
                         audio_path = audio_path[8:]
+                        mohs.append("shout://%s" % audio_path)
                     elif audio_path[:6].lower() == "ftp://":
                         audio_path = audio_path[6:]
-                    else:
-                        pass
-                    mohs.append("shout://%s" % audio_path)
+                        mohs.append("shout://%s" % audio_path)
         return mohs
 
     def create_number(self, number_instance, outbound_socket):

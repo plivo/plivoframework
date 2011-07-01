@@ -103,6 +103,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.hangup_url = ''
         self.session_params = {}
         self._hangup_cause = ''
+        # flag to track current element
+        self.current_element = None
         # create queue for waiting actions
         self._action_queue = gevent.queue.Queue()
         # set default answer url
@@ -193,6 +195,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             and event['Unique-ID'] == self.get_channel_unique_id():
             self._action_queue.put(event)
 
+    def on_dtmf(self, event):
+        # special case to hangupOnStar in conference
+        if self.current_element == 'Conference' and event['DTMF-Digit'] == '*':
+            self._action_queue.put(event)
+
     def has_hangup(self):
         if self._hangup_cause:
             return True
@@ -235,9 +242,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.linger()
         self.myevents()
         if self._is_eventjson:
-            self.eventjson('CUSTOM conference::maintenance')
+            self.eventjson('DTMF CUSTOM conference::maintenance')
         else:
-            self.eventplain('CUSTOM conference::maintenance')
+            self.eventplain('DTMF CUSTOM conference::maintenance')
         # Set plivo app flag
         self.set('plivo_app=true')
         # Don't hangup after bridge
