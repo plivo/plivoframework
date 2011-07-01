@@ -291,14 +291,17 @@ class Conference(Element):
             outbound_socket.unset("max-members")
 
         if self.record_file_path:
+            file_path = os.path.normpath(self.record_file_path) + os.sep
             if self.record_filename:
                 filename = self.record_filename
             else:
                 filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
-                                self.room)
-            record_file = "%s%s.%s" % (self.record_file_path, filename,
-                                                    self.record_file_format)
-            outbound_socket.set("auto-record=%s" % record_file)
+                                      outbound_socket.get_channel_unique_id())
+            record_file = "%s%s.%s" % (file_path, filename,
+                                        self.record_file_format)
+            #outbound_socket.set("auto-record=%s" % record_file)
+        else:
+            record_file = None
 
         # set moh sound
         mohs = self._prepare_moh()
@@ -364,6 +367,11 @@ class Conference(Element):
                     outbound_socket.api("conference %s play tone_stream://%%(300,200,700) async" % self.room)
                 elif self.enter_sound == 'beep:2':
                     outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
+            # record conference if set
+            if record_file:
+                outbound_socket.bgapi("conference %s record %s" % (self.room, record_file))
+                outbound_socket.log.info("Conference: Room %s, recording to file %s" \
+                                % (self.room, record_file))
             # wait conference ending for this member
             event = outbound_socket.wait_for_action()
             # case '*' dtmf was catched and hangupOnStar is set
