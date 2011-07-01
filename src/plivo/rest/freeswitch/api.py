@@ -168,8 +168,8 @@ class PlivoRestApi(object):
         if time_limit > 0:
             # create sched_hangup_id
             sched_hangup_id = str(uuid.uuid1())
-            args_list.append("api_on_answer='sched_api %s +%d hupall ALLOTTED_TIMEOUT plivo_request_uuid %s'" \
-                                                % (sched_hangup_id, time_limit, request_uuid))
+            args_list.append("api_on_answer='sched_api +%d %s hupall ALLOTTED_TIMEOUT plivo_request_uuid %s'" \
+                                                % (time_limit, sched_hangup_id, request_uuid))
             args_list.append("plivo_sched_hangup_id=%s" % sched_hangup_id)
 
         # build originate string
