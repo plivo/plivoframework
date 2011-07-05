@@ -214,12 +214,12 @@ class RESTInboundSocket(InboundEventSocket):
             caller_num = event['Caller-Caller-ID-Number']
             params = {
                     'RequestUUID': request_uuid,
-                    'CallUUID': call_uuid,
+                    'CallUUID': call_uuid or '',
                     'HangupCause': reason,
                     'Direction': 'outbound',
-                    'To': called_num,
+                    'To': called_num or '',
                     'CallStatus': 'completed',
-                    'From': caller_num
+                    'From': caller_num or ''
                 }
             spawn_raw(self.send_to_url, hangup_url, params)
         else:
