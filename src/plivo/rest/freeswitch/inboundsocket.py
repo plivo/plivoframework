@@ -76,7 +76,7 @@ class RESTInboundSocket(InboundEventSocket):
                     # set an empty call_uuid
                     call_uuid = ''
                     hangup_url = call_req.hangup_url
-                    self.set_hangup_complete(self, request_uuid, call_uuid,
+                    self.set_hangup_complete(request_uuid, call_uuid,
                                              reason, event, hangup_url)
                     return
                 # If there are gateways and call request state_flag is not set
