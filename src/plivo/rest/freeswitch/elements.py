@@ -630,9 +630,9 @@ class Dial(Element):
         if self.action and is_valid_url(self.action):
             params = {}
             if dial_rang:
-                params['RingStatus'] = 'true'
+                params['DialRingStatus'] = 'true'
             else:
-                params['RingStatus'] = 'false'
+                params['DialRingStatus'] = 'false'
             params['HangupCause'] = hangup_cause
             self.fetch_rest_xml(self.action, params, method=self.method)
 
@@ -1138,10 +1138,10 @@ class Record(Element):
             params['RecordingFilename'] = filename
             params['RecordingFullFilePath'] = record_file
             if self.both_legs:
-                # RecordingDuration not available for bothLegs 
-                # because recording is in progress 
+                # RecordingDuration not available for bothLegs
+                # because recording is in progress
                 # Digits is empty for the same reason
-                params['RecordingDuration'] = "-1" 
+                params['RecordingDuration'] = "-1"
                 params['Digits'] = ""
             else:
                 params['RecordingDuration'] = record_ms
