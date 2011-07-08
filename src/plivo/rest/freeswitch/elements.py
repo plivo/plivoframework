@@ -1117,7 +1117,7 @@ class Record(Element):
                 record_ms = str(int(outbound_socket.get_var("record_ms")))
             except ValueError:
                 record_ms = "-1"
-            record_digits = self.get_var("playback_terminator_used")
+            record_digits = outbound_socket.get_var("playback_terminator_used")
             if not record_digits:
                 record_digits = ""
             outbound_socket.log.info("Record Completed")
