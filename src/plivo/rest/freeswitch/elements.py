@@ -538,8 +538,7 @@ class Dial(Element):
         # But first set plivo_dial_rang to false
         # to be sure we don't get it from an old Dial
         outbound_socket.set("plivo_dial_rang=false")
-        outbound_socket.set("execute_on_ring=eval ${uuid_setvar(%s plivo_dial_rang true}" \
-                            % outbound_socket.get_channel_unique_id())
+        outbound_socket.set("execute_on_ring=set::plivo_dial_rang=true")
         # Set numbers to dial from Number nouns
         for child in self.children:
             if isinstance(child, Number):
