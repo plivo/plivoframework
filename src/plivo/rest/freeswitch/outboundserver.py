@@ -176,6 +176,8 @@ def main():
 
     if not configfile:
         configfile = './etc/plivo/default.conf'
+        if not os.path.isfile(configfile):
+            raise SystemExit("Error : Default config file mising at '%s'. Please specify -c <configfilepath>" %configfile)
     if not pidfile:
         pidfile='/tmp/plivo_outbound.pid'
 

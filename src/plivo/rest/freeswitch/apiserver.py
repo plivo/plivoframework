@@ -27,7 +27,7 @@ class PlivoRestServer(PlivoRestApi):
     """Class PlivoRestServer"""
     name = 'PlivoRestServer'
     default_http_method = 'POST'
-    
+
     def __init__(self, configfile, daemon=False,
                         pidfile='/tmp/plivo_rest.pid'):
         """Constructor
@@ -92,7 +92,7 @@ class PlivoRestServer(PlivoRestApi):
                             fs_password, outbound_address=fs_out_address,
                             auth_id=self.auth_id,
                             auth_token=self.auth_token,
-                            log=self.log, 
+                            log=self.log,
                             default_http_method=default_http_method,
                             trace=self._trace)
         # expose API functions to flask app
@@ -252,27 +252,29 @@ class PlivoRestServer(PlivoRestApi):
 def main():
     parser = optparse.OptionParser()
     parser.add_option("-c", "--configfile", action="store", type="string",
-                      dest="configfile", 
+                      dest="configfile",
                       help="use plivo config file (argument is mandatory)",
                       metavar="CONFIGFILE")
     parser.add_option("-p", "--pidfile", action="store", type="string",
-                      dest="pidfile", 
+                      dest="pidfile",
                       help="write pid to PIDFILE (argument is mandatory)",
                       metavar="PIDFILE")
     (options, args) = parser.parse_args()
 
     configfile = options.configfile
     pidfile = options.pidfile
-    
+
     if not configfile:
         configfile = './etc/plivo/default.conf'
+        if not os.path.isfile(configfile):
+            raise SystemExit("Error : Default config file mising at '%s'. Please specify -c <configfilepath>" %configfile)
     if not pidfile:
         pidfile='/tmp/plivo_rest.pid'
 
     server = PlivoRestServer(configfile=configfile, pidfile=pidfile,
                                                         daemon=False)
     server.start()
-    
+
 
 if __name__ == '__main__':
     main()
