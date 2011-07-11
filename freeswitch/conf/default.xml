@@ -19,6 +19,7 @@
     -->
     <extension name="plivo">
         <condition field="destination_number" expression="^(\d+)$">
+            <action application="enable_heartbeat" data="60"/>
             <action application="socket" data="127.0.0.1:8084 async full"/>
         </condition>
     </extension>
@@ -28,9 +29,10 @@
      freeswitch will call plivo outbound server on every incoming call
     -->
     <extension name="plivo_sip_uri">
-      <condition field="destination_number" expression="^sip:(.*)$">
-        <action application="socket" data="127.0.0.1:8084 async full"/>
-      </condition>
+        <condition field="destination_number" expression="^sip:(.*)$">
+            <action application="enable_heartbeat" data="60"/>
+            <action application="socket" data="127.0.0.1:8084 async full"/>
+        </condition>
     </extension>
 
 
