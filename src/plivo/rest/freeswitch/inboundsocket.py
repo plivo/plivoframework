@@ -225,10 +225,6 @@ class RESTInboundSocket(InboundEventSocket):
         request_uuid = event['variable_plivo_request_uuid']
         if request_uuid:
             params['RequestUUID'] = request_uuid
-        # AccountID to which this calls belongs to
-        plivo_account_id = event['variable_plivo_account_id']
-        if plivo_account_id:
-            params['PlivoAccountID'] = plivo_account_id
 
         if self.call_heartbeat_url:
             spawn_raw(self.send_to_url, self.call_heartbeat_url, params)
