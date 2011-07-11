@@ -8,10 +8,10 @@ from gevent import spawn_raw
 from gevent import pool
 
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
-from plivo.rest.freeswitch.helpers import HTTPRequest
+from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
 
 
-EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP CHANNEL_STATE"
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP CHANNEL_STATE SESSION_HEARTBEAT"
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -21,9 +21,9 @@ class RESTInboundSocket(InboundEventSocket):
     def __init__(self, host, port, password,
                  outbound_address='',
                  auth_id='', auth_token='',
-                 log=None, default_http_method='POST',
+                 log=None, default_http_method='POST', call_heartbeat_url=None,
                  trace=False):
-        InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER, 
+        InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER,
                                     trace=trace)
         self.fs_outbound_address = outbound_address
         self.log = log
@@ -36,6 +36,7 @@ class RESTInboundSocket(InboundEventSocket):
         # Call Requests
         self.call_requests = {}
         self.default_http_method = default_http_method
+        self.call_heartbeat_url = call_heartbeat_url
 
     def on_background_job(self, event):
         """
@@ -100,7 +101,7 @@ class RESTInboundSocket(InboundEventSocket):
                 # set state flag to true
                 call_req.state_flag = 'Ringing'
                 # clear gateways to avoid retry
-                call_req.gateways = [] 
+                call_req.gateways = []
                 called_num = event['Caller-Destination-Number']
                 caller_num = event['Caller-Caller-ID-Number']
                 self.log.info("Call from %s to %s Ringing for RequestUUID %s" \
@@ -132,7 +133,7 @@ class RESTInboundSocket(InboundEventSocket):
                 # set state flag to true
                 call_req.state_flag = 'EarlyMedia'
                 # clear gateways to avoid retry
-                call_req.gateways = [] 
+                call_req.gateways = []
                 called_num = event['Caller-Destination-Number']
                 caller_num = event['Caller-Caller-ID-Number']
                 self.log.info("Call from %s to %s in EarlyMedia for RequestUUID %s" \
@@ -150,8 +151,7 @@ class RESTInboundSocket(InboundEventSocket):
                     spawn_raw(self.send_to_url, ring_url, params)
 
     def on_channel_hangup(self, event):
-        """
-        Capture Channel Hangup
+        """Capture Channel Hangup
         """
         request_uuid = event['variable_plivo_request_uuid']
         direction = event['Call-Direction']
@@ -199,6 +199,39 @@ class RESTInboundSocket(InboundEventSocket):
             xfer = self.xfer_jobs.pop(call_uuid, None)
             if xfer:
                 self.log.warn("TransferCall Aborted (hangup) for %s" % call_uuid)
+
+    def on_session_heartbeat(self, event):
+        """Capture every heartbeat event in a session and post info
+        """
+        params = {}
+        answer_seconds_since_epoch = float(event['Caller-Channel-Answered-Time'])/1000000
+        # using UTC here .. make sure FS is using UTC also
+        params['AnsweredTime'] = str(answer_seconds_since_epoch)
+        heartbeat_seconds_since_epoch = float(event['Event-Date-Timestamp'])/1000000
+        # using UTC here .. make sure FS is using UTC also
+        params['HeartbeatTime'] = str(heartbeat_seconds_since_epoch)
+        params['ElapsedTime'] = str(heartbeat_seconds_since_epoch - answer_seconds_since_epoch)
+        params['To'] = event['Caller-Destination-Number'].lstrip('+')
+        params['From'] = event['Caller-Caller-ID-Number'].lstrip('+')
+        params['CallUUID'] = event['Unique-ID']
+        params['Direction'] = event['Call-Direction']
+        forwarded_from = get_substring(':', '@',
+                            event['variable_sip_h_Diversion'])
+        if forwarded_from:
+            params['ForwardedFrom'] = forwarded_from.lstrip('+')
+        if event['Channel-State'] == 'CS_EXECUTE':
+            params['CallStatus'] = 'in-progress'
+        # RequestUUID through which this call was initiated if outbound
+        request_uuid = event['variable_plivo_request_uuid']
+        if request_uuid:
+            params['RequestUUID'] = request_uuid
+        # AccountID to which this calls belongs to
+        plivo_account_id = event['variable_plivo_account_id']
+        if plivo_account_id:
+            params['PlivoAccountID'] = plivo_account_id
+
+        if self.call_heartbeat_url:
+            spawn_raw(self.send_to_url, self.call_heartbeat_url, params)
 
     def set_hangup_complete(self, request_uuid, call_uuid, reason, event, hangup_url):
         self.log.info("Call %s Completed, Reason %s, Request uuid %s"
@@ -293,12 +326,12 @@ class RESTInboundSocket(InboundEventSocket):
         return False
 
     def transfer_call(self, new_xml_url, call_uuid):
-        # Set transfer progress flag to prevent hangup 
+        # Set transfer progress flag to prevent hangup
         # when the current outbound_socket flow will end
         self.set_var("plivo_transfer_progress", "true", uuid=call_uuid)
         # Set transfer url
         self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
-        # Link inline dptools (will be run when ready to start transfer) 
+        # Link inline dptools (will be run when ready to start transfer)
         # to the call_uuid job
         outbound_str = "socket:%s async full" \
                         % (self.fs_outbound_address)

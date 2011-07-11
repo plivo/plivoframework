@@ -87,6 +87,9 @@ class PlivoRestServer(PlivoRestApi):
         if not default_http_method or \
                             default_http_method not in ('GET', 'POST'):
             self.default_http_method = 'POST'
+        # get call_heartbeat url
+        call_heartbeat_url = helpers.get_conf_value(self._config,
+                                        'rest_server', 'CALL_HEARTBEAT_URL')
         # create inbound socket instance
         self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port,
                             fs_password, outbound_address=fs_out_address,
@@ -94,6 +97,7 @@ class PlivoRestServer(PlivoRestApi):
                             auth_token=self.auth_token,
                             log=self.log,
                             default_http_method=default_http_method,
+                            call_heartbeat_url = call_heartbeat_url,
                             trace=self._trace)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
