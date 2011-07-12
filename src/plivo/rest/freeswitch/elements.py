@@ -422,6 +422,8 @@ class Dial(Element):
         self.confirm_sound = ''
         self.confirm_key = ''
         self.dial_music = ''
+        self.bleg_hangup_url = ''
+        self.bleg_hangup_method = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -450,6 +452,13 @@ class Dial(Element):
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
+
+        self.bleg_hangup_url = self.extract_attribute_value("BLegHangupAction")
+        if self.bleg_hangup_url:
+            method = self.extract_attribute_value("BLegHangupMethod")
+            if not method in ('GET', 'POST'):
+                raise RESTAttributeException("BLegHangupMethod, must be 'GET' or 'POST'")
+            self.bleg_hangup_method = method
 
     def _prepare_moh(self):
         mohs = []
@@ -550,6 +559,14 @@ class Dial(Element):
             return
         # Create dialstring
         self.dial_str = ':_:'.join(numbers)
+        # Set bleg hangup action and method if needed
+        if self.bleg_hangup_url and self.bleg_hangup_method:
+            baction = 'plivo_bleg_dial_hangup_url=%s,plivo_bleg_dial_hangup_method=%s,plivo_aleg_dial_uuid=%s' \
+                    % (self.bleg_hangup_url, self.bleg_hangup_method, self.get_channel_unique_id())
+            if len(numbers) > 1:
+                self.dial_str = '<%s>%s' % (baction, self.dial_str)
+            else:
+                self.dial_str = '{%s}%s' % (baction, self.dial_str)
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
         # Set time limit: when reached, B Leg is hung up
