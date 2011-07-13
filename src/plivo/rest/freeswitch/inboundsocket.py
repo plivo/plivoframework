@@ -225,8 +225,11 @@ class RESTInboundSocket(InboundEventSocket):
         request_uuid = event['variable_plivo_request_uuid']
         if request_uuid:
             params['RequestUUID'] = request_uuid
-
+            
+        self.log.debug("Got Session Heartbeat from Freeswitch: %s" % params)
+        
         if self.call_heartbeat_url:
+            self.log.debug("Sending heartbeat to calalback: %s" % self.call_heartbeat_url)
             spawn_raw(self.send_to_url, self.call_heartbeat_url, params)
 
     def set_hangup_complete(self, request_uuid, call_uuid, reason, event, hangup_url):
