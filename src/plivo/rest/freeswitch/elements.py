@@ -453,11 +453,11 @@ class Dial(Element):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
 
-        self.bleg_hangup_url = self.extract_attribute_value("BLegHangupAction")
+        self.bleg_hangup_url = self.extract_attribute_value("bLegHangupAction")
         if self.bleg_hangup_url:
-            method = self.extract_attribute_value("BLegHangupMethod")
+            method = self.extract_attribute_value("bLegHangupMethod")
             if not method in ('GET', 'POST'):
-                raise RESTAttributeException("BLegHangupMethod, must be 'GET' or 'POST'")
+                raise RESTAttributeException("bLegHangupMethod, must be 'GET' or 'POST'")
             self.bleg_hangup_method = method
 
     def _prepare_moh(self):
@@ -562,11 +562,20 @@ class Dial(Element):
         # Set bleg hangup action and method if needed
         if self.bleg_hangup_url and self.bleg_hangup_method:
             baction = 'plivo_bleg_dial_hangup_url=%s,plivo_bleg_dial_hangup_method=%s,plivo_aleg_dial_uuid=%s' \
-                    % (self.bleg_hangup_url, self.bleg_hangup_method, self.get_channel_unique_id())
+                    % (self.bleg_hangup_url, self.bleg_hangup_method, 
+                        outbound_socket.get_channel_unique_id())
+            # case more than one number to dial
             if len(numbers) > 1:
+                # add baction as global options for originate
                 self.dial_str = '<%s>%s' % (baction, self.dial_str)
+            # case one number to dial
             else:
-                self.dial_str = '{%s}%s' % (baction, self.dial_str)
+                # append baction as local options for originate
+                if self.dial_str[0] == '[':
+                    self.dial_str = "[%s,%s" % (baction, self.dial_str[1:])
+                # or add baction as local options for originate
+                else:
+                    self.dial_str = '[%s]%s' % (baction, self.dial_str)
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
         # Set time limit: when reached, B Leg is hung up
