@@ -32,9 +32,13 @@ def get_substring(start_char, end_char, data):
 
 def url_exists(url):
     p = urlparse.urlparse(url)
+    if p[4]:
+        extra_string = "%s?%s" %(p[2], p[4])
+    else:
+        extra_string = p[2]
     try:
         connection = httplib.HTTPConnection(p[1])
-        connection.request('HEAD', p[2])
+        connection.request('HEAD', extra_string)
         response = connection.getresponse()
         connection.close()
         return response.status == httplib.OK
