@@ -204,6 +204,13 @@ class Conference(Element):
         (default mp3)
     recordFilename: By default empty, if provided this name will be used for the recording
         (any unique name)
+    action: redirect to this URL after leaving conference
+    method: submit to 'action' url using GET or POST
+    callbackUrl: url to request when call enters/leaves conference 
+            or has pressed digits matching (digitsMatch)
+    callbackMethod: submit to 'callbackUrl' url using GET or POST
+    digitsMatch: a list of matching digits to send with callbackUrl
+            Can be a list of digits patterns separated by comma.
     """
     DEFAULT_TIMELIMIT = 0
     DEFAULT_MAXMEMBERS = 200
@@ -411,7 +418,7 @@ class Conference(Element):
 
                 # set bind digit actions
                 digit_realm = ''
-                if self.digits_match and self.action:
+                if self.digits_match and self.callback_url:
                     # create event template
                     event_template = "Event-Name=CUSTOM,Event-Subclass=conference::maintenance,Action=digits-match,Unique-ID=%s,Callback-Url=%s,Callback-Method=%s,Member-ID=%s,Conference-Name=%s,Conference-Unique-ID=%s" \
                         % (outbound_socket.get_channel_unique_id(), self.callback_url, self.callback_method, self.member_id, self.room, self.conf_id)
@@ -479,7 +486,7 @@ class Conference(Element):
 class Dial(Element):
     """Dial another phone number and connect it to this call
 
-    action: submit the result of the dial to this URL
+    action: submit the result of the dial and redirect to this URL 
     method: submit to 'action' url using GET or POST
     hangupOnStar: hangup the b leg if a leg presses start and this is true
     callerId: caller id to be send to the dialed number
@@ -488,13 +495,15 @@ class Dial(Element):
     confirmKey: Key to be pressed to bridge the call.
     dialMusic: Play music to a leg while doing a dial to b leg
                 Can be a list of files separated by comma
+    redirect: if 'false', don't redirect to 'action', only request url 
+        and continue to next element. (default 'true')
     """
     DEFAULT_TIMEOUT = 30
     DEFAULT_TIMELIMIT = 14400
 
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ['Number']
+        self.nestables = ('Number',)
         self.method = ''
         self.action = ''
         self.hangup_on_star = False
@@ -505,8 +514,7 @@ class Dial(Element):
         self.confirm_sound = ''
         self.confirm_key = ''
         self.dial_music = ''
-        self.bleg_hangup_url = ''
-        self.bleg_hangup_method = ''
+        self.redirect = False
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -531,17 +539,13 @@ class Dial(Element):
         self.dial_music = self.extract_attribute_value("dialMusic")
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
                                                                 == 'true'
+        self.redirect = self.extract_attribute_value("redirect") \
+                                                        == 'true'
+
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
         self.method = method
-
-        self.bleg_hangup_url = self.extract_attribute_value("bLegHangupAction")
-        if self.bleg_hangup_url:
-            method = self.extract_attribute_value("bLegHangupMethod")
-            if not method in ('GET', 'POST'):
-                raise RESTAttributeException("bLegHangupMethod, must be 'GET' or 'POST'")
-            self.bleg_hangup_method = method
 
     def _prepare_moh(self):
         mohs = []
@@ -642,23 +646,6 @@ class Dial(Element):
             return
         # Create dialstring
         self.dial_str = ':_:'.join(numbers)
-        # Set bleg hangup action and method if needed
-        if self.bleg_hangup_url and self.bleg_hangup_method:
-            baction = 'plivo_bleg_dial_hangup_url=%s,plivo_bleg_dial_hangup_method=%s,plivo_aleg_dial_uuid=%s' \
-                    % (self.bleg_hangup_url, self.bleg_hangup_method, 
-                        outbound_socket.get_channel_unique_id())
-            # case more than one number to dial
-            if len(numbers) > 1:
-                # add baction as global options for originate
-                self.dial_str = '<%s>%s' % (baction, self.dial_str)
-            # case one number to dial
-            else:
-                # append baction as local options for originate
-                if self.dial_str[0] == '[':
-                    self.dial_str = "[%s,%s" % (baction, self.dial_str[1:])
-                # or add baction as local options for originate
-                else:
-                    self.dial_str = '[%s]%s' % (baction, self.dial_str)
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
         # Set time limit: when reached, B Leg is hung up
@@ -705,40 +692,53 @@ class Dial(Element):
             outbound_socket.unset("group_confirm_key")
         # Start dial
         outbound_socket.log.info("Dial Started %s" % self.dial_str)
-        outbound_socket.bridge(self.dial_str)
-        event = outbound_socket.wait_for_action()
-        reason = None
-        originate_disposition = event['variable_originate_disposition']
-        hangup_cause = originate_disposition
-        if hangup_cause == 'ORIGINATOR_CANCEL':
-            reason = '%s (A leg)' % hangup_cause
-        else:
-            reason = '%s (B leg)' % hangup_cause
-        if not hangup_cause or hangup_cause == 'SUCCESS':
-            hangup_cause = outbound_socket.get_hangup_cause()
-            reason = '%s (A leg)' % hangup_cause
-            if not hangup_cause:
-                hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
-                reason = '%s (B leg)' % hangup_cause
-                if not hangup_cause:
-                    hangup_cause = outbound_socket.get_var('hangup_cause')
-                    reason = '%s (A leg)' % hangup_cause
-        outbound_socket.log.info("Dial Finished with reason: %s" \
-                                 % reason)
-        # Unschedule hangup task
-        outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
-        # Get ring status
-        dial_rang = outbound_socket.get_var("plivo_dial_rang") == 'true'
-        # If action is set, redirect to this url
-        # Otherwise, continue to next Element
-        if self.action and is_valid_url(self.action):
-            params = {}
-            if dial_rang:
-                params['DialRingStatus'] = 'true'
+        bleg_uuid = ''
+        dial_rang = ''
+        try:
+            outbound_socket.bridge(self.dial_str)
+            event = outbound_socket.wait_for_action()
+            if event['Event-Name'] == 'CHANNEL_UNBRIDGE':
+                bleg_uuid = event['Originatee-Unique-ID'] or ''
+                event = outbound_socket.wait_for_action()
+            reason = None
+            originate_disposition = event['variable_originate_disposition']
+            hangup_cause = originate_disposition
+            if hangup_cause == 'ORIGINATOR_CANCEL':
+                reason = '%s (A leg)' % hangup_cause
             else:
-                params['DialRingStatus'] = 'false'
-            params['HangupCause'] = hangup_cause
-            self.fetch_rest_xml(self.action, params, method=self.method)
+                reason = '%s (B leg)' % hangup_cause
+            if not hangup_cause or hangup_cause == 'SUCCESS':
+                hangup_cause = outbound_socket.get_hangup_cause()
+                reason = '%s (A leg)' % hangup_cause
+                if not hangup_cause:
+                    hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
+                    reason = '%s (B leg)' % hangup_cause
+                    if not hangup_cause:
+                        hangup_cause = outbound_socket.get_var('hangup_cause')
+                        reason = '%s (A leg)' % hangup_cause
+            outbound_socket.log.info("Dial Finished with reason: %s" \
+                                     % reason)
+            # Unschedule hangup task
+            outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
+            # Get ring status
+            dial_rang = outbound_socket.get_var("plivo_dial_rang") == 'true'
+        finally:
+            # If action is set, redirect to this url
+            # Otherwise, continue to next Element
+            if self.action and is_valid_url(self.action):
+                params = {}
+                if dial_rang:
+                    params['DialRingStatus'] = 'true'
+                else:
+                    params['DialRingStatus'] = 'false'
+                params['DialHangupCause'] = hangup_cause
+                params['DialALegUUID'] = outbound_socket.get_channel_unique_id()
+                if bleg_uuid:
+                    params['DialBLegUUID'] = bleg_uuid
+                if self.redirect:
+                    self.fetch_rest_xml(self.action, params, method=self.method)
+                else:
+                    spawn_raw(outbound_socket.send_to_url, self.action, params, method=self.method)
 
 
 class GetDigits(Element):
@@ -759,7 +759,7 @@ class GetDigits(Element):
 
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ['Speak', 'Play', 'Wait']
+        self.nestables = ('Speak', 'Play', 'Wait')
         self.num_digits = None
         self.timeout = None
         self.finish_on_key = None
@@ -1054,8 +1054,7 @@ class Play(Element):
                 self.sound_file_path = audio_path
         else:
             GOOGLE_TRANSLATE = "translate.google.com/translate_tts"
-            if url_exists(audio_path) or
-               GOOGLE_TRANSLATE in (audio_path[7:41], audio_path[8:42]):
+            if url_exists(audio_path) or GOOGLE_TRANSLATE in (audio_path[7:41], audio_path[8:42]):
                 if audio_path[:7].lower() == "http://":
                     audio_path = audio_path[7:]
                 elif audio_path[:8].lower() == "https://":
@@ -1103,7 +1102,7 @@ class PreAnswer(Element):
     """
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ['Play', 'Speak', 'GetDigits', 'Wait']
+        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait')
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1196,7 +1195,6 @@ class Record(Element):
             else:
                 outbound_socket.unset("plivo_record_both_legs")
 
-
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
@@ -1217,21 +1215,16 @@ class Record(Element):
                                 self.finish_on_key)
             event = outbound_socket.wait_for_action()
             outbound_socket.stop_dtmf()
-            try:
-                record_ms = str(int(outbound_socket.get_var("record_ms")))
-            except ValueError:
-                record_ms = "-1"
-            record_digits = outbound_socket.get_var("playback_terminator_used")
-            if not record_digits:
-                record_digits = ""
             outbound_socket.log.info("Record Completed")
 
-        # unset vars
-        outbound_socket.unset("plivo_record_file")
-        outbound_socket.unset("plivo_record_both_legs")
         # If action is set, redirect to this url
         # Otherwise, continue to next Element
         if self.action and is_valid_url(self.action):
+            try:
+                record_ms = str(int(outbound_socket.get_var("record_ms")))
+            except ValueError, TypeError:
+                record_ms = "-1"
+            record_digits = outbound_socket.get_var("playback_terminator_used")
             outbound_socket.unset("plivo_record_file")
             outbound_socket.unset("plivo_record_action")
             outbound_socket.unset("plivo_record_method")
@@ -1249,7 +1242,10 @@ class Record(Element):
                 params['Digits'] = ""
             else:
                 params['RecordingDuration'] = record_ms
-                params['Digits'] = record_digits
+                if record_digits:
+                    params['Digits'] = record_digits
+                else:
+                    params['Digits'] = ""
             self.fetch_rest_xml(self.action, params, method=self.method)
 
 

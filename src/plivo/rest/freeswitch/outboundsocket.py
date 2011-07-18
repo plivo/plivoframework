@@ -76,8 +76,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                        )
     NO_ANSWER_ELEMENTS = ('Wait',
                           'PreAnswer',
-                          'Dial',
                           'Hangup',
+                          'Dial',
                          )
 
     def __init__(self, socket, address, log,
@@ -166,9 +166,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             else:
                 self._action_queue.put(event)
 
-    def on_channel_hangup(self, event):
+    def on_channel_hangup_complete(self, event):
         """
-        Capture Channel Hangup
+        Capture Channel Hangup Complete
         """
         self._hangup_cause = event['Hangup-Cause']
         self.log.info('Event: channel %s has hung up (%s)' %
@@ -196,8 +196,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 method = event["variable_plivo_record_method"]
                 both_legs = event["variable_plivo_record_both_legs"]
                 try:
-                    record_ms = int(event["variable_record_ms"])
-                except ValueError:
+                    record_ms = str(int(event["variable_record_ms"]))
+                except ValueError, TypeError:
                     record_ms = "-1"
                 digits = event["variable_playback_terminator_used"]
                 if not digits:
@@ -214,6 +214,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.error('Failed to send record info after hangup: %s' % str(e))
         # Prevent command to be stuck while waiting response
         self._action_queue.put_nowait(Event())
+
+    def on_channel_unbridge(self, event):
+        # special case to get bleg uuid for Dial
+        if self.current_element == 'Dial':
+            self._action_queue.put(event)
 
     def on_custom(self, event):
         if self.current_element == 'Conference':
@@ -249,17 +254,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     params['ConferenceAction'] = 'digits'
                     spawn_raw(self.send_to_url, digits_action, params, digits_method)
 
-    '''
-    def on_dtmf(self, event):
-        # special case to hangupOnStar in conference
-        if self.current_element == 'Conference' and event['DTMF-Digit'] == '*':
-            self._action_queue.put(event)
-    '''
-
     def has_hangup(self):
         if self._hangup_cause:
             return True
         return False
+
+    def has_answered(self):
+        return self.answered
 
     def get_hangup_cause(self):
         return self._hangup_cause
@@ -567,14 +568,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 element_instance.prepare()
             # Check if it's an inbound call
             if self.session_params['Direction'] == 'inbound':
-                # Don't answer the call if element is of type no answer
-                # Only execute the element
+                # Answer the call if element need it
                 if not self.answered and \
                     not element_instance.name in self.NO_ANSWER_ELEMENTS:
                     self.log.debug("Answering because Element %s need it" \
                         % element_instance.name)
                     self.answer()
                     self.answered = True
+                    # After answer, update callstatus to 'in-progress'
+                    self.session_params['CallStatus'] = 'in-progress'
             # execute Element
             element_instance.run(self)
         # If transfer is in progress, don't hangup call
