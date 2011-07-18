@@ -164,7 +164,7 @@ class RESTInboundSocket(InboundEventSocket):
             params['DialALegUUID'] = aleg_uuid
             params['DialBLegUUID'] = call_uuid
             params['DialBLegHangupCause'] = hangupcause
-            spawn_raw(self.send_to_url, self, bleg_dial_hangup_url, 
+            spawn_raw(self.send_to_url, bleg_dial_hangup_url, 
                       params, bleg_dial_hangup_method)
         # check if found a request uuid
         # if not, ignore hangup event
