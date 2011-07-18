@@ -524,7 +524,6 @@ class Dial(Element):
         return result
 
     def execute(self, outbound_socket):
-        dial_options = []
         numbers = []
         # Set timeout
         outbound_socket.set("call_timeout=%d" % self.timeout)
@@ -550,10 +549,7 @@ class Dial(Element):
             outbound_socket.log.error("Dial Aborted, No Number to dial !")
             return
         # Create dialstring
-        self.dial_str = '<'
-        self.dial_str += ','.join(dial_options)
-        self.dial_str += '>'
-        self.dial_str += ':_:'.join(numbers)
+        self.dial_str = ':_:'.join(numbers)
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
         # Set time limit: when reached, B Leg is hung up
