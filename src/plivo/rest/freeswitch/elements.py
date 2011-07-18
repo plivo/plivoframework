@@ -949,8 +949,6 @@ class Play(Element):
                 self.sound_file_path = audio_path
         else:
             if url_exists(audio_path):
-                if audio_path[-4:].lower() != '.mp3':
-                    raise RESTFormatException("Only mp3 files allowed for remote file play")
                 if audio_path[:7].lower() == "http://":
                     audio_path = audio_path[7:]
                 elif audio_path[:8].lower() == "https://":
