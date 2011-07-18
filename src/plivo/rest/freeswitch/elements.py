@@ -945,7 +945,7 @@ class Play(Element):
                 self.sound_file_path = audio_path
         else:
             GOOGLE_TRANSLATE = "translate.google.com/translate_tts"
-            if url_exists(audio_path) or
+            if url_exists(audio_path) or \
                GOOGLE_TRANSLATE in (audio_path[7:41], audio_path[8:42]):
                 if audio_path[:7].lower() == "http://":
                     audio_path = audio_path[7:]
