@@ -25,7 +25,7 @@ fi
 # Set full path
 echo "$PLIVO_ENV" |grep '^/' -q && REAL_PATH=$PLIVO_ENV || REAL_PATH=$PWD/$PLIVO_ENV
 
-# Identify Linix Distribution type
+# Identify Linux Distribution type
 if [ -f /etc/debian_version ] ; then
     DIST='DEBIAN'
 elif [ -f /etc/redhat-release ] ; then
