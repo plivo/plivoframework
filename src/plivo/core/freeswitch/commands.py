@@ -235,6 +235,15 @@ class Commands(object):
         """
         return self._protocol_sendmsg("bind_digit_action", args, uuid, lock)
 
+    def digit_action_set_realm(self, args, uuid="", lock=True):
+        """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_digit_action_set_realm
+
+        >>> digit_action_set_realm("test1")
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("digit_action_set_realm", args, uuid, lock)
+
     def wait_for_silence(self, args, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_wait_for_silence
 

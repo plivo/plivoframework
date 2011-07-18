@@ -13,6 +13,7 @@ except ImportError:
 
 import gevent
 import gevent.queue
+from gevent import spawn_raw
 
 from plivo.core.freeswitch.eventtypes import Event
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
@@ -182,7 +183,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['HangupCause'] = self._hangup_cause
             self.session_params['CallStatus'] = 'completed'
             self.log.info("Sending hangup to %s" % hangup_url)
-            gevent.spawn(self.send_to_url, hangup_url)
+            spawn_raw(self.send_to_url, hangup_url)
         # post record if found
         record_file = event['variable_plivo_record_file']
         if record_file:
@@ -208,23 +209,52 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 params['RecordingDuration'] = record_ms
                 params['Digits'] = digits
                 self.log.warn('Send record info after hangup: %s' % str(params))
-                gevent.spawn(self.send_to_url, action, params, method)
+                spawn_raw(self.send_to_url, action, params, method)
             except Exception, e:
                 self.log.error('Failed to send record info after hangup: %s' % str(e))
         # Prevent command to be stuck while waiting response
         self._action_queue.put_nowait(Event())
 
     def on_custom(self, event):
-        # special case to get Member-ID for conference
-        if event['Event-Subclass'] == 'conference::maintenance' \
-            and event['Action'] == 'add-member' \
-            and event['Unique-ID'] == self.get_channel_unique_id():
-            self._action_queue.put(event)
+        if self.current_element == 'Conference':
+            # special case to get Member-ID for Conference
+            if event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'add-member' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                self.log.debug("Entered conference")
+                self._action_queue.put(event)
+            # special case for hangupOnStar in Conference
+            elif event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'kick' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                room = event['Conference-Name']
+                member_id = event['Member-ID']
+                if room and member_id:
+                    self.bgapi("conference %s kick %s" % (room, member_id))
+                    self.log.warn("Conference Room %s, member %s pressed '*', kicked now !" \
+                            % (room, member_id))
+            # special case to send callback for Conference
+            elif event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'digits-match' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                self.log.debug("Digits match on conference")
+                digits_action = event['Callback-Url'] 
+                digits_method = event['Callback-Method']
+                if digits_action and digits_method:
+                    params = {}
+                    params['ConferenceMemberID'] = event['Member-ID'] or ''
+                    params['ConferenceUUID'] = event['Conference-Unique-ID'] or ''
+                    params['ConferenceName'] = event['Conference-Name'] or ''
+                    params['ConferenceDigitsMatch'] = event['Digits-Match'] or ''
+                    params['ConferenceAction'] = 'digits'
+                    spawn_raw(self.send_to_url, digits_action, params, digits_method)
 
+    '''
     def on_dtmf(self, event):
         # special case to hangupOnStar in conference
         if self.current_element == 'Conference' and event['DTMF-Digit'] == '*':
             self._action_queue.put(event)
+    '''
 
     def has_hangup(self):
         if self._hangup_cause:
@@ -268,9 +298,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.linger()
         self.myevents()
         if self._is_eventjson:
-            self.eventjson('DTMF CUSTOM conference::maintenance')
+            self.eventjson('CUSTOM conference::maintenance')
         else:
-            self.eventplain('DTMF CUSTOM conference::maintenance')
+            self.eventplain('CUSTOM conference::maintenance')
         # Set plivo app flag
         self.set('plivo_app=true')
         # Don't hangup after bridge
@@ -564,6 +594,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.session_params['HangupCause'] = 'NORMAL_CLEARING'
                     self.session_params['CallStatus'] = 'completed'
                     self.log.info("Sending hangup to %s" % hangup_url)
-                    gevent.spawn(self.send_to_url, hangup_url)
+                    spawn_raw(self.send_to_url, hangup_url)
             else:
                 self.log.warn('No more Elements, Transfer In Progress !')
