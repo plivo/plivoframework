@@ -153,6 +153,21 @@ class RESTInboundSocket(InboundEventSocket):
     def on_channel_hangup(self, event):
         """Capture Channel Hangup
         """
+        # send bleg hangup url from Dial element if found
+        bleg_dial_hangup_url = event['variable_plivo_bleg_dial_hangup_url']
+        if bleg_dial_hangup_url:
+            bleg_dial_hangup_method = event['variable_plivo_bleg_dial_hangup_method']
+            params = {}
+            aleg_uuid = event['variable_plivo_aleg_dial_uuid']
+            call_uuid = event['Unique-ID']
+            hangupcause = event['Hangup-Cause']
+            params['DialALegUUID'] = aleg_uuid
+            params['DialBLegUUID'] = call_uuid
+            params['DialBLegHangupCause'] = hangupcause
+            spawn_raw(self.send_to_url, bleg_dial_hangup_url, 
+                      params, bleg_dial_hangup_method)
+        # check if found a request uuid
+        # if not, ignore hangup event
         request_uuid = event['variable_plivo_request_uuid']
         direction = event['Call-Direction']
         if not request_uuid and direction != 'outbound':

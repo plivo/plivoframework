@@ -13,6 +13,7 @@ except ImportError:
 
 import gevent
 import gevent.queue
+from gevent import spawn_raw
 
 from plivo.core.freeswitch.eventtypes import Event
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
@@ -75,8 +76,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                        )
     NO_ANSWER_ELEMENTS = ('Wait',
                           'PreAnswer',
-                          'Dial',
                           'Hangup',
+                          'Dial',
                          )
 
     def __init__(self, socket, address, log,
@@ -165,9 +166,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             else:
                 self._action_queue.put(event)
 
-    def on_channel_hangup(self, event):
+    def on_channel_hangup_complete(self, event):
         """
-        Capture Channel Hangup
+        Capture Channel Hangup Complete
         """
         self._hangup_cause = event['Hangup-Cause']
         self.log.info('Event: channel %s has hung up (%s)' %
@@ -182,7 +183,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['HangupCause'] = self._hangup_cause
             self.session_params['CallStatus'] = 'completed'
             self.log.info("Sending hangup to %s" % hangup_url)
-            gevent.spawn(self.send_to_url, hangup_url)
+            spawn_raw(self.send_to_url, hangup_url)
         # post record if found
         record_file = event['variable_plivo_record_file']
         if record_file:
@@ -195,8 +196,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 method = event["variable_plivo_record_method"]
                 both_legs = event["variable_plivo_record_both_legs"]
                 try:
-                    record_ms = int(event["variable_record_ms"])
-                except ValueError:
+                    record_ms = str(int(event["variable_record_ms"]))
+                except ValueError, TypeError:
                     record_ms = "-1"
                 digits = event["variable_playback_terminator_used"]
                 if not digits:
@@ -208,28 +209,58 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 params['RecordingDuration'] = record_ms
                 params['Digits'] = digits
                 self.log.warn('Send record info after hangup: %s' % str(params))
-                gevent.spawn(self.send_to_url, action, params, method)
+                spawn_raw(self.send_to_url, action, params, method)
             except Exception, e:
                 self.log.error('Failed to send record info after hangup: %s' % str(e))
         # Prevent command to be stuck while waiting response
         self._action_queue.put_nowait(Event())
 
-    def on_custom(self, event):
-        # special case to get Member-ID for conference
-        if event['Event-Subclass'] == 'conference::maintenance' \
-            and event['Action'] == 'add-member' \
-            and event['Unique-ID'] == self.get_channel_unique_id():
+    def on_channel_unbridge(self, event):
+        # special case to get bleg uuid for Dial
+        if self.current_element == 'Dial':
             self._action_queue.put(event)
 
-    def on_dtmf(self, event):
-        # special case to hangupOnStar in conference
-        if self.current_element == 'Conference' and event['DTMF-Digit'] == '*':
-            self._action_queue.put(event)
+    def on_custom(self, event):
+        if self.current_element == 'Conference':
+            # special case to get Member-ID for Conference
+            if event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'add-member' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                self.log.debug("Entered conference")
+                self._action_queue.put(event)
+            # special case for hangupOnStar in Conference
+            elif event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'kick' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                room = event['Conference-Name']
+                member_id = event['Member-ID']
+                if room and member_id:
+                    self.bgapi("conference %s kick %s" % (room, member_id))
+                    self.log.warn("Conference Room %s, member %s pressed '*', kicked now !" \
+                            % (room, member_id))
+            # special case to send callback for Conference
+            elif event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'digits-match' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                self.log.debug("Digits match on conference")
+                digits_action = event['Callback-Url'] 
+                digits_method = event['Callback-Method']
+                if digits_action and digits_method:
+                    params = {}
+                    params['ConferenceMemberID'] = event['Member-ID'] or ''
+                    params['ConferenceUUID'] = event['Conference-Unique-ID'] or ''
+                    params['ConferenceName'] = event['Conference-Name'] or ''
+                    params['ConferenceDigitsMatch'] = event['Digits-Match'] or ''
+                    params['ConferenceAction'] = 'digits'
+                    spawn_raw(self.send_to_url, digits_action, params, digits_method)
 
     def has_hangup(self):
         if self._hangup_cause:
             return True
         return False
+
+    def has_answered(self):
+        return self.answered
 
     def get_hangup_cause(self):
         return self._hangup_cause
@@ -268,9 +299,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.linger()
         self.myevents()
         if self._is_eventjson:
-            self.eventjson('DTMF CUSTOM conference::maintenance')
+            self.eventjson('CUSTOM conference::maintenance')
         else:
-            self.eventplain('DTMF CUSTOM conference::maintenance')
+            self.eventplain('CUSTOM conference::maintenance')
         # Set plivo app flag
         self.set('plivo_app=true')
         # Don't hangup after bridge
@@ -537,14 +568,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 element_instance.prepare()
             # Check if it's an inbound call
             if self.session_params['Direction'] == 'inbound':
-                # Don't answer the call if element is of type no answer
-                # Only execute the element
+                # Answer the call if element need it
                 if not self.answered and \
                     not element_instance.name in self.NO_ANSWER_ELEMENTS:
                     self.log.debug("Answering because Element %s need it" \
                         % element_instance.name)
                     self.answer()
                     self.answered = True
+                    # After answer, update callstatus to 'in-progress'
+                    self.session_params['CallStatus'] = 'in-progress'
             # execute Element
             element_instance.run(self)
         # If transfer is in progress, don't hangup call
@@ -564,6 +596,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.session_params['HangupCause'] = 'NORMAL_CLEARING'
                     self.session_params['CallStatus'] = 'completed'
                     self.log.info("Sending hangup to %s" % hangup_url)
-                    gevent.spawn(self.send_to_url, hangup_url)
+                    spawn_raw(self.send_to_url, hangup_url)
             else:
                 self.log.warn('No more Elements, Transfer In Progress !')

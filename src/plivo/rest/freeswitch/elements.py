@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
-import gevent
+
 import os.path
 from datetime import datetime
 import re
 import uuid
+
+import gevent
+from gevent import spawn_raw
+
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
                                                         file_exists
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
@@ -29,7 +33,12 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'hangupOnStar': 'false',
                 'recordFilePath': '',
                 'recordFileFormat': 'mp3',
-                'recordFilename': ''
+                'recordFilename': '',
+                'action': '',
+                'method': 'POST',
+                'callbackUrl': '',
+                'callbackMethod': 'POST',
+                'digitsMatch': ''
         },
         'Dial': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -195,6 +204,13 @@ class Conference(Element):
         (default mp3)
     recordFilename: By default empty, if provided this name will be used for the recording
         (any unique name)
+    action: redirect to this URL after leaving conference
+    method: submit to 'action' url using GET or POST
+    callbackUrl: url to request when call enters/leaves conference 
+            or has pressed digits matching (digitsMatch)
+    callbackMethod: submit to 'callbackUrl' url using GET or POST
+    digitsMatch: a list of matching digits to send with callbackUrl
+            Can be a list of digits patterns separated by comma.
     """
     DEFAULT_TIMELIMIT = 0
     DEFAULT_MAXMEMBERS = 200
@@ -215,6 +231,12 @@ class Conference(Element):
         self.record_file_path = ""
         self.record_file_format = "mp3"
         self.record_filename = ""
+        self.action = ''
+        self.method = ''
+        self.callback_url = ''
+        self.callback_method = ''
+        self.conf_id = ''
+        self.member_id = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -261,6 +283,17 @@ class Conference(Element):
         self.record_filename = \
                             self.extract_attribute_value("recordFilename")
 
+        self.method = self.extract_attribute_value("method")
+        if not self.method in ('GET', 'POST'):
+            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
+        self.action = self.extract_attribute_value("action")
+
+        self.callback_method = self.extract_attribute_value("callbackMethod")
+        if not self.callback_method in ('GET', 'POST'):
+            raise RESTAttributeException("callbackMethod, must be 'GET' or 'POST'")
+        self.callback_url = self.extract_attribute_value("callbackUrl")
+        self.digits_match = self.extract_attribute_value("digitsMatch")
+
     def _prepare_moh(self):
         mohs = []
         if not self.moh_sound:
@@ -283,6 +316,26 @@ class Conference(Element):
                         mohs.append("shout://%s" % audio_path)
         return mohs
 
+    def _notify_enter_conf(self, outboundsocket):
+        if not self.callback_url and not self.conf_id and not self.member_id:
+            return
+        params = {}
+        params['ConferenceName'] = self.room
+        params['ConferenceUUID'] = self.conf_id or ''
+        params['ConferenceMemberID'] = self.member_id or ''
+        params['ConferenceAction'] = 'enter'
+        spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
+
+    def _notify_exit_conf(self, outboundsocket):
+        if not self.callback_url and not self.conf_id and not self.member_id:
+            return
+        params = {}
+        params['ConferenceName'] = self.room
+        params['ConferenceUUID'] = self.conf_id or ''
+        params['ConferenceMemberID'] = self.member_id or ''
+        params['ConferenceAction'] = 'exit'
+        spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
+
     def execute(self, outbound_socket):
         flags = []
         # settings for conference room
@@ -301,7 +354,6 @@ class Conference(Element):
                                       outbound_socket.get_channel_unique_id())
             record_file = "%s%s.%s" % (file_path, filename,
                                         self.record_file_format)
-            #outbound_socket.set("auto-record=%s" % record_file)
         else:
             record_file = None
 
@@ -348,55 +400,93 @@ class Conference(Element):
             outbound_socket.log.error("Conference: Entering Room %s Failed" \
                                 % (self.room))
             return
-        # wait for action event
-        # drop all dtmf events until we get another event
-        for x in range(1000):
-            event = outbound_socket.wait_for_action()
-            if event['Event-Name'] == 'DTMF':
-                continue
-            else:
-                break
+        # get next event
+        event = outbound_socket.wait_for_action()
+
         # if event is add-member, get Member-ID
         # and set extra features for conference
-        if event['Event-Subclass'] == 'conference::maintenance' \
-            and event['Action'] == 'add-member':
-            member_id = event['Member-ID']
-            outbound_socket.log.debug("Entered Conference: Room %s with Member-ID %s" \
-                            % (self.room, member_id))
-            # play beep on enter if enabled
-            if member_id:
-                if self.enter_sound == 'beep:1':
-                    outbound_socket.api("conference %s play tone_stream://%%(300,200,700) async" % self.room)
-                elif self.enter_sound == 'beep:2':
-                    outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
-            # record conference if set
-            if record_file:
-                outbound_socket.bgapi("conference %s record %s" % (self.room, record_file))
-                outbound_socket.log.info("Conference: Room %s, recording to file %s" \
-                                % (self.room, record_file))
-            # wait conference ending for this member
-            event = outbound_socket.wait_for_action()
-            # case '*' dtmf was catched and hangupOnStar is set
-            if self.hangup_on_star and event['Event-Name'] == 'DTMF' \
-                and event['DTMF-Digit'] == '*':
-                outbound_socket.bgapi("conference %s kick %s" % (self.room, member_id))
-                outbound_socket.log.info("Conference: Room %s, Dtmf '*' pressed, kick Member-ID %s" \
-                                % (self.room, member_id))
-                # now really wait conference ending for this member
+        # else conference element ending here
+        try:
+            if event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'add-member':
+                self.member_id = event['Member-ID']
+                self.conf_id = event['Conference-Unique-ID']
+                outbound_socket.log.debug("Entered Conference: Room %s with Member-ID %s" \
+                                % (self.room, self.member_id))
+                # notify channel has entered room
+                self._notify_enter_conf(outbound_socket)
+
+                # set bind digit actions
+                digit_realm = ''
+                if self.digits_match and self.callback_url:
+                    # create event template
+                    event_template = "Event-Name=CUSTOM,Event-Subclass=conference::maintenance,Action=digits-match,Unique-ID=%s,Callback-Url=%s,Callback-Method=%s,Member-ID=%s,Conference-Name=%s,Conference-Unique-ID=%s" \
+                        % (outbound_socket.get_channel_unique_id(), self.callback_url, self.callback_method, self.member_id, self.room, self.conf_id)
+                    digit_realm = "plivo_bda_%s" % outbound_socket.get_channel_unique_id()
+                    # for each digits match, set digit binding action
+                    for dmatch in self.digits_match.split(','):
+                        dmatch = dmatch.strip()
+                        if dmatch:
+                            raw_event = "%s,Digits-Match=%s" % (event_template, dmatch)
+                            cmd = "%s,%s,exec:event,'%s'" % (digit_realm, dmatch, raw_event)
+                            outbound_socket.bind_digit_action(cmd) 
+                # set hangup on star
+                if self.hangup_on_star:
+                    # create event template
+                    raw_event = "Event-Name=CUSTOM,Event-Subclass=conference::maintenance,Action=kick,Unique-ID=%s,Member-ID=%s,Conference-Name=%s,Conference-Unique-ID=%s" \
+                        % (outbound_socket.get_channel_unique_id(), self.member_id, self.room, self.conf_id)
+                    digit_realm = "plivo_bda_%s" % outbound_socket.get_channel_unique_id()
+                    cmd = "%s,*,exec:event,'%s'" % (digit_realm, raw_event)
+                    outbound_socket.bind_digit_action(cmd) 
+                # set digit realm
+                if digit_realm:
+                    outbound_socket.digit_action_set_realm(digit_realm)
+
+                # play beep on enter if enabled
+                if self.member_id:
+                    if self.enter_sound == 'beep:1':
+                        outbound_socket.bgapi("conference %s play tone_stream://%%(300,200,700) async" % self.room)
+                    elif self.enter_sound == 'beep:2':
+                        outbound_socket.bgapi("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
+
+                # record conference if set
+                if record_file:
+                    outbound_socket.bgapi("conference %s record %s" % (self.room, record_file))
+                    outbound_socket.log.info("Conference: Room %s, recording to file %s" \
+                                    % (self.room, record_file))
+
+                # wait conference ending for this member
+                outbound_socket.log.debug("Conference: Room %s, waiting end ..." % self.room)
                 event = outbound_socket.wait_for_action()
-            # play beep on exit if enabled
-            if member_id:
-                if self.exit_sound == 'beep:1':
-                    outbound_socket.api("conference %s play tone_stream://%%(300,200,700) async" % self.room)
-                elif self.exit_sound == 'beep:2':
-                    outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
-        outbound_socket.log.info("Leaving Conference: Room %s" % self.room)
+
+                # play beep on exit if enabled
+                if self.member_id:
+                    if self.exit_sound == 'beep:1':
+                        outbound_socket.api("conference %s play tone_stream://%%(300,200,700) async" % self.room)
+                    elif self.exit_sound == 'beep:2':
+                        outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
+            # unset digit realm
+            outbound_socket.digit_action_set_realm("none")
+
+        finally:
+            # notify channel has left room
+            self._notify_exit_conf(outbound_socket)
+            outbound_socket.log.info("Leaving Conference: Room %s" % self.room)
+            # If action is set, redirect to this url
+            # Otherwise, continue to next Element
+            if self.action and is_valid_url(self.action):
+                params = {}
+                params['ConferenceName'] = self.room
+                params['ConferenceUUID'] = self.conf_id or ''
+                params['ConferenceMemberID'] = self.member_id or ''
+                self.fetch_rest_xml(self.action, params, method=self.method)
+
 
 
 class Dial(Element):
     """Dial another phone number and connect it to this call
 
-    action: submit the result of the dial to this URL
+    action: submit the result of the dial and redirect to this URL 
     method: submit to 'action' url using GET or POST
     hangupOnStar: hangup the b leg if a leg presses start and this is true
     callerId: caller id to be send to the dialed number
@@ -405,13 +495,15 @@ class Dial(Element):
     confirmKey: Key to be pressed to bridge the call.
     dialMusic: Play music to a leg while doing a dial to b leg
                 Can be a list of files separated by comma
+    redirect: if 'false', don't redirect to 'action', only request url 
+        and continue to next element. (default 'true')
     """
     DEFAULT_TIMEOUT = 30
     DEFAULT_TIMELIMIT = 14400
 
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ['Number']
+        self.nestables = ('Number',)
         self.method = ''
         self.action = ''
         self.hangup_on_star = False
@@ -422,6 +514,7 @@ class Dial(Element):
         self.confirm_sound = ''
         self.confirm_key = ''
         self.dial_music = ''
+        self.redirect = False
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -446,6 +539,9 @@ class Dial(Element):
         self.dial_music = self.extract_attribute_value("dialMusic")
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
                                                                 == 'true'
+        self.redirect = self.extract_attribute_value("redirect") \
+                                                        == 'true'
+
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method, must be 'GET' or 'POST'")
@@ -596,40 +692,53 @@ class Dial(Element):
             outbound_socket.unset("group_confirm_key")
         # Start dial
         outbound_socket.log.info("Dial Started %s" % self.dial_str)
-        outbound_socket.bridge(self.dial_str)
-        event = outbound_socket.wait_for_action()
-        reason = None
-        originate_disposition = event['variable_originate_disposition']
-        hangup_cause = originate_disposition
-        if hangup_cause == 'ORIGINATOR_CANCEL':
-            reason = '%s (A leg)' % hangup_cause
-        else:
-            reason = '%s (B leg)' % hangup_cause
-        if not hangup_cause or hangup_cause == 'SUCCESS':
-            hangup_cause = outbound_socket.get_hangup_cause()
-            reason = '%s (A leg)' % hangup_cause
-            if not hangup_cause:
-                hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
-                reason = '%s (B leg)' % hangup_cause
-                if not hangup_cause:
-                    hangup_cause = outbound_socket.get_var('hangup_cause')
-                    reason = '%s (A leg)' % hangup_cause
-        outbound_socket.log.info("Dial Finished with reason: %s" \
-                                 % reason)
-        # Unschedule hangup task
-        outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
-        # Get ring status
-        dial_rang = outbound_socket.get_var("plivo_dial_rang") == 'true'
-        # If action is set, redirect to this url
-        # Otherwise, continue to next Element
-        if self.action and is_valid_url(self.action):
-            params = {}
-            if dial_rang:
-                params['DialRingStatus'] = 'true'
+        bleg_uuid = ''
+        dial_rang = ''
+        try:
+            outbound_socket.bridge(self.dial_str)
+            event = outbound_socket.wait_for_action()
+            if event['Event-Name'] == 'CHANNEL_UNBRIDGE':
+                bleg_uuid = event['Originatee-Unique-ID'] or ''
+                event = outbound_socket.wait_for_action()
+            reason = None
+            originate_disposition = event['variable_originate_disposition']
+            hangup_cause = originate_disposition
+            if hangup_cause == 'ORIGINATOR_CANCEL':
+                reason = '%s (A leg)' % hangup_cause
             else:
-                params['DialRingStatus'] = 'false'
-            params['HangupCause'] = hangup_cause
-            self.fetch_rest_xml(self.action, params, method=self.method)
+                reason = '%s (B leg)' % hangup_cause
+            if not hangup_cause or hangup_cause == 'SUCCESS':
+                hangup_cause = outbound_socket.get_hangup_cause()
+                reason = '%s (A leg)' % hangup_cause
+                if not hangup_cause:
+                    hangup_cause = outbound_socket.get_var('bridge_hangup_cause')
+                    reason = '%s (B leg)' % hangup_cause
+                    if not hangup_cause:
+                        hangup_cause = outbound_socket.get_var('hangup_cause')
+                        reason = '%s (A leg)' % hangup_cause
+            outbound_socket.log.info("Dial Finished with reason: %s" \
+                                     % reason)
+            # Unschedule hangup task
+            outbound_socket.bgapi("sched_del %s" % sched_hangup_id)
+            # Get ring status
+            dial_rang = outbound_socket.get_var("plivo_dial_rang") == 'true'
+        finally:
+            # If action is set, redirect to this url
+            # Otherwise, continue to next Element
+            if self.action and is_valid_url(self.action):
+                params = {}
+                if dial_rang:
+                    params['DialRingStatus'] = 'true'
+                else:
+                    params['DialRingStatus'] = 'false'
+                params['DialHangupCause'] = hangup_cause
+                params['DialALegUUID'] = outbound_socket.get_channel_unique_id()
+                if bleg_uuid:
+                    params['DialBLegUUID'] = bleg_uuid
+                if self.redirect:
+                    self.fetch_rest_xml(self.action, params, method=self.method)
+                else:
+                    spawn_raw(outbound_socket.send_to_url, self.action, params, method=self.method)
 
 
 class GetDigits(Element):
@@ -650,7 +759,7 @@ class GetDigits(Element):
 
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ['Speak', 'Play', 'Wait']
+        self.nestables = ('Speak', 'Play', 'Wait')
         self.num_digits = None
         self.timeout = None
         self.finish_on_key = None
@@ -992,7 +1101,7 @@ class PreAnswer(Element):
     """
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ['Play', 'Speak', 'GetDigits', 'Wait']
+        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait')
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1085,7 +1194,6 @@ class Record(Element):
             else:
                 outbound_socket.unset("plivo_record_both_legs")
 
-
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
@@ -1106,21 +1214,16 @@ class Record(Element):
                                 self.finish_on_key)
             event = outbound_socket.wait_for_action()
             outbound_socket.stop_dtmf()
-            try:
-                record_ms = str(int(outbound_socket.get_var("record_ms")))
-            except ValueError:
-                record_ms = "-1"
-            record_digits = outbound_socket.get_var("playback_terminator_used")
-            if not record_digits:
-                record_digits = ""
             outbound_socket.log.info("Record Completed")
 
-        # unset vars
-        outbound_socket.unset("plivo_record_file")
-        outbound_socket.unset("plivo_record_both_legs")
         # If action is set, redirect to this url
         # Otherwise, continue to next Element
         if self.action and is_valid_url(self.action):
+            try:
+                record_ms = str(int(outbound_socket.get_var("record_ms")))
+            except ValueError, TypeError:
+                record_ms = "-1"
+            record_digits = outbound_socket.get_var("playback_terminator_used")
             outbound_socket.unset("plivo_record_file")
             outbound_socket.unset("plivo_record_action")
             outbound_socket.unset("plivo_record_method")
@@ -1138,7 +1241,10 @@ class Record(Element):
                 params['Digits'] = ""
             else:
                 params['RecordingDuration'] = record_ms
-                params['Digits'] = record_digits
+                if record_digits:
+                    params['Digits'] = record_digits
+                else:
+                    params['Digits'] = ""
             self.fetch_rest_xml(self.action, params, method=self.method)
 
 
