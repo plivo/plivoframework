@@ -697,7 +697,7 @@ class Dial(Element):
             outbound_socket.bridge(self.dial_str)
             event = outbound_socket.wait_for_action()
             if event['Event-Name'] == 'CHANNEL_UNBRIDGE':
-                bleg_uuid = event['Originatee-Unique-ID'] or ''
+                bleg_uuid = event['variable_bridge_uuid'] or ''
                 event = outbound_socket.wait_for_action()
             reason = None
             originate_disposition = event['variable_originate_disposition']
@@ -734,6 +734,8 @@ class Dial(Element):
                 params['DialALegUUID'] = outbound_socket.get_channel_unique_id()
                 if bleg_uuid:
                     params['DialBLegUUID'] = bleg_uuid
+                else:
+                    params['DialBLegUUID'] = ''
                 if self.redirect:
                     self.fetch_rest_xml(self.action, params, method=self.method)
                 else:

@@ -162,9 +162,16 @@ class HTTPRequest:
         request.add_header('User-Agent', self.USER_AGENT)
 
         # append the POST variables sorted by key to the uri
+        # and transform None to '' and unicode to string
         s = uri
         for k, v in sorted(params.items()):
-            s += k + v
+            if k:
+                if v is None:
+                    x = ''
+                else:
+                    x = str(v)
+                params[k] = x
+                s += k + x
 
         # compute signature and compare signatures
         signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
