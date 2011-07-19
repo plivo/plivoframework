@@ -6,6 +6,7 @@ monkey.patch_all()
 
 from gevent import spawn_raw
 from gevent import pool
+import gevent.event
 
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
@@ -33,6 +34,8 @@ class RESTInboundSocket(InboundEventSocket):
         self.bk_jobs = {}
         # Transfer jobs: call_uuid - Value: inline dptools to execute
         self.xfer_jobs = {}
+        # Conference sync jobs
+        self.conf_sync_jobs = {}
         # Call Requests
         self.call_requests = {}
         self.default_http_method = default_http_method
@@ -41,7 +44,7 @@ class RESTInboundSocket(InboundEventSocket):
     def on_background_job(self, event):
         """
         Capture Job Event
-        Capture background job only for originate,
+        Capture background job only for originate and conference,
         and ignore all other jobs
         """
         job_cmd = event['Job-Command']
@@ -86,6 +89,13 @@ class RESTInboundSocket(InboundEventSocket):
                     self.log.warn("Call Failed without Ringing/EarlyMedia for RequestUUID %s - Retrying Now (%s)" \
                                                     % (request_uuid, reason))
                     self.spawn_originate(request_uuid)
+        elif job_cmd == 'conference' and job_uuid:
+            result = event.get_body().strip() or ''
+            async_res = self.conf_sync_jobs.pop(job_uuid, None)
+            if not async_res:
+                return
+            async_res.set(result)
+            self.log.info("Conference Api Response for JobUUID %s -- %s" % (job_uuid, result))
 
     def on_channel_progress(self, event):
         request_uuid = event['variable_plivo_request_uuid']
@@ -153,19 +163,6 @@ class RESTInboundSocket(InboundEventSocket):
     def on_channel_hangup(self, event):
         """Capture Channel Hangup
         """
-        # send bleg hangup url from Dial element if found
-        bleg_dial_hangup_url = event['variable_plivo_bleg_dial_hangup_url']
-        if bleg_dial_hangup_url:
-            bleg_dial_hangup_method = event['variable_plivo_bleg_dial_hangup_method']
-            params = {}
-            aleg_uuid = event['variable_plivo_aleg_dial_uuid']
-            call_uuid = event['Unique-ID']
-            hangupcause = event['Hangup-Cause']
-            params['DialALegUUID'] = aleg_uuid
-            params['DialBLegUUID'] = call_uuid
-            params['DialBLegHangupCause'] = hangupcause
-            spawn_raw(self.send_to_url, bleg_dial_hangup_url, 
-                      params, bleg_dial_hangup_method)
         # check if found a request uuid
         # if not, ignore hangup event
         request_uuid = event['variable_plivo_request_uuid']
@@ -394,5 +391,46 @@ class RESTInboundSocket(InboundEventSocket):
         job_uuid = bg_api_response.get_job_uuid()
         if not job_uuid:
             self.log.error("Hangup All Calls Failed -- JobUUID not received")
-            return
+            return False
         self.log.info("Executed Hangup for all calls")
+        return True
+
+    def conference_api(self, room=None, command=None, async=True):
+        if not command:
+            self.log.error("Conference Api Failed -- 'command' is empty")
+            return False
+        if room:
+            cmd = "conference %s %s" % (room, command)
+        else:
+            cmd = "conference %s" % command
+        # async mode
+        if async:
+            bg_api_response = self.bgapi(cmd)
+            job_uuid = bg_api_response.get_job_uuid()
+            if not job_uuid:
+                self.log.error("Conference Api (async) Failed '%s' -- JobUUID not received" \
+                                        % (cmd))
+                return False
+            self.log.info("Conference Api (async) '%s' with JobUUID %s" \
+                                    % (cmd, job_uuid))
+            return True
+        # sync mode
+        else:
+            res = gevent.event.AsyncResult()
+            bg_api_response = self.bgapi(cmd)
+            job_uuid = bg_api_response.get_job_uuid()
+            if not job_uuid:
+                self.log.error("Conference Api (async) Failed '%s' -- JobUUID not received" \
+                                        % (cmd))
+                return False
+            self.log.info("Conference Api (sync) '%s' with JobUUID %s" \
+                                    % (cmd, job_uuid))
+            self.conf_sync_jobs[job_uuid] = res
+            try:
+                result = res.wait(timeout=120)
+                return result
+            except gevent.timeout.Timeout:
+                self.log.error("Conference Api (sync) '%s' with JobUUID %s -- timeout getting response" \
+                                    % (cmd, job_uuid))
+                return False
+        return False

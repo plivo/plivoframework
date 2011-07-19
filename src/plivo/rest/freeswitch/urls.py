@@ -33,4 +33,28 @@ URLS = {
         '/' + PLIVO_VERSION + '/ScheduleHangup/': (PlivoRestApi.schedule_hangup, ['POST']),
         # API to cancel a scheduled hangup on a single call
         '/' + PLIVO_VERSION + '/CancelScheduledHangup/': (PlivoRestApi.cancel_scheduled_hangup, ['POST']),
+        # API to mute a member in a conference
+        '/' + PLIVO_VERSION + '/ConferenceMute/': (PlivoRestApi.conference_mute, ['POST']),
+        # API to unmute a member in a conference
+        '/' + PLIVO_VERSION + '/ConferenceUnmute/': (PlivoRestApi.conference_unmute, ['POST']),
+        # API to kick a member from a conference
+        '/' + PLIVO_VERSION + '/ConferenceKick/': (PlivoRestApi.conference_kick, ['POST']),
+        # API to hangup a conference member
+        '/' + PLIVO_VERSION + '/ConferenceHangup/': (PlivoRestApi.conference_hangup, ['POST']),
+        # API to deaf a member in a conference
+        '/' + PLIVO_VERSION + '/ConferenceDeaf/': (PlivoRestApi.conference_deaf, ['POST']),
+        # API to undeaf a member in a conference
+        '/' + PLIVO_VERSION + '/ConferenceUndeaf/': (PlivoRestApi.conference_undeaf, ['POST']),
+        # API to start recording a conference
+        '/' + PLIVO_VERSION + '/ConferenceRecordStart/': (PlivoRestApi.conference_record_start, ['POST']),
+        # API to stop recording a conference
+        '/' + PLIVO_VERSION + '/ConferenceRecordStop/': (PlivoRestApi.conference_record_stop, ['POST']),
+        # API to play a sound file into a conference
+        '/' + PLIVO_VERSION + '/ConferencePlay/': (PlivoRestApi.conference_play, ['POST']),
+        # API to say something into a conference
+        '/' + PLIVO_VERSION + '/ConferenceSpeak/': (PlivoRestApi.conference_speak, ['POST']),
+        # API to list a conference with members
+        '/' + PLIVO_VERSION + '/ConferenceListMembers/': (PlivoRestApi.conference_list_members, ['POST']),
+        # API to list all conferences with members
+        '/' + PLIVO_VERSION + '/ConferenceList/': (PlivoRestApi.conference_list, ['POST']),
        }

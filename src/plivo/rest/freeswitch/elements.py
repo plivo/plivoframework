@@ -1129,9 +1129,9 @@ class Record(Element):
     maxLength: maximum number of seconds to record (default 60)
     timeout: seconds of silence before considering the recording complete (default 500)
     playBeep: play a beep before recording (true/false, default true)
-    file_format: file format (default mp3)
-    filePath: complete file path to save the file to
     finishOnKey: Stop recording on this key
+    fileFormat: file format (default mp3)
+    filePath: complete file path to save the file to
     filename: Default empty, if given this will be used for the recording
     bothLegs: record both legs (true/false, default false)
               no beep will be played

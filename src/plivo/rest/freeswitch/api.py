@@ -4,6 +4,14 @@
 import base64
 import re
 import uuid
+import os
+import os.path
+from datetime import datetime
+try:
+    import xml.etree.cElementTree as etree
+except ImportError:
+    from xml.etree.elementtree import ElementTree as etree
+
 import flask
 from flask import request
 from werkzeug.exceptions import Unauthorized
@@ -123,7 +131,7 @@ class PlivoRestApi(object):
         # don't allow "|" and "," in 'to' (destination) to avoid call injection
         to = re.split(',|\|', to)[0]
         # build gateways list removing trailing '/' character
-        gw_list = [ gateway.rstrip('/') for gateway in gw.split(',') ]
+        gw_list = [ gateway.rstrip('/').strip() for gateway in gw.split(',') ]
         # split gw codecs by , but only outside the ''
         if gw_codecs:
             gw_codec_list = re.split(''',(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''',
@@ -621,3 +629,445 @@ class PlivoRestApi(object):
             else:
                 msg = "Scheduled Hangup Cancelation Failed: %s" % res.get_response()
         return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_mute(self):
+        """ConferenceMute
+        Mute a Member in a Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        MemberID: conference member id or 'all' to mute all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        res = self._rest_inbound_socket.conference_api(room, "mute %s" % member_id)
+        if res:
+            msg = "Conference Mute Executed"
+            result = True
+        else:
+            msg = "Conference Mute Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_unmute(self):
+        """ConferenceUnmute
+        Unmute a Member in a Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        MemberID: conference member id or 'all' to unmute all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        res = self._rest_inbound_socket.conference_api(room, "unmute %s" % member_id)
+        if res:
+            msg = "Conference Unmute Executed"
+            result = True
+        else:
+            msg = "Conference Unmute Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_kick(self):
+        """ConferenceKick
+        Kick a Member from a Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        MemberID: conference member id or 'all' for kicking all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        res = self._rest_inbound_socket.conference_api(room, "kick %s" % (cmd, member_id))
+        if res:
+            msg = "Conference Kick Executed"
+            result = True
+        else:
+            msg = "Conference Kick Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_hangup(self):
+        """ConferenceHangup
+        Hangup a Member in Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        MemberID: conference member id or 'all' for hanging up all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        res = self._rest_inbound_socket.conference_api(room, "hup %s" % member_id)
+        if res:
+            msg = "Conference Hangup Executed"
+            result = True
+        else:
+            msg = "Conference Hangup Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_deaf(self):
+        """ConferenceDeaf
+        Deaf a Member in Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        MemberID: conference member id or 'all' for kicking all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        res = self._rest_inbound_socket.conference_api(room, "deaf %s" % member_id)
+        if res:
+            msg = "Conference Deaf Executed"
+            result = True
+        else:
+            msg = "Conference Deaf Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_undeaf(self):
+        """ConferenceUndeaf
+        Undeaf a Member in Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        MemberID: conference member id or 'all' for kicking all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        res = self._rest_inbound_socket.conference_api(room, "undeaf %s" % member_id)
+        if res:
+            msg = "Conference Deaf Executed"
+            result = True
+        else:
+            msg = "Conference Deaf Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_record_start(self):
+        """ConferenceRecordStart
+        Start Recording Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        FileFormat: file format, can be be "mp3" or "wav" (default "mp3")
+        FilePath: complete file path to save the file to
+        Filename: Default empty, if given this will be used for the recording
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        fileformat = get_post_param(request, 'FileFormat')
+        filepath = get_post_param(request, 'FilePath')
+        filename = get_post_param(request, 'Filename')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not fileformat:
+            fileformat = "mp3"
+        if not fileformat in ("mp3", "wav"):
+            msg = "FileFormat Parameter must be 'mp3' or 'wav'"
+            return flask.jsonify(Success=result, Message=msg)
+
+        if filepath:
+            filepath = os.path.normpath(filepath) + os.sep
+        if not filename:
+            filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), room)
+        recordfile = "%s%s.%s" % (filepath, filename, fileformat)
+
+        res = self._rest_inbound_socket.conference_api(room, "record %s" % recordfile)
+        if res:
+            msg = "Conference RecordStart Executed"
+            result = True
+        else:
+            msg = "Conference RecordStart Failed"
+        return flask.jsonify(Success=result, Message=msg, RecordFile=recordfile)
+
+    @auth_protect
+    def conference_record_stop(self):
+        """ConferenceRecordStop
+        Stop Recording Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        RecordFile: full file path to the recording file (the one returned by ConferenceRecordStart)
+                    or 'all' to stop all current recordings on conference
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        recordfile = get_post_param(request, 'RecordFile')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not recordfile:
+            msg = "RecordFile Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+
+        res = self._rest_inbound_socket.conference_api(room, "norecord %s" % recordfile)
+        if res:
+            msg = "Conference RecordStop Executed"
+            result = True
+        else:
+            msg = "Conference RecordStop Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_play(self):
+        """ConferencePlay
+        Play something into Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        FilePath: full path to file to be played
+        MemberID: conference member id or 'all' to play file to all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        filepath = get_post_param(request, 'FilePath')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not filepath:
+            msg = "FilePath Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        if member_id == 'all':
+            arg = "async"
+        else:
+            arg = member_id
+        res = self._rest_inbound_socket.conference_api(room, "play %s %s" % (filepath, arg))
+        if res:
+            msg = "Conference Play Executed"
+            result = True
+        else:
+            msg = "Conference Play Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_speak(self):
+        """ConferenceSpeak
+        Say something into Conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        Text: text to say in conference
+        MemberID: conference member id or 'all' to say text to all members
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        text = get_post_param(request, 'Text')
+        member_id = get_post_param(request, 'MemberID')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not text:
+            msg = "Text Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not member_id:
+            msg = "MemberID Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        if member_id == 'all':
+            res = self._rest_inbound_socket.conference_api(room, "say %s" % text)
+        else:
+            res = self._rest_inbound_socket.conference_api(room, "saymember %s %s" % (text, member_id))
+        if res:
+            msg = "Conference Speak Executed"
+            result = True
+        else:
+            msg = "Conference Speak Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_list_members(self):
+        """ConferenceListMembers
+        List all or some members in a conference
+
+        POST Parameters
+        ---------------
+        Room: conference room name
+        Members: a list of MemberID separated by comma.
+                If set only get the members matching the MemberIDs in list.
+                (default empty)
+        """
+        msg = ""
+        result = False
+
+        room = get_post_param(request, 'Room')
+        members = get_post_param(request, 'Members')
+
+        if not room:
+            msg = "Room Parameter must be present"
+            return flask.jsonify(Success=result, Message=msg)
+        if not members:
+            members = None
+        res = self._rest_inbound_socket.conference_api(room, "xml_list", async=False)
+        if res:
+            try:
+                member_list = self._parse_conference_xml_list(res, member_filter=members)
+                msg = "Conference ListMembers Executed"
+                result = True
+                return flask.jsonify(Success=result, Message=msg, List=member_list)
+            except Exception, e:
+                msg = "Conference ListMembers Failed to parse result"
+                result = False
+                self._rest_inbound_socket.log.error("Conference ListMembers Failed -- %s" % str(e))
+                return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference ListMembers Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def conference_list(self):
+        """ConferenceList
+        List all conferences with members
+
+        POST Parameters
+        ---------------
+        No parameters
+        """
+        msg = ""
+        result = False
+
+        res = self._rest_inbound_socket.conference_api(room='', command="xml_list", async=False)
+        if res:
+            try:
+                confs = self._parse_conference_xml_list(res, member_filter=None)
+                msg = "Conference List Executed"
+                result = True
+                return flask.jsonify(Success=result, Message=msg, List=confs)
+            except Exception, e:
+                msg = "Conference List Failed to parse result"
+                result = False
+                self._rest_inbound_socket.log.error("Conference List Failed -- %s" % str(e))
+                return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference List Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @staticmethod
+    def _parse_conference_xml_list(xmlstr, member_filter=None):
+        res = {}
+        if member_filter:
+            mfilter = tuple( [ mid.strip() for mid in member_filter.split(',') if mid != '' ])
+        else:
+            mfilter = ()
+        doc = etree.fromstring(xmlstr)
+
+        if doc.tag != 'conferences':
+            raise Exception("Root tag must be 'conferences'")
+        for conf in doc:
+            conf_name = conf.get("name", None)
+            if not conf_name:
+                continue
+            res[conf_name] = {}
+            res[conf_name]['ConferenceUUID'] = conf.get("uuid")
+            res[conf_name]['ConferenceRunTime'] = conf.get("run_time")
+            res[conf_name]['ConferenceName'] = conf_name
+            res[conf_name]['ConferenceMemberCount'] = conf.get("member-count")
+            res[conf_name]['Members'] = []
+            for member in conf.findall('members/member'):
+                m = {}
+                member_id = member.find('id').text
+                if not member_id:
+                    continue
+                if mfilter and member_id not in mfilter:
+                    continue
+                m["MemberID"] = member_id
+                m["CanHear"] = member.find("flags/can_hear").text == "true"
+                m["CanSpeak"] = member.find("flags/can_speak").text == "true"
+                m["CallUUID"] = member.find("uuid").text
+                m["CallName"] = member.find("caller_id_name").text
+                m["CallNumber"] = member.find("caller_id_number").text
+                m["JoinTime"] = member.find("join_time").text
+                res[conf_name]['Members'].append(m)
+        return res
+
+'''
+Conference Room-596 (1 member rate: 8000)
+35;sofia/internal/1000@wario;ad1773f6-f6bd-49e6-9a56-c7ed29c4517b;Wario1000;1000;hear|speak|floor;0;0;0;0
+Conference Room-913 (1 member rate: 8000)
+34;sofia/internal/1000@wario;e16a0601-aab9-4ad5-9392-11acade7ad40;Wario1000;1000;hear|speak|floor;0;0;0;0
+'''
