@@ -1056,18 +1056,11 @@ class PlivoRestApi(object):
                 if mfilter and member_id not in mfilter:
                     continue
                 m["MemberID"] = member_id
-                m["CanHear"] = member.find("flags/can_hear").text == "true"
-                m["CanSpeak"] = member.find("flags/can_speak").text == "true"
+                m["Deaf"] = member.find("flags/can_hear").text == "true"
+                m["Muted"] = member.find("flags/can_speak").text == "true"
                 m["CallUUID"] = member.find("uuid").text
                 m["CallName"] = member.find("caller_id_name").text
                 m["CallNumber"] = member.find("caller_id_number").text
                 m["JoinTime"] = member.find("join_time").text
                 res[conf_name]['Members'].append(m)
         return res
-
-'''
-Conference Room-596 (1 member rate: 8000)
-35;sofia/internal/1000@wario;ad1773f6-f6bd-49e6-9a56-c7ed29c4517b;Wario1000;1000;hear|speak|floor;0;0;0;0
-Conference Room-913 (1 member rate: 8000)
-34;sofia/internal/1000@wario;e16a0601-aab9-4ad5-9392-11acade7ad40;Wario1000;1000;hear|speak|floor;0;0;0;0
-'''
