@@ -556,8 +556,7 @@ class Dial(Element):
             if not is_valid_url(audio_path) and file_exists(audio_path):
                 mohs.append(audio_path)
             # remote file case :
-            else:
-                if url_exists(audio_path):
+            elif url_exists(audio_path):
                     if audio_path[:7].lower() == "http://":
                         audio_path = audio_path[7:]
                         mohs.append("shout://%s" % audio_path)
@@ -969,7 +968,8 @@ class Number(Element):
         gateway_retries = self.extract_attribute_value('gatewayRetries')
 
         if gateways:
-            self.gateways = gateways.split(',')
+            # get list of gateways removing trailing '/' if found
+            self.gateways = [ gw.rstrip('/').strip() for gw in gateways.split(',') ]
         # split gw codecs by , but only outside the ''
         if gateway_codecs:
             self.gateway_codecs = \
