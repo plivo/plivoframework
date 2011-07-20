@@ -292,7 +292,7 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
-        [HangUpUrl]: URL that Plivo will notify to, with POST params when
+        [HangupUrl]: URL that Plivo will notify to, with POST params when
         calls ends
 
         [RingUrl]: URL that Plivo will notify to, with POST params when
@@ -328,14 +328,14 @@ class PlivoRestApi(object):
         if not caller_id or not to or not gw or not answer_url:
             msg = "Mandatory Parameters Missing"
         elif not is_valid_url(answer_url):
-            msg = "Answer URL is not Valid"
+            msg = "AnswerUrl is not Valid"
         else:
             hangup_url = get_post_param(request, 'HangupUrl')
             ring_url = get_post_param(request, 'RingUrl')
             if hangup_url and not is_valid_url(hangup_url):
-                msg = "Hangup URL is not Valid"
+                msg = "HangupUrl is not Valid"
             elif ring_url and not is_valid_url(ring_url):
-                msg = "Ring URL is not Valid"
+                msg = "RingUrl is not Valid"
             else:
                 extra_dial_string = get_post_param(request, 'ExtraDialString')
                 gw_codecs = get_post_param(request, 'GatewayCodecs')
@@ -392,7 +392,7 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
-        [HangUpUrl]: URL that Plivo will notify to, with POST params when
+        [HangupUrl]: URL that Plivo will notify to, with POST params when
         calls ends
 
         [RingUrl]: URL that Plivo will notify to, with POST params when
@@ -430,19 +430,19 @@ class PlivoRestApi(object):
         delimiter = get_post_param(request, 'Delimiter')
 
         if delimiter in (',', '/'):
-            msg = "This Delimiter not allowed"
+            msg = "This Delimiter is not allowed"
         elif not caller_id or not to_str or not gw_str or not answer_url or\
             not delimiter:
             msg = "Mandatory Parameters Missing"
         elif not is_valid_url(answer_url):
-            msg = "Answer URL is not Valid"
+            msg = "AnswerUrl is not Valid"
         else:
             hangup_url = get_post_param(request, 'HangupUrl')
             ring_url = get_post_param(request, 'RingUrl')
             if hangup_url and not is_valid_url(hangup_url):
-                msg = "Hangup URL is not Valid"
+                msg = "HangupUrl is not Valid"
             elif ring_url and not is_valid_url(ring_url):
-                msg = "Ring URL is not Valid"
+                msg = "RingUrl is not Valid"
             else:
                 extra_dial_string = get_post_param(request,
                                                         'ExtraDialString')
@@ -543,10 +543,10 @@ class PlivoRestApi(object):
         request_uuid= get_post_param(request, 'RequestUUID')
 
         if not call_uuid and not request_uuid:
-            msg = "One of the Call ID Parameters must be present"
+            msg = "CallUUID or RequestUUID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif call_uuid and request_uuid:
-            msg = "Both Call ID Parameters cannot be present"
+            msg = "Both CallUUID and RequestUUID Parameters cannot be present"
             return flask.jsonify(Success=result, Message=msg)
         res = self._rest_inbound_socket.hangup_call(call_uuid, request_uuid)
         if res:
@@ -572,7 +572,7 @@ class PlivoRestApi(object):
 
         CallUUID: Unique Call ID to which the action should occur to.
 
-        URL: A valid URL that returns RESTXML. Plivo will immediately fetch
+        Url: A valid URL that returns RESTXML. Plivo will immediately fetch
               the XML and continue the call as the new XML.
         """
         msg = ""
@@ -585,12 +585,12 @@ class PlivoRestApi(object):
             msg = "CallUUID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not new_xml_url:
-            msg = "URL Parameter must be present"
+            msg = "Url Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not is_valid_url(new_xml_url):
-            msg = "URL is not Valid"
+            msg = "Url is not Valid"
             return flask.jsonify(Success=result, Message=msg)
-        msg = "Call UUID must be present with URL"
+
         res = self._rest_inbound_socket.transfer_call(new_xml_url,
                                                       call_uuid)
         if res:
@@ -1250,3 +1250,4 @@ class PlivoRestApi(object):
                 return flask.jsonify(Success=result, Message=msg)
         msg = "Conference List Failed"
         return flask.jsonify(Success=result, Message=msg)
+
