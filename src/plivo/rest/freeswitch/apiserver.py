@@ -20,7 +20,7 @@ from plivo.rest.freeswitch.api import PlivoRestApi
 from plivo.rest.freeswitch.inboundsocket import RESTInboundSocket
 from plivo.rest.freeswitch import urls, helpers
 import plivo.utils.daemonize
-from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger
+from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger, HTTPLogger
 
 
 class PlivoRestServer(PlivoRestApi):
