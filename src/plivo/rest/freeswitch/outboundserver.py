@@ -19,7 +19,7 @@ from plivo.core.freeswitch import outboundsocket
 from plivo.rest.freeswitch.outboundsocket import PlivoOutboundEventSocket
 from plivo.rest.freeswitch import helpers
 import plivo.utils.daemonize
-from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger
+from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger, HTTPLogger
 
 """
 PlivoOutboundServer is our event_socket server listening for connection
@@ -115,10 +115,18 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                 self.log = SysLogger(syslogaddress, syslogfacility)
             elif logtype == 'dummy':
                 self.log = DummyLogger()
+            elif logtype == 'http':
+                url = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'HTTP_LOG_URL')
+                method = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'HTTP_LOG_METHOD')
+                fallback_file = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'HTTP_LOG_FILE_FAILURE')
+                self.log = HTTPLogger(url=url, method=method, fallback_file=fallback_file)
             else:
                 self.log = StdoutLogger()
             debug_mode = helpers.get_conf_value(self._config,
-                                                'freeswitch', 'DEBUG')
+                                            'freeswitch', 'DEBUG')
             if debug_mode == 'true' or self._trace is True:
                 self.log.set_debug()
             else:

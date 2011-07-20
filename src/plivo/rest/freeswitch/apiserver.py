@@ -97,7 +97,7 @@ class PlivoRestServer(PlivoRestApi):
                             auth_token=self.auth_token,
                             log=self.log,
                             default_http_method=default_http_method,
-                            call_heartbeat_url = call_heartbeat_url,
+                            call_heartbeat_url=call_heartbeat_url,
                             trace=self._trace)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
@@ -151,6 +151,14 @@ class PlivoRestServer(PlivoRestApi):
                 self.log = SysLogger(syslogaddress, syslogfacility)
             elif logtype == 'dummy':
                 self.log = DummyLogger()
+            elif logtype == 'http':
+                url = helpers.get_conf_value(self._config,
+                                            'rest_server', 'HTTP_LOG_URL')
+                method = helpers.get_conf_value(self._config,
+                                            'rest_server', 'HTTP_LOG_METHOD')
+                fallback_file = helpers.get_conf_value(self._config,
+                                            'rest_server', 'HTTP_LOG_FILE_FAILURE')
+                self.log = HTTPLogger(url=url, method=method, fallback_file=fallback_file)
             else:
                 self.log = StdoutLogger()
 

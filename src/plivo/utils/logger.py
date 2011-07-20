@@ -186,3 +186,108 @@ class DummyLogger(object):
 
     def write(self, msg):
         pass
+
+class HTTPHandler(logging.handlers.HTTPHandler):
+    def __init__(self, host, url, method="GET"):
+        logging.handlers.HTTPHandler.__init__(self, host, url, method)
+
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Send the record to the Web server as a percent-encoded dictionary
+        """
+        try:
+            import httplib, urllib
+            host = self.host
+            h = httplib.HTTP(host)
+            url = self.url
+            data = urllib.urlencode(self.mapLogRecord(record))
+            if self.method == "GET":
+                if (url.find('?') >= 0):
+                    sep = '&'
+                else:
+                    sep = '?'
+                url = url + "%c%s" % (sep, data)
+            h.putrequest(self.method, url)
+            # support multiple hosts on one IP address...
+            # need to strip optional :port from host, if present
+            i = host.find(":")
+            if i >= 0:
+                host = host[:i]
+            h.putheader("Host", host)
+            if self.method == "POST":
+                h.putheader("Content-type",
+                            "application/x-www-form-urlencoded")
+                h.putheader("Content-length", str(len(data)))
+            h.endheaders(data if self.method == "POST" else None)
+            h.getreply()    #can't do anything with the result
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            raise
+
+
+
+class HTTPLogger(object):
+    def __init__(self, url, method='POST', fallback_file=None, loglevel=LOG_DEBUG, servicename=__default_servicename__):
+        import urlparse
+        self.loglevel = loglevel
+        self.fallback_file = fallback_file
+        p = urlparse.urlparse(url)
+        netloc = p.netloc
+        urlpath = p.path
+        if p.query:
+            urlpath += '?' + query
+        h = HTTPHandler(host=netloc, url=urlpath, method=method)
+        h.setLevel(loglevel)
+        fmt = logging.Formatter(servicename+"[%(process)d]: %(levelname)s: %(message)s")
+        h.setFormatter(fmt)
+        self._logger = RootLogger(loglevel)
+        self._logger.addHandler(h)
+        if self.fallback_file:
+            self._fallback = FileLogger(logfile=self.fallback_file,
+                                        loglevel=self.loglevel,
+                                        servicename=servicename)
+        else:
+            self._fallback = DummyLogger()
+
+    def set_debug(self):
+        self.loglevel = LOG_DEBUG
+        self._logger.setLevel(self.loglevel)
+        self._fallback.set_debug()
+
+    def set_info(self):
+        self.loglevel = LOG_INFO
+        self._logger.setLevel(self.loglevel)
+        self._fallback.set_info()
+
+    def info(self, msg):
+        try:
+            self._logger.info(str(msg))
+        except:
+            self._fallback.info(str(msg))
+
+    def debug(self, msg):
+        try:
+            self._logger.debug(str(msg))
+        except:
+            self._fallback.debug(str(msg))
+
+    def warn(self, msg):
+        try:
+            self._logger.warn(str(msg))
+        except:
+            self._fallback.warn(str(msg))
+
+    def error(self, msg):
+        try:
+            self._logger.error(str(msg))
+        except:
+            self._fallback.error(str(msg))
+
+    def write(self, msg):
+        try:
+            self.info(msg)
+        except:
+            self._fallback.info(str(msg))
