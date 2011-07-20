@@ -637,27 +637,32 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         MemberID: conference member id or 'all' to mute all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not member_id:
             msg = "MemberID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "mute %s" % member_id)
-        if res:
-            msg = "Conference Mute Executed"
-            result = True
-        else:
+        res = self._rest_inbound_socket.conference_api(room, "mute %s" % member_id, async=False)
+        if not res:
             msg = "Conference Mute Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Mute %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Mute Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -667,27 +672,32 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         MemberID: conference member id or 'all' to unmute all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not member_id:
             msg = "MemberID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "unmute %s" % member_id)
-        if res:
-            msg = "Conference Unmute Executed"
-            result = True
-        else:
+        res = self._rest_inbound_socket.conference_api(room, "unmute %s" % member_id, async=False)
+        if not res:
             msg = "Conference Unmute Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Unmute %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Unmute Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -697,27 +707,32 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         MemberID: conference member id or 'all' for kicking all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not member_id:
             msg = "MemberID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "kick %s" % (cmd, member_id))
-        if res:
-            msg = "Conference Kick Executed"
-            result = True
-        else:
+        res = self._rest_inbound_socket.conference_api(room, "kick %s" % member_id, async=False)
+        if not res:
             msg = "Conference Kick Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Kick %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Kick Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -727,27 +742,32 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         MemberID: conference member id or 'all' for hanging up all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not member_id:
             msg = "MemberID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "hup %s" % member_id)
-        if res:
-            msg = "Conference Hangup Executed"
-            result = True
-        else:
+        res = self._rest_inbound_socket.conference_api(room, "hup %s" % member_id, async=False)
+        if not res:
             msg = "Conference Hangup Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Hangup %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Hangup Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -757,27 +777,32 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         MemberID: conference member id or 'all' for kicking all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not member_id:
             msg = "MemberID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "deaf %s" % member_id)
-        if res:
-            msg = "Conference Deaf Executed"
-            result = True
-        else:
+        res = self._rest_inbound_socket.conference_api(room, "deaf %s" % member_id, async=False)
+        if not res:
             msg = "Conference Deaf Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Deaf %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Deaf Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -787,27 +812,32 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         MemberID: conference member id or 'all' for kicking all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not member_id:
             msg = "MemberID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         res = self._rest_inbound_socket.conference_api(room, "undeaf %s" % member_id)
-        if res:
-            msg = "Conference Deaf Executed"
-            result = True
-        else:
-            msg = "Conference Deaf Failed"
+        if not res:
+            msg = "Conference Undeaf Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Undeaf %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Undeaf Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -817,7 +847,7 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         FileFormat: file format, can be be "mp3" or "wav" (default "mp3")
         FilePath: complete file path to save the file to
         Filename: Default empty, if given this will be used for the recording
@@ -825,13 +855,13 @@ class PlivoRestApi(object):
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         fileformat = get_post_param(request, 'FileFormat')
         filepath = get_post_param(request, 'FilePath')
         filename = get_post_param(request, 'Filename')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not fileformat:
             fileformat = "mp3"
@@ -845,13 +875,18 @@ class PlivoRestApi(object):
             filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), room)
         recordfile = "%s%s.%s" % (filepath, filename, fileformat)
 
-        res = self._rest_inbound_socket.conference_api(room, "record %s" % recordfile)
-        if res:
-            msg = "Conference RecordStart Executed"
-            result = True
-        else:
+        res = self._rest_inbound_socket.conference_api(room, "record %s" % recordfile, async=False)
+        if not res:
             msg = "Conference RecordStart Failed"
-        return flask.jsonify(Success=result, Message=msg, RecordFile=recordfile)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)):
+            msg = "Conference RecordStart %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference RecordStart Executed"
+        result = True
+        return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
     def conference_record_stop(self):
@@ -860,29 +895,34 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         RecordFile: full file path to the recording file (the one returned by ConferenceRecordStart)
                     or 'all' to stop all current recordings on conference
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         recordfile = get_post_param(request, 'RecordFile')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not recordfile:
             msg = "RecordFile Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
 
         res = self._rest_inbound_socket.conference_api(room, "norecord %s" % recordfile)
-        if res:
-            msg = "Conference RecordStop Executed"
-            result = True
-        else:
+        if not res:
             msg = "Conference RecordStop Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)):
+            msg = "Conference RecordStop %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference RecordStop Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -892,19 +932,19 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         FilePath: full path to file to be played
         MemberID: conference member id or 'all' to play file to all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         filepath = get_post_param(request, 'FilePath')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not filepath:
             msg = "FilePath Parameter must be present"
@@ -916,12 +956,17 @@ class PlivoRestApi(object):
             arg = "async"
         else:
             arg = member_id
-        res = self._rest_inbound_socket.conference_api(room, "play %s %s" % (filepath, arg))
-        if res:
-            msg = "Conference Play Executed"
-            result = True
-        else:
+        res = self._rest_inbound_socket.conference_api(room, "play %s %s" % (filepath, arg), async=False)
+        if not res:
             msg = "Conference Play Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Play %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Play Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -931,19 +976,19 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         Text: text to say in conference
         MemberID: conference member id or 'all' to say text to all members
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         text = get_post_param(request, 'Text')
         member_id = get_post_param(request, 'MemberID')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         elif not text:
             msg = "Text Parameter must be present"
@@ -952,14 +997,19 @@ class PlivoRestApi(object):
             msg = "MemberID Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         if member_id == 'all':
-            res = self._rest_inbound_socket.conference_api(room, "say %s" % text)
+            res = self._rest_inbound_socket.conference_api(room, "say %s" % text, async=False)
         else:
-            res = self._rest_inbound_socket.conference_api(room, "saymember %s %s" % (text, member_id))
-        if res:
-            msg = "Conference Speak Executed"
-            result = True
-        else:
+            res = self._rest_inbound_socket.conference_api(room, "saymember %s %s" % (text, member_id), async=False)
+        if not res:
             msg = "Conference Speak Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+            msg = "Conference Speak %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Conference Speak Executed"
+        result = True
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
@@ -969,36 +1019,44 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        Room: conference room name
+        ConferenceName: conference room name
         Members: a list of MemberID separated by comma.
                 If set only get the members matching the MemberIDs in list.
+                (default empty)
+        CallUUIDs: a list of CallUUID separated by comma.
+                If set only get the channels matching the CallUUIDs in list.
                 (default empty)
         """
         msg = ""
         result = False
 
-        room = get_post_param(request, 'Room')
+        room = get_post_param(request, 'ConferenceName')
         members = get_post_param(request, 'Members')
 
         if not room:
-            msg = "Room Parameter must be present"
+            msg = "ConferenceName Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
         if not members:
             members = None
         res = self._rest_inbound_socket.conference_api(room, "xml_list", async=False)
-        if res:
-            try:
-                member_list = self._parse_conference_xml_list(res, member_filter=members)
-                msg = "Conference ListMembers Executed"
-                result = True
-                return flask.jsonify(Success=result, Message=msg, List=member_list)
-            except Exception, e:
-                msg = "Conference ListMembers Failed to parse result"
-                result = False
-                self._rest_inbound_socket.log.error("Conference ListMembers Failed -- %s" % str(e))
-                return flask.jsonify(Success=result, Message=msg)
-        msg = "Conference ListMembers Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        if not res:
+            msg = "Conference ListMembers Failed"
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        elif res.startswith('Conference %s not found' % str(room)):
+            msg = "Conference ListMembers %s" % str(res)
+            result = False
+            return flask.jsonify(Success=result, Message=msg)
+        try:
+            member_list = self._parse_conference_xml_list(res, member_filter=members)
+            msg = "Conference ListMembers Executed"
+            result = True
+            return flask.jsonify(Success=result, Message=msg, List=member_list)
+        except Exception, e:
+            msg = "Conference ListMembers Failed to parse result"
+            result = False
+            self._rest_inbound_socket.log.error("Conference ListMembers Failed -- %s" % str(e))
+            return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
     def conference_list(self):
@@ -1028,12 +1086,17 @@ class PlivoRestApi(object):
         return flask.jsonify(Success=result, Message=msg)
 
     @staticmethod
-    def _parse_conference_xml_list(xmlstr, member_filter=None):
+    def _parse_conference_xml_list(xmlstr, member_filter=None, uuid_filter=None):
         res = {}
         if member_filter:
             mfilter = tuple( [ mid.strip() for mid in member_filter.split(',') if mid != '' ])
         else:
             mfilter = ()
+        if uuid_filter:
+            ufilter = tuple( [ uid.strip() for uid in uuid_filter.split(',') if uid != '' ])
+        else:
+            ufilter = ()
+
         doc = etree.fromstring(xmlstr)
 
         if doc.tag != 'conferences':
@@ -1051,14 +1114,17 @@ class PlivoRestApi(object):
             for member in conf.findall('members/member'):
                 m = {}
                 member_id = member.find('id').text
-                if not member_id:
+                call_uuid = member.find("uuid").text
+                if not member_id or not call_uuid:
                     continue
                 if mfilter and member_id not in mfilter:
+                    continue
+                if ufilter and call_uuid not in ufilter:
                     continue
                 m["MemberID"] = member_id
                 m["Deaf"] = member.find("flags/can_hear").text == "true"
                 m["Muted"] = member.find("flags/can_speak").text == "true"
-                m["CallUUID"] = member.find("uuid").text
+                m["CallUUID"] = call_uuid
                 m["CallName"] = member.find("caller_id_name").text
                 m["CallNumber"] = member.find("caller_id_number").text
                 m["JoinTime"] = member.find("join_time").text

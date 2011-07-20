@@ -92,10 +92,13 @@ class RESTInboundSocket(InboundEventSocket):
         elif job_cmd == 'conference' and job_uuid:
             result = event.get_body().strip() or ''
             async_res = self.conf_sync_jobs.pop(job_uuid, None)
-            if not async_res:
+            if async_res is None:
+                return
+            elif async_res is True:
+                self.log.info("Conference Api (async) Response for JobUUID %s -- %s" % (job_uuid, result))
                 return
             async_res.set(result)
-            self.log.info("Conference Api Response for JobUUID %s -- %s" % (job_uuid, result))
+            self.log.info("Conference Api (sync) Response for JobUUID %s -- %s" % (job_uuid, result))
 
     def on_channel_progress(self, event):
         request_uuid = event['variable_plivo_request_uuid']
@@ -411,6 +414,7 @@ class RESTInboundSocket(InboundEventSocket):
                 self.log.error("Conference Api (async) Failed '%s' -- JobUUID not received" \
                                         % (cmd))
                 return False
+            self.conf_sync_jobs[job_uuid] = True
             self.log.info("Conference Api (async) '%s' with JobUUID %s" \
                                     % (cmd, job_uuid))
             return True
