@@ -33,6 +33,10 @@ URLS = {
         '/' + PLIVO_VERSION + '/ScheduleHangup/': (PlivoRestApi.schedule_hangup, ['POST']),
         # API to cancel a scheduled hangup on a single call
         '/' + PLIVO_VERSION + '/CancelScheduledHangup/': (PlivoRestApi.cancel_scheduled_hangup, ['POST']),
+        # API to start recording a call
+        '/' + PLIVO_VERSION + '/RecordStart/': (PlivoRestApi.record_start, ['POST']),
+        # API to stop recording a call
+        '/' + PLIVO_VERSION + '/RecordStop/': (PlivoRestApi.record_stop, ['POST']),
         # API to mute a member in a conference
         '/' + PLIVO_VERSION + '/ConferenceMute/': (PlivoRestApi.conference_mute, ['POST']),
         # API to unmute a member in a conference
