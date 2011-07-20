@@ -1234,7 +1234,7 @@ class Record(Element):
             params['RecordingFileFormat'] = self.file_format
             params['RecordingFilePath'] = self.file_path
             params['RecordingFilename'] = filename
-            params['RecordingFullFilePath'] = record_file
+            params['RecordFile'] = record_file
             if self.both_legs:
                 # RecordingDuration not available for bothLegs
                 # because recording is in progress

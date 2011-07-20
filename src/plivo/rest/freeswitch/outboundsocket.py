@@ -205,7 +205,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 params['RecordingFileFormat'] = fileformat
                 params['RecordingFilePath'] = filepath
                 params['RecordingFilename'] = filename
-                params['RecordingFullFilePath'] = record_file
+                params['RecordFile'] = record_file
                 params['RecordingDuration'] = record_ms
                 params['Digits'] = digits
                 self.log.warn('Send record info after hangup: %s' % str(params))
