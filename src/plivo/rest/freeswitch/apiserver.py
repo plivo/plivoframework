@@ -51,6 +51,11 @@ class PlivoRestServer(PlivoRestApi):
         self._pidfile = pidfile
         # load config
         self._config = helpers.get_config(configfile)
+        # check if http json config
+        json_config_url = helpers.get_conf_value(self._config,
+                                    'rest_server', 'INBOUND_CONFIG_URL')
+        if json_config_url:
+            self._config = helpers.get_json_config(json_config_url)
         # create flask app
         self.app = Flask(self.name)
         self.app.secret_key = helpers.get_conf_value(self._config,

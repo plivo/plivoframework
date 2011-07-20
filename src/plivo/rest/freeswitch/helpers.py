@@ -16,6 +16,7 @@ import urllib2
 import urlparse
 
 from werkzeug.datastructures import MultiDict
+import ujson as json
 
 
 def get_substring(start_char, end_char, data):
@@ -53,6 +54,11 @@ def file_exists(filepath):
 def get_config(filename):
     config = ConfigParser.SafeConfigParser()
     config.read(filename)
+    return config
+
+def get_json_config(url):
+    config = HTTPJsonConfig()
+    config.read(url)
     return config
 
 
@@ -199,3 +205,36 @@ class HTTPRequest:
         request = self._prepare_http_request(uri, params, method)
         response = urllib2.urlopen(request).read()
         return response
+
+
+
+class HTTPJsonConfig(object):
+    """
+    Json Config Format is :
+    {'section1':{'key':'value', ..., 'keyN':'valueN'},
+     'section2 :{'key':'value', ..., 'keyN':'valueN'},
+     ...
+     'sectionN :{'key':'value', ..., 'keyN':'valueN'},
+    }
+    """
+    def __init__(self):
+        self.jdata = None
+
+    def read(self, url):
+        req = HTTPRequest()
+        data = req.fetch_response(url, params={}, method='POST')
+        self.jdata = json.loads(data)
+
+    def get(self, section, key):
+        try:
+            val = self.jdata[section][key]
+            if val is None:
+                return ""
+            return str(val)
+        except KeyError:
+            return ""
+
+
+
+
+

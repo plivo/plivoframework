@@ -38,6 +38,11 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self._pidfile = pidfile
         # load config
         self._config = helpers.get_config(configfile)
+        # check if http json config
+        json_config_url = helpers.get_conf_value(self._config,
+                            'freeswitch', 'OUTBOUND_CONFIG_URL')
+        if json_config_url:
+            self._config = helpers.get_json_config(json_config_url)
         # set trace flag
         self._trace = helpers.get_conf_value(self._config,
                             'freeswitch', 'FS_OUTBOUND_TRACE') == 'true'
