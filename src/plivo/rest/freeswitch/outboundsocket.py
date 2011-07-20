@@ -462,6 +462,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.lexed_xml_response = []
                 self.log.info("Redirecting to %s %s to fetch RESTXML" \
                                         % (fetch_method, self.target_url))
+                # If transfer is in progress, break redirect
+                xfer_progress = self.get_var('plivo_transfer_progress') == 'true'
+                if xfer_progress:
+                    self.log.warn('Transfer in progress, breaking redirect to %s %s' \
+                                  % (fetch_method, self.target_url))
+                    return
                 gevent.sleep(0.010)
                 continue
         self.log.warn('Max Redirect Reached !')
