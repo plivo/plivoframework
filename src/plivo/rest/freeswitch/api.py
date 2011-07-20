@@ -203,6 +203,64 @@ class PlivoRestApi(object):
         call_req = CallRequest(request_uuid, gateways, answer_url, ring_url, hangup_url)
         return call_req
 
+    @staticmethod
+    def _parse_conference_xml_list(xmlstr, member_filter=None, uuid_filter=None, mute_filter=False, deaf_filter=False):
+        res = {}
+        if member_filter:
+            mfilter = tuple( [ mid.strip() for mid in member_filter.split(',') if mid != '' ])
+        else:
+            mfilter = ()
+        if uuid_filter:
+            ufilter = tuple( [ uid.strip() for uid in uuid_filter.split(',') if uid != '' ])
+        else:
+            ufilter = ()
+
+        doc = etree.fromstring(xmlstr)
+
+        if doc.tag != 'conferences':
+            raise Exception("Root tag must be 'conferences'")
+        for conf in doc:
+            conf_name = conf.get("name", None)
+            if not conf_name:
+                continue
+            res[conf_name] = {}
+            res[conf_name]['ConferenceUUID'] = conf.get("uuid")
+            res[conf_name]['ConferenceRunTime'] = conf.get("run_time")
+            res[conf_name]['ConferenceName'] = conf_name
+            res[conf_name]['ConferenceMemberCount'] = conf.get("member-count")
+            res[conf_name]['Members'] = []
+            for member in conf.findall('members/member'):
+                m = {}
+                member_id = member.find('id').text
+                call_uuid = member.find("uuid").text
+                is_muted = member.find("flags/can_speak").text == "false"
+                is_deaf = member.find("flags/can_hear").text == "false"
+                if not member_id or not call_uuid:
+                    continue
+                filter_match = 0
+                if not mfilter and not ufilter and not mute_filter and not deaf_filter:
+                    filter_match = 1
+                else:
+                    if mfilter and member_id in mfilter:
+                        filter_match += 1
+                    if ufilter and call_uuid in ufilter:
+                        filter_match += 1
+                    if mute_filter and is_muted:
+                        filter_match += 1
+                    if deaf_filter and is_deaf:
+                        filter_match += 1
+                if filter_match == 0:
+                    continue
+                m["MemberID"] = member_id
+                m["Deaf"] = is_deaf
+                m["Muted"] = is_muted
+                m["CallUUID"] = call_uuid
+                m["CallName"] = member.find("caller_id_name").text
+                m["CallNumber"] = member.find("caller_id_number").text
+                m["JoinTime"] = member.find("join_time").text
+                res[conf_name]['Members'].append(m)
+        return res
+
     @auth_protect
     def call(self):
         """Make Outbound Call
@@ -1020,18 +1078,25 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        Members: a list of MemberID separated by comma.
+        MemberFilter: a list of MemberID separated by comma.
                 If set only get the members matching the MemberIDs in list.
                 (default empty)
-        CallUUIDs: a list of CallUUID separated by comma.
+        CallUUIDFilter: a list of CallUUID separated by comma.
                 If set only get the channels matching the CallUUIDs in list.
                 (default empty)
+        MutedFilter: 'true' or 'false', only get muted members or not (default 'false')
+        DeafFilter: 'true' or 'false', only get deaf members or not (default 'false')
+
+        All Filter parameters can be mixed.
         """
         msg = ""
         result = False
 
         room = get_post_param(request, 'ConferenceName')
-        members = get_post_param(request, 'Members')
+        members = get_post_param(request, 'MemberFilter')
+        calluuids = get_post_param(request, 'CallUUIDFilter')
+        onlymuted = get_post_param(request, 'MutedFilter') == 'true'
+        onlydeaf = get_post_param(request, 'DeafFilter') == 'true'
 
         if not room:
             msg = "ConferenceName Parameter must be present"
@@ -1048,7 +1113,8 @@ class PlivoRestApi(object):
             result = False
             return flask.jsonify(Success=result, Message=msg)
         try:
-            member_list = self._parse_conference_xml_list(res, member_filter=members)
+            member_list = self._parse_conference_xml_list(res, member_filter=members, 
+                                uuid_filter=calluuids, mute_filter=onlymuted, deaf_filter=onlydeaf)
             msg = "Conference ListMembers Executed"
             result = True
             return flask.jsonify(Success=result, Message=msg, List=member_list)
@@ -1065,15 +1131,30 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        No parameters
+        MemberFilter: a list of MemberID separated by comma.
+                If set only get the members matching the MemberIDs in list.
+                (default empty)
+        CallUUIDFilter: a list of CallUUID separated by comma.
+                If set only get the channels matching the CallUUIDs in list.
+                (default empty)
+        MutedFilter: 'true' or 'false', only get muted members or not (default 'false')
+        DeafFilter: 'true' or 'false', only get deaf members or not (default 'false')
+
+        All Filter parameters can be mixed.
         """
         msg = ""
         result = False
 
+        members = get_post_param(request, 'MemberFilter')
+        calluuids = get_post_param(request, 'CallUUIDFilter')
+        onlymuted = get_post_param(request, 'MutedFilter') == 'true'
+        onlydeaf = get_post_param(request, 'DeafFilter') == 'true'
+
         res = self._rest_inbound_socket.conference_api(room='', command="xml_list", async=False)
         if res:
             try:
-                confs = self._parse_conference_xml_list(res, member_filter=None)
+                confs = self._parse_conference_xml_list(res, member_filter=members, 
+                                uuid_filter=calluuids, mute_filter=onlymuted, deaf_filter=onlydeaf)
                 msg = "Conference List Executed"
                 result = True
                 return flask.jsonify(Success=result, Message=msg, List=confs)
@@ -1084,49 +1165,3 @@ class PlivoRestApi(object):
                 return flask.jsonify(Success=result, Message=msg)
         msg = "Conference List Failed"
         return flask.jsonify(Success=result, Message=msg)
-
-    @staticmethod
-    def _parse_conference_xml_list(xmlstr, member_filter=None, uuid_filter=None):
-        res = {}
-        if member_filter:
-            mfilter = tuple( [ mid.strip() for mid in member_filter.split(',') if mid != '' ])
-        else:
-            mfilter = ()
-        if uuid_filter:
-            ufilter = tuple( [ uid.strip() for uid in uuid_filter.split(',') if uid != '' ])
-        else:
-            ufilter = ()
-
-        doc = etree.fromstring(xmlstr)
-
-        if doc.tag != 'conferences':
-            raise Exception("Root tag must be 'conferences'")
-        for conf in doc:
-            conf_name = conf.get("name", None)
-            if not conf_name:
-                continue
-            res[conf_name] = {}
-            res[conf_name]['ConferenceUUID'] = conf.get("uuid")
-            res[conf_name]['ConferenceRunTime'] = conf.get("run_time")
-            res[conf_name]['ConferenceName'] = conf_name
-            res[conf_name]['ConferenceMemberCount'] = conf.get("member-count")
-            res[conf_name]['Members'] = []
-            for member in conf.findall('members/member'):
-                m = {}
-                member_id = member.find('id').text
-                call_uuid = member.find("uuid").text
-                if not member_id or not call_uuid:
-                    continue
-                if mfilter and member_id not in mfilter:
-                    continue
-                if ufilter and call_uuid not in ufilter:
-                    continue
-                m["MemberID"] = member_id
-                m["Deaf"] = member.find("flags/can_hear").text == "true"
-                m["Muted"] = member.find("flags/can_speak").text == "true"
-                m["CallUUID"] = call_uuid
-                m["CallName"] = member.find("caller_id_name").text
-                m["CallNumber"] = member.find("caller_id_number").text
-                m["JoinTime"] = member.find("join_time").text
-                res[conf_name]['Members'].append(m)
-        return res
