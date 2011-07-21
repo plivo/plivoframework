@@ -329,7 +329,19 @@ class RESTInboundSocket(InboundEventSocket):
             if not hangup_url:
                 self.log.debug("No hangupUrl Outgoing Call %s, RequestUUID %s" % (call_uuid, request_uuid))
                 return
+            forwarded_from = get_substring(':', '@', event['variable_sip_h_Diversion'])
+            aleg_uuid = event['Caller-Unique-ID']
+            aleg_request_uuid = event['variable_plivo_request_uuid']
+            sched_hangup_id = event['variable_plivo_sched_hangup_id']
             params['RequestUUID'] = request_uuid
+            if forwarded_from:
+                params['ForwardedFrom'] = forwarded_from.lstrip('+')
+            if aleg_uuid:
+                params['ALegUUID'] = aleg_uuid
+            if aleg_request_uuid:
+                params['ALegRequestUUID'] = aleg_request_uuid
+            if sched_hangup_id:
+                params['ScheduledHangupId'] = sched_hangup_id
 
         # if hangup url, handle http request
         if hangup_url:

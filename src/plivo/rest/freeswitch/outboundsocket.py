@@ -338,26 +338,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
-            '''
-            # Look for hangup_url in order below :
-            # get plivo_hangup_url from channel var if found
-            # get default_hangup_url from config if found
-            # get plivo_answer_url from channel var if found
-            # get default_answer_url from config if found
-            hangup_url = self.get_var('plivo_hangup_url')
-            if hangup_url:
-                self.hangup_url = hangup_url
-                self.log.info("Using HangupUrl %s from plivo_hangup_url channel var" % self.hangup_url)
-            elif self.default_hangup_url:
-                self.hangup_url = self.default_hangup_url
-                self.log.info("Using HangupUrl %s from hangup url in config" % self.hangup_url)
-            elif answer_url:
-                self.hangup_url = answer_url
-                self.log.info("Using HangupUrl %s from plivo_answer_url channel var" % self.hangup_url)
-            elif self.default_answer_url:
-                self.hangup_url = self.default_answer_url
-                self.log.info("Using HangupUrl %s from answer url in config" % self.hangup_url)
-            '''
             # Set CallStatus to Session Params
             self.session_params['CallStatus'] = 'ringing'
 
