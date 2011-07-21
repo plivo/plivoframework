@@ -244,7 +244,10 @@ class PlivoConfig(object):
 
     def read(self):
         self._cfg.read(self._source)
-        json_source = self.get('common', 'JSON_CONFIG_URL')
+        try:
+            json_source = self._cfg.get('common', 'JSON_CONFIG_URL')
+        except:
+            json_source = None
         if json_source:
             self._json_source = json_source
             self._json_cfg = HTTPJsonConfig()
