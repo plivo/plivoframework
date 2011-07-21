@@ -37,42 +37,55 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self._run = False
         self._pidfile = pidfile
         # load config
-        self._config = helpers.get_config(configfile)
-        # check if http json config
-        json_config_url = helpers.get_conf_value(self._config,
-                            'freeswitch', 'OUTBOUND_CONFIG_URL')
-        if json_config_url:
-            self._config = helpers.get_json_config(json_config_url)
-        # set trace flag
-        self._trace = helpers.get_conf_value(self._config,
-                            'freeswitch', 'FS_OUTBOUND_TRACE') == 'true'
-        # create logger
-        self.create_logger()
-        # create outbound server
-        self.fs_outbound_address = helpers.get_conf_value(self._config,
-                                        'freeswitch', 'FS_OUTBOUND_ADDRESS')
-        fs_host, fs_port = self.fs_outbound_address.split(':', 1)
-        fs_port = int(fs_port)
-        self.default_answer_url = helpers.get_conf_value(self._config,
-                                        'freeswitch', 'DEFAULT_ANSWER_URL')
-        self.auth_id = helpers.get_conf_value(self._config,
-                                        'rest_server', 'AUTH_ID')
-        self.auth_token = helpers.get_conf_value(self._config,
-                                        'rest_server', 'AUTH_TOKEN')
-        self.default_hangup_url = helpers.get_conf_value(self._config,
-                                        'freeswitch', 'DEFAULT_HANGUP_URL')
-        self.default_http_method = helpers.get_conf_value(self._config,
-                                        'rest_server', 'DEFAULT_HTTP_METHOD')
-        if not self.default_http_method in ('GET', 'POST'):
-            self.default_http_method = 'POST'
-
-        self.extra_fs_vars = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'EXTRA_FS_VARS')
+        self._config = helpers.PlivoConfig(configfile)
+        self.load_config()
 
         # This is where we define the connection with the
         # Plivo XML element Processor
-        outboundsocket.OutboundServer.__init__(self, (fs_host, fs_port),
+        outboundsocket.OutboundServer.__init__(self, (self.fs_host, self.fs_port),
                                 PlivoOutboundEventSocket, filter=None)
+
+    def load_config(self, reload=False):
+        # load config
+        self._config.read()
+        # create logger
+        self.create_logger()
+        if not reload:
+            self.log.info("Starting ...")
+        self.log.warn("logger %s" % str(self.log))
+        # set trace flag
+        self._trace = self._config.get('outbound_server', 'TRACE') == 'true'
+        self.log.warn("trace %s" % str(self._trace))
+        # create outbound server
+        if not reload:
+            self.fs_outbound_address = self._config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
+            self.fs_host, fs_port = self.fs_outbound_address.split(':', 1)
+            self.fs_port = int(fs_port)
+            self.log.warn("outbound_server %s" % str(self.fs_outbound_address))
+        
+        self.default_answer_url = self._config.get('common', 'DEFAULT_ANSWER_URL')
+        self.log.warn("default_answer_url %s" % str(self.default_answer_url))
+        
+        self.default_hangup_url = self._config.get('common', 'DEFAULT_HANGUP_URL')
+        self.log.warn("default_hangup_url %s" % str(self.default_hangup_url))
+        
+        self.default_http_method = self._config.get('common', 'DEFAULT_HTTP_METHOD')
+        if not self.default_http_method in ('GET', 'POST'):
+            self.default_http_method = 'POST'
+        self.log.warn("default_http_method %s" % str(self.default_http_method))
+
+        self.auth_id = self._config.get('common', 'AUTH_ID')
+        self.log.warn("auth_id %s" % str(self.auth_id))
+        self.auth_token = self._config.get('common', 'AUTH_TOKEN')
+        self.log.warn("auth_token %s" % str(self.auth_token))
+
+        self.extra_fs_vars = self._config.get('common', 'EXTRA_FS_VARS')
+        self.log.warn("extra_fs_vars %s" % str(self.extra_fs_vars))
+
+    def reload(self):
+        self.log.warn("Reloading ...")
+        self.load_config(reload=True)
+        self.log.warn("Reloading done")
 
     def _get_request_id(self):
         try:
@@ -97,52 +110,56 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
     def create_logger(self):
+        """This will create a logger
+
+        Based on the settings in the configuration file,
+        LOG_TYPE will determine if we will log in file, syslog, stdout, http or dummy (no log)
+        """
+
         if self._daemon is False:
-            logtype = helpers.get_conf_value(self._config,
-                                                'freeswitch', 'LOG_TYPE')
+            logtype = self._config.get('outbound_server', 'LOG_TYPE')
             if logtype == 'dummy':
                 self.log = DummyLogger()
             else:
                 self.log = StdoutLogger()
             self.log.set_debug()
         else:
-            logtype = helpers.get_conf_value(self._config,
-                                                'freeswitch', 'LOG_TYPE')
+            logtype = self._config.get('outbound_server', 'LOG_TYPE')
             if logtype == 'file':
-                logfile = helpers.get_conf_value(self._config,
-                                                'freeswitch', 'LOG_FILE')
+                logfile = self._config.get('outbound_server', 'LOG_FILE')
                 self.log = FileLogger(logfile)
             elif logtype == 'syslog':
-                syslogaddress = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'SYSLOG_ADDRESS')
-                syslogfacility = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'SYSLOG_FACILITY')
+                syslogaddress = self._config.get('outbound_server', 'SYSLOG_ADDRESS')
+                syslogfacility = self._config.get('outbound_server', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
             elif logtype == 'dummy':
                 self.log = DummyLogger()
             elif logtype == 'http':
-                url = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'HTTP_LOG_URL')
-                method = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'HTTP_LOG_METHOD')
-                fallback_file = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'HTTP_LOG_FILE_FAILURE')
+                url = self._config.get('outbound_server', 'HTTP_LOG_URL')
+                method = self._config.get('outbound_server', 'HTTP_LOG_METHOD')
+                fallback_file = self._config.get('outbound_server', 'HTTP_LOG_FILE_FAILURE')
                 self.log = HTTPLogger(url=url, method=method, fallback_file=fallback_file)
             else:
                 self.log = StdoutLogger()
-            debug_mode = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'DEBUG')
-            if debug_mode == 'true' or self._trace is True:
+
+            debug_mode = self._config.get('outbound_server', 'DEBUG') == 'true'
+            if debug_mode is True or self._trace is True:
                 self.log.set_debug()
             else:
                 self.log.set_info()
 
     def do_daemon(self):
+        """This will daemonize the current application
+
+        Two settings from our configuration files are also used to run the
+        daemon under a determine user & group.
+
+        USER : determine the user running the daemon
+        GROUP : determine the group running the daemon
+        """
         # get user/group from config
-        user = helpers.get_conf_value(self._config,
-                                    'freeswitch', 'FS_OUTBOUND_USER')
-        group = helpers.get_conf_value(self._config,
-                                    'freeswitch', 'FS_OUTBOUND_GROUP')
+        user = self._config.get('outbound_server', 'USER')
+        group = self._config.get('outbound_server', 'GROUP')
         if not user or not group:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
@@ -150,17 +167,22 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
             group = grp.getgrgid(gid)[0]
         # daemonize now
         plivo.utils.daemonize.daemon(user, group, path='/',
-                                    pidfile=self._pidfile, other_groups=())
+                                     pidfile=self._pidfile,
+                                     other_groups=())
 
     def sig_term(self, *args):
         self.stop()
         self.log.warn("Shutdown ...")
         sys.exit(0)
 
+    def sig_hup(self, *args):
+        self.reload()
+
     def start(self):
         self.log.info("Starting OutboundServer ...")
         # catch SIG_TERM
         gevent.signal(signal.SIGTERM, self.sig_term)
+        gevent.signal(signal.SIGHUP, self.sig_hup)
         # run
         self._run = True
         if self._daemon:

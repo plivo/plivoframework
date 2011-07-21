@@ -21,23 +21,12 @@ class RESTInboundSocket(InboundEventSocket):
     """
     Interface between REST API and the InboundSocket
     """
-    def __init__(self, host, port, password,
-                 outbound_address='',
-                 auth_id='', 
-                 auth_token='',
-                 log=None, 
-                 default_answer_url=None,
-                 default_hangup_url=None,
-                 default_http_method='POST', 
-                 call_heartbeat_url=None,
-                 extra_fs_vars=None,
-                 trace=False):
-        InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER,
-                                    trace=trace)
-        self.fs_outbound_address = outbound_address
-        self.log = log
-        self.auth_id = auth_id
-        self.auth_token = auth_token
+    def __init__(self, server):
+        self.server = server
+        self.log = self.server.log
+
+        InboundEventSocket.__init__(self, self.get_server().fs_host, self.get_server().fs_port, self.get_server().fs_password, 
+                                    filter=EVENT_FILTER, trace=self.get_server()._trace)
         # Mapping of Key: job-uuid - Value: request_uuid
         self.bk_jobs = {}
         # Transfer jobs: call_uuid - Value: inline dptools to execute
@@ -46,17 +35,19 @@ class RESTInboundSocket(InboundEventSocket):
         self.conf_sync_jobs = {}
         # Call Requests
         self.call_requests = {}
-        self.default_answer_url = default_answer_url
-        self.default_hangup_url = default_hangup_url
-        self.default_http_method = default_http_method
-        self.call_heartbeat_url = call_heartbeat_url
-        self.extra_fs_vars = extra_fs_vars
+
+    def get_server(self):
+        return self.server
+
+    def reload_config(self):
+        self.get_server().load_config(reload=True)
+        self.log = self.server.log
 
     def get_extra_fs_vars(self, event):
         params = {}
-        if not event or not self.extra_fs_vars:
+        if not event or not self.get_server().extra_fs_vars:
             return params
-        for var in self.extra_fs_vars.split(','):
+        for var in self.get_server().extra_fs_vars.split(','):
             var = var.strip()
             if var:
                 val = event.get_header(var)
@@ -209,12 +200,12 @@ class RESTInboundSocket(InboundEventSocket):
             reason = event['Hangup-Cause']
             hangup_url = event['variable_plivo_hangup_url']
             if not hangup_url:
-                if self.default_hangup_url:
-                    hangup_url = self.default_hangup_url
+                if self.get_server().default_hangup_url:
+                    hangup_url = self.get_server().default_hangup_url
                 elif event['variable_plivo_answer_url']:
                     hangup_url = event['variable_plivo_answer_url']
-                elif self.default_answer_url:
-                    hangup_url = self.default_answer_url
+                elif self.get_server().default_answer_url:
+                    hangup_url = self.get_server().default_answer_url
             request_uuid = None
             try:
                 self.set_hangup_complete(request_uuid, call_uuid, reason, event, hangup_url)
@@ -300,9 +291,9 @@ class RESTInboundSocket(InboundEventSocket):
             
         self.log.debug("Got Session Heartbeat from Freeswitch: %s" % params)
         
-        if self.call_heartbeat_url:
-            self.log.debug("Sending heartbeat to callback: %s" % self.call_heartbeat_url)
-            spawn_raw(self.send_to_url, self.call_heartbeat_url, params)
+        if self.get_server().call_heartbeat_url:
+            self.log.debug("Sending heartbeat to callback: %s" % self.get_server().call_heartbeat_url)
+            spawn_raw(self.send_to_url, self.get_server().call_heartbeat_url, params)
 
     def set_hangup_complete(self, request_uuid, call_uuid, reason, event, hangup_url):
         params = {}
@@ -387,12 +378,12 @@ class RESTInboundSocket(InboundEventSocket):
 
     def send_to_url(self, url=None, params={}, method=None):
         if method is None:
-            method = self.default_http_method
+            method = self.get_server().default_http_method
 
         if not url:
             self.log.warn("Cannot send %s, no url !" % method)
             return None
-        http_obj = HTTPRequest(self.auth_id, self.auth_token)
+        http_obj = HTTPRequest(self.get_server().auth_id, self.get_server().auth_token)
         try:
             data = http_obj.fetch_response(url, params, method)
             self.log.info("Sent to %s %s with %s -- Result: %s"
@@ -430,7 +421,7 @@ class RESTInboundSocket(InboundEventSocket):
         _options.append("ignore_early_media=true")
         options = ','.join(_options)
         outbound_str = "'socket:%s async full' inline" \
-                        % self.fs_outbound_address
+                        % self.get_server().fs_out_address
 
         dial_str = "originate {%s,%s}%s/%s %s" \
             % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
@@ -461,7 +452,7 @@ class RESTInboundSocket(InboundEventSocket):
         # Link inline dptools (will be run when ready to start transfer)
         # to the call_uuid job
         outbound_str = "socket:%s async full" \
-                        % (self.fs_outbound_address)
+                        % (self.get_server().fs_out_address)
         self.xfer_jobs[call_uuid] = outbound_str
         # Transfer into sleep state a little waiting for real transfer
         res = self.api("uuid_transfer %s 'sleep:5000' inline" % call_uuid)

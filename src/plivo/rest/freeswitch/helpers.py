@@ -51,29 +51,10 @@ def file_exists(filepath):
     return os.path.isfile(filepath)
 
 
-def get_config(filename):
-    config = ConfigParser.SafeConfigParser()
-    config.read(filename)
-    return config
-
-def get_json_config(url):
-    config = HTTPJsonConfig()
-    config.read(url)
-    return config
-
-
 def get_post_param(request, key):
     try:
         return request.form[key]
     except MultiDict.KeyError:
-        return ""
-
-
-def get_conf_value(config, section, key):
-    try:
-        value = config.get(section, key)
-        return str(value)
-    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
         return ""
 
 
@@ -208,6 +189,25 @@ class HTTPRequest:
 
 
 
+
+def get_config(filename):
+    config = ConfigParser.SafeConfigParser()
+    config.read(filename)
+    return config
+
+def get_json_config(url):
+    config = HTTPJsonConfig()
+    config.read(url)
+    return config
+
+def get_conf_value(config, section, key):
+    try:
+        value = config.get(section, key)
+        return str(value)
+    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        return ""
+
+
 class HTTPJsonConfig(object):
     """
     Json Config Format is :
@@ -235,6 +235,34 @@ class HTTPJsonConfig(object):
             return ""
 
 
+class PlivoConfig(object):
+    def __init__(self, source):
+        self._cfg = ConfigParser.SafeConfigParser()
+        self._source = source
+        self._json_cfg = None
+        self._json_source = None
 
+    def read(self):
+        self._cfg.read(self._source)
+        json_source = self.get('common', 'JSON_CONFIG_URL')
+        if json_source:
+            self._json_source = json_source
+            self._json_cfg = HTTPJsonConfig()
+            self._json_cfg.read(self._json_source)
+        else:
+            self._json_source = None
+            self._json_cfg = None
 
+    def get(self, section, key):
+        if self._json_cfg:
+            return self._json_cfg.get(section, key)
+        else:
+            try:
+                value = self._cfg.get(section, key)
+                return str(value)
+            except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+                return ""
+
+    def reload(self):
+        self.read()
 

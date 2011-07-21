@@ -28,7 +28,7 @@ PRE_SCRIPT=$EXEC_PREFIX/etc/plivo/env.sh
 do_help()
 {
 	echo
-	echo "$(basename $0) (start|stop|restart|status|list) [CONFIGNAME]"
+	echo "$(basename $0) (start|stop|restart|status|list|reload) [CONFIGNAME]"
 	echo "	[CONFIGNAME] plivo instance to manage (optional)"
 	echo
 	exit 1;
@@ -96,6 +96,24 @@ do_stop()
 	fi
 }
 
+do_reload()
+{
+	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
+	kill -HUP $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$REST_NAME reloaded"
+	else
+		echo "$REST_NAME reload failed"
+	fi
+	kill -HUP $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$OUTBOUND_NAME reloaded"
+	else
+		echo "$OUTBOUND_NAME reload failed"
+	fi
+}
+
 
 do_status()
 {
@@ -158,6 +176,9 @@ do
 
 	status)
 		do_status
+	;;
+	reload)
+		do_reload
 	;;
 	list)
 		echo "Plivo config list:"

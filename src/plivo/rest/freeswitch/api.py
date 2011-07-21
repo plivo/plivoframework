@@ -262,6 +262,35 @@ class PlivoRestApi(object):
         return res
 
     @auth_protect
+    def reload_config(self):
+        """Reload plivo config for rest server
+        """
+        msg = "Plivo config reload failed"
+        result = False
+
+        if self._rest_inbound_socket:
+            try:
+                self._rest_inbound_socket.reload_config()
+                extra = "rest_server"
+                outbound_pidfile = self._rest_inbound_socket.get_server().fs_out_pidfile
+                if outbound_pidfile:
+                    try:
+                        pid = int(open(outbound_pidfile, 'r').read().strip())
+                        os.kill(pid, 1)
+                        extra += " and outbound_server"
+                    except Exception, e:
+                        extra += ", failed for outbound_server (%s)" % str(e)
+                else:
+                    extra += ", failed for outbound_server (no pidfile)"
+                msg = "Plivo config reloaded : %s" % extra
+                result = True
+            except Exception, e:
+                msg += ' : %s' % str(e)
+                result = False
+
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
     def call(self):
         """Make Outbound Call
         Allow initiating outbound calls via the REST API. To make an

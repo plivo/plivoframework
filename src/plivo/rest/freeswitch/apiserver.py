@@ -30,9 +30,7 @@ class PlivoRestServer(PlivoRestApi):
 
     def __init__(self, configfile, daemon=False,
                         pidfile='/tmp/plivo_rest.pid'):
-        """Constructor
-
-        Initialize main properties such as daemon, pidfile, config, etc...
+        """Initialize main properties such as daemon, pidfile, config, etc...
 
         This will init the http server that will provide the Rest interface,
         the rest server is configured on HTTP_ADDRESS
@@ -49,103 +47,39 @@ class PlivoRestServer(PlivoRestApi):
         self._daemon = daemon
         self._run = False
         self._pidfile = pidfile
-        # load config
-        self._config = helpers.get_config(configfile)
-        # check if http json config
-        json_config_url = helpers.get_conf_value(self._config,
-                                    'rest_server', 'INBOUND_CONFIG_URL')
-        if json_config_url:
-            self._config = helpers.get_json_config(json_config_url)
         # create flask app
         self.app = Flask(self.name)
-        self.app.secret_key = helpers.get_conf_value(self._config,
-                                                'rest_server', 'SECRET_KEY')
-        self.app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
 
-        # set trace flag
-        self._trace = helpers.get_conf_value(self._config,
-                                'freeswitch', 'FS_INBOUND_TRACE') == 'true'
-        # create logger
-        self.create_logger()
-        # create rest server
-        self.fs_inbound_address = helpers.get_conf_value(self._config,
-                                        'freeswitch', 'FS_INBOUND_ADDRESS')
-        fs_host, fs_port = self.fs_inbound_address.split(':', 1)
-        fs_port = int(fs_port)
-        fs_password = helpers.get_conf_value(self._config,
-                                                'freeswitch', 'FS_PASSWORD')
-        # get auth id and auth token
-        self.auth_id = helpers.get_conf_value(self._config,
-                                        'rest_server', 'AUTH_ID')
-        self.auth_token = helpers.get_conf_value(self._config,
-                                        'rest_server', 'AUTH_TOKEN')
-        # get outbound socket host/port
-        fs_out_address = helpers.get_conf_value(self._config,
-                                        'freeswitch', 'FS_OUTBOUND_ADDRESS')
-        fs_out_host, fs_out_port  = fs_out_address.split(':', 1)
-        # if outbound host is 0.0.0.0, send to 127.0.0.1
-        if fs_out_host == '0.0.0.0':
-            fs_out_address = '127.0.0.1:%s' % fs_out_port
-
-        self.default_answer_url = helpers.get_conf_value(self._config,
-                                        'freeswitch', 'DEFAULT_ANSWER_URL')
-        self.default_hangup_url = helpers.get_conf_value(self._config,
-                                        'freeswitch', 'DEFAULT_HANGUP_URL')
-        self.default_http_method = helpers.get_conf_value(self._config,
-                                        'rest_server', 'DEFAULT_HTTP_METHOD')
-        if not self.default_http_method in ('GET', 'POST'):
-            self.default_http_method = 'POST'
-
-        # get call_heartbeat url
-        call_heartbeat_url = helpers.get_conf_value(self._config,
-                                        'rest_server', 'CALL_HEARTBEAT_URL')
-
-        self.extra_fs_vars = helpers.get_conf_value(self._config,
-                                            'freeswitch', 'EXTRA_FS_VARS')
+        # load config
+        self._config = helpers.PlivoConfig(configfile)
+        self.load_config()
 
         # create inbound socket instance
-        self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port,
-                            fs_password, outbound_address=fs_out_address,
-                            auth_id=self.auth_id,
-                            auth_token=self.auth_token,
-                            log=self.log,
-                            default_answer_url=self.default_answer_url,
-                            default_hangup_url=self.default_hangup_url,
-                            default_http_method=self.default_http_method,
-                            call_heartbeat_url=call_heartbeat_url,
-                            extra_fs_vars=self.extra_fs_vars,
-                            trace=self._trace)
+        self._rest_inbound_socket = RESTInboundSocket(server=self)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
             func, methods = func_desc
             fn = getattr(self, func.__name__)
             self.app.add_url_rule(path, func.__name__, fn, methods=methods)
         # create WSGI Server
-        self.http_address = helpers.get_conf_value(self._config,
-                                            'rest_server', 'HTTP_ADDRESS')
-        http_host, http_port = self.http_address.split(':', 1)
-        http_port = int(http_port)
-        self.http_server = WSGIServer((http_host, http_port),
+        self.http_server = WSGIServer((self.http_host, self.http_port),
                                        self.app, log=self.log)
+
+    def get_log(self):
+        return self.log
+
+    def get_config(self):
+        return self._config
 
     def create_logger(self):
         """This will create a logger
 
         Based on the settings in the configuration file,
-        LOG_TYPE will determine if we will log in file, syslog or stdout
-
-        To log in file we use the following setting :
-        LOG_FILE = /tmp/plivo-rest.log
-
-        To log to syslog we have several settings to configure the logging :
-            * LOG_TYPE = syslog
-            * SYSLOG_ADDRESS = /dev/log
-            * SYSLOG_FACILITY = local0
+        LOG_TYPE will determine if we will log in file, syslog, stdout, http or dummy (no log)
         """
 
         if self._daemon is False:
-            logtype = helpers.get_conf_value(self._config,
-                                                'freeswitch', 'LOG_TYPE')
+            logtype = self._config.get('rest_server', 'LOG_TYPE')
             if logtype == 'dummy':
                 self.log = DummyLogger()
             else:
@@ -153,34 +87,26 @@ class PlivoRestServer(PlivoRestApi):
             self.log.set_debug()
             self.app.debug = True
         else:
-            logtype = helpers.get_conf_value(self._config,
-                                                'rest_server', 'LOG_TYPE')
+            logtype = self._config.get('rest_server', 'LOG_TYPE')
             if logtype == 'file':
-                logfile = helpers.get_conf_value(self._config,
-                                                'rest_server', 'LOG_FILE')
+                logfile = self._config.get('rest_server', 'LOG_FILE')
                 self.log = FileLogger(logfile)
             elif logtype == 'syslog':
-                syslogaddress = helpers.get_conf_value(self._config,
-                                            'rest_server', 'SYSLOG_ADDRESS')
-                syslogfacility = helpers.get_conf_value(self._config,
-                                            'rest_server', 'SYSLOG_FACILITY')
+                syslogaddress = self._config.get('rest_server', 'SYSLOG_ADDRESS')
+                syslogfacility = self._config.get('rest_server', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
             elif logtype == 'dummy':
                 self.log = DummyLogger()
             elif logtype == 'http':
-                url = helpers.get_conf_value(self._config,
-                                            'rest_server', 'HTTP_LOG_URL')
-                method = helpers.get_conf_value(self._config,
-                                            'rest_server', 'HTTP_LOG_METHOD')
-                fallback_file = helpers.get_conf_value(self._config,
-                                            'rest_server', 'HTTP_LOG_FILE_FAILURE')
+                url = self._config.get('rest_server', 'HTTP_LOG_URL')
+                method = self._config.get('rest_server', 'HTTP_LOG_METHOD')
+                fallback_file = self._config.get('rest_server', 'HTTP_LOG_FILE_FAILURE')
                 self.log = HTTPLogger(url=url, method=method, fallback_file=fallback_file)
             else:
                 self.log = StdoutLogger()
 
-            debug_mode = helpers.get_conf_value(self._config,
-                                                    'rest_server', 'DEBUG')
-            if debug_mode == 'true' or self._trace is True:
+            debug_mode = self._config.get('rest_server', 'DEBUG') == 'true'
+            if debug_mode is True or self._trace is True:
                 self.log.set_debug()
                 self.app.debug = True
             else:
@@ -188,20 +114,91 @@ class PlivoRestServer(PlivoRestApi):
         self.log.name = self.name
         self.app._logger = self.log
 
+    def load_config(self, reload=False):
+        self._config.read()
+        # create logger
+        self.create_logger()
+        if not reload:
+            self.log.info("Starting ...")
+        self.log.warn("logger %s" % str(self.log))
+
+        # set trace flag
+        self._trace = self._config.get('rest_server', 'TRACE') == 'true'
+        self.log.warn("trace %s" % str(self._trace))
+
+        if not reload:
+            self.app.secret_key = self._config.get('rest_server', 'SECRET_KEY')
+            self.log.warn("secret_key %s" % str(self.app.secret_key))
+            self.app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
+            self.http_address = self._config.get('rest_server', 'HTTP_ADDRESS')
+            self.http_host, http_port = self.http_address.split(':', 1)
+            self.http_port = int(http_port)
+            self.log.warn("http_address %s" % str(self.http_address))
+
+            self.fs_inbound_address = self._config.get('rest_server', 'FS_INBOUND_ADDRESS')
+            self.fs_host, fs_port = self.fs_inbound_address.split(':', 1)
+            self.fs_port = int(fs_port)
+            self.log.warn("fs_inbound_address %s" % str(self.fs_inbound_address))
+
+            self.fs_password = self._config.get('rest_server', 'FS_INBOUND_PASSWORD')
+            self.log.warn("fs_password %s" % str(self.fs_password))
+
+            # get outbound socket host/port
+            self.fs_out_address = self._config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
+            self.fs_out_host, self.fs_out_port  = self.fs_out_address.split(':', 1)
+            
+            # if outbound host is 0.0.0.0, send to 127.0.0.1
+            if self.fs_out_host == '0.0.0.0':
+                self.fs_out_address = '127.0.0.1:%s' % self.fs_out_port
+            self.log.warn("fs_out_address %s" % str(self.fs_out_address))
+
+        self.default_answer_url = self._config.get('common', 'DEFAULT_ANSWER_URL')
+        self.log.warn("default_answer_url %s" % str(self.default_answer_url))
+
+        self.default_hangup_url = self._config.get('common', 'DEFAULT_HANGUP_URL')
+        self.log.warn("default_hangup_url %s" % str(self.default_hangup_url))
+
+        self.default_http_method = self._config.get('common', 'DEFAULT_HTTP_METHOD')
+        if not self.default_http_method in ('GET', 'POST'):
+            self.default_http_method = 'POST'
+        self.log.warn("default_http_method %s" % str(self.default_http_method))
+
+        self.auth_id = self._config.get('common', 'AUTH_ID')
+        self.log.warn("auth_id %s" % str(self.auth_id))
+        self.auth_token = self._config.get('common', 'AUTH_TOKEN')
+        self.log.warn("auth_token %s" % str(self.auth_token))
+
+        self.extra_fs_vars = self._config.get('common', 'EXTRA_FS_VARS')
+        self.log.warn("extra_fs_vars %s" % str(self.extra_fs_vars))
+
+        # get call_heartbeat url
+        self.call_heartbeat_url = self._config.get('rest_server', 'CALL_HEARTBEAT_URL')
+        self.log.warn("call_heartbeat_url %s" % str(self.call_heartbeat_url))
+
+        # get pid file for reloading outbound server (ugly hack ...)
+        try:
+            self.fs_out_pidfile = self._pidfile.replace('rest-', 'outbound-')
+        except Exception, e:
+            self.log.warn("Cannot identify outbound_server pidfile: %s" % str(e))
+            self.fs_out_pidfile = None
+
+    def reload(self):
+        self.log.warn("Reloading config ...")
+        self._rest_inbound_socket.reload_config()
+        self.log.warn("Reloading done")
+
     def do_daemon(self):
         """This will daemonize the current application
 
         Two settings from our configuration files are also used to run the
         daemon under a determine user & group.
 
-        REST_SERVER_USER : determine the user running the daemon
-        REST_SERVER_GROUP : determine the group running the daemon
+        USER : determine the user running the daemon
+        GROUP : determine the group running the daemon
         """
         # get user/group from config
-        user = helpers.get_conf_value(self._config,
-                                        'rest_server', 'REST_SERVER_USER')
-        group = helpers.get_conf_value(self._config,
-                                        'rest_server', 'REST_SERVER_GROUP')
+        user = self._config.get('rest_server', 'USER')
+        group = self._config.get('rest_server', 'GROUP')
         if not user or not group:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
@@ -218,6 +215,9 @@ class PlivoRestServer(PlivoRestApi):
         self.log.warn("Shutdown ...")
         self.stop()
         sys.exit(0)
+
+    def sig_hup(self, *args):
+        self.reload()
 
     def stop(self):
         """Method stop stop the infinite loop from start method
@@ -237,6 +237,7 @@ class PlivoRestServer(PlivoRestApi):
         self.log.info("RESTServer starting ...")
         # catch SIG_TERM
         gevent.signal(signal.SIGTERM, self.sig_term)
+        gevent.signal(signal.SIGHUP, self.sig_hup)
         # run
         self._run = True
         if self._daemon:
