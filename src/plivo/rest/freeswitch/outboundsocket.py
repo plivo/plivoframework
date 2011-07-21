@@ -374,8 +374,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if forwarded_from:
             self.session_params['ForwardedFrom'] = forwarded_from.lstrip('+')
 
-        #params = self.get_extra_fs_vars(event=channel)
-
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
             self.unset('plivo_sched_hangup_id')
