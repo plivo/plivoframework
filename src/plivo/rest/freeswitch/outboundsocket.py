@@ -14,6 +14,7 @@ except ImportError:
 import gevent
 import gevent.queue
 from gevent import spawn_raw
+from gevent.event import AsyncResult
 
 from plivo.core.freeswitch.eventtypes import Event
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
@@ -173,45 +174,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self._hangup_cause = event['Hangup-Cause']
         self.log.info('Event: channel %s has hung up (%s)' %
                       (self.get_channel_unique_id(), self._hangup_cause))
-        if self.hangup_url:
-            hangup_url = self.hangup_url
-        elif self.default_hangup_url:
-            hangup_url = self.default_hangup_url
-        else:
-            hangup_url = None
-        if hangup_url:
-            self.session_params['HangupCause'] = self._hangup_cause
-            self.session_params['CallStatus'] = 'completed'
-            self.log.info("Sending hangup to %s" % hangup_url)
-            spawn_raw(self.send_to_url, hangup_url)
-        # post record if found
-        record_file = event['variable_plivo_record_file']
-        if record_file:
-            try:
-                params = {}
-                filepath, filename = os.path.split(record_file)
-                filename, fileformat = os.path.splitext(filename)
-                fileformat = fileformat.lstrip('.')
-                action = event["variable_plivo_record_action"]
-                method = event["variable_plivo_record_method"]
-                both_legs = event["variable_plivo_record_both_legs"]
-                try:
-                    record_ms = str(int(event["variable_record_ms"]))
-                except ValueError, TypeError:
-                    record_ms = "-1"
-                digits = event["variable_playback_terminator_used"]
-                if not digits:
-                    digits = ""
-                params['RecordingFileFormat'] = fileformat
-                params['RecordingFilePath'] = filepath
-                params['RecordingFilename'] = filename
-                params['RecordFile'] = record_file
-                params['RecordingDuration'] = record_ms
-                params['Digits'] = digits
-                self.log.warn('Send record info after hangup: %s' % str(params))
-                spawn_raw(self.send_to_url, action, params, method)
-            except Exception, e:
-                self.log.error('Failed to send record info after hangup: %s' % str(e))
+        self.session_params['HangupCause'] = self._hangup_cause
+        self.session_params['CallStatus'] = 'completed'
         # Prevent command to be stuck while waiting response
         self._action_queue.put_nowait(Event())
 
@@ -265,15 +229,18 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def get_hangup_cause(self):
         return self._hangup_cause
 
-    def get_extra_fs_vars(self):
-        channel = self.get_channel()
-        if self.extra_fs_vars is not None:
-            extra_vars = self.extra_fs_vars.split(',')
-            for var in extra_vars:
-                var = var.strip()
-                val = channel.get_header(var)
-                if var and val:
-                    self.session_params[var] = val
+    def get_extra_fs_vars(self, event):
+        params = {}
+        if not event or not self.extra_fs_vars: 
+            return params
+        for var in self.extra_fs_vars.split(','):
+            var = var.strip()
+            if var:
+                val = event.get_header(var)
+                if val is None:
+                    val = ''
+                params[var] = val
+        return params
 
     def disconnect(self):
         # Prevent command to be stuck while waiting response
@@ -371,6 +338,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
+            '''
             # Look for hangup_url in order below :
             # get plivo_hangup_url from channel var if found
             # get default_hangup_url from config if found
@@ -389,6 +357,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             elif self.default_answer_url:
                 self.hangup_url = self.default_answer_url
                 self.log.info("Using HangupUrl %s from answer url in config" % self.hangup_url)
+            '''
             # Set CallStatus to Session Params
             self.session_params['CallStatus'] = 'ringing'
 
@@ -405,7 +374,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if forwarded_from:
             self.session_params['ForwardedFrom'] = forwarded_from.lstrip('+')
 
-        self.get_extra_fs_vars()
+        #params = self.get_extra_fs_vars(event=channel)
 
         # Remove sched_hangup_id from channel vars
         if sched_hangup_id:
@@ -436,6 +405,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             try:
                 if self.has_hangup():
                     raise RESTHangup()
+                # case answer url, add extra vars to http request :
+                if x == 0:
+                    params = self.get_extra_fs_vars(event=self.get_channel())
                 self.fetch_xml(params=params)
                 if not self.xml_response:
                     self.log.warn('No XML Response')
@@ -591,17 +563,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             if not xfer_progress:
                 self.log.warn('No more Elements, Hangup Now !')
                 self.session_params['CallStatus'] = 'completed'
+                self.session_params['HangupCause'] = 'NORMAL_CLEARING'
                 self.hangup()
-                if self.hangup_url:
-                    hangup_url = self.hangup_url
-                elif self.default_hangup_url:
-                    hangup_url = self.default_hangup_url
-                else:
-                    hangup_url = None
-                if hangup_url:
-                    self.session_params['HangupCause'] = 'NORMAL_CLEARING'
-                    self.session_params['CallStatus'] = 'completed'
-                    self.log.info("Sending hangup to %s" % hangup_url)
-                    spawn_raw(self.send_to_url, hangup_url)
             else:
                 self.log.warn('No more Elements, Transfer In Progress !')

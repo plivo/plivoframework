@@ -4,6 +4,8 @@
 from gevent import monkey
 monkey.patch_all()
 
+import os.path
+
 from gevent import spawn_raw
 from gevent import pool
 import gevent.event
@@ -12,7 +14,7 @@ from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
 
 
-EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP CHANNEL_STATE SESSION_HEARTBEAT"
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT"
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -21,8 +23,14 @@ class RESTInboundSocket(InboundEventSocket):
     """
     def __init__(self, host, port, password,
                  outbound_address='',
-                 auth_id='', auth_token='',
-                 log=None, default_http_method='POST', call_heartbeat_url=None,
+                 auth_id='', 
+                 auth_token='',
+                 log=None, 
+                 default_answer_url=None,
+                 default_hangup_url=None,
+                 default_http_method='POST', 
+                 call_heartbeat_url=None,
+                 extra_fs_vars=None,
                  trace=False):
         InboundEventSocket.__init__(self, host, port, password, filter=EVENT_FILTER,
                                     trace=trace)
@@ -38,8 +46,24 @@ class RESTInboundSocket(InboundEventSocket):
         self.conf_sync_jobs = {}
         # Call Requests
         self.call_requests = {}
+        self.default_answer_url = default_answer_url
+        self.default_hangup_url = default_hangup_url
         self.default_http_method = default_http_method
         self.call_heartbeat_url = call_heartbeat_url
+        self.extra_fs_vars = extra_fs_vars
+
+    def get_extra_fs_vars(self, event):
+        params = {}
+        if not event or not self.extra_fs_vars:
+            return params
+        for var in self.extra_fs_vars.split(','):
+            var = var.strip()
+            if var:
+                val = event.get_header(var)
+                if val is None:
+                    val = ''
+                params[var] = val
+        return params
 
     def on_background_job(self, event):
         """
@@ -129,6 +153,10 @@ class RESTInboundSocket(InboundEventSocket):
                             'CallStatus': 'ringing',
                             'From': caller_num
                         }
+                    # add extra params
+                    extra_params = self.get_extra_fs_vars(event)
+                    if extra_params:
+                        params.update(extra_params)
                     spawn_raw(self.send_to_url, ring_url, params)
 
     def on_channel_progress_media(self, event):
@@ -161,36 +189,65 @@ class RESTInboundSocket(InboundEventSocket):
                             'CallStatus': 'ringing',
                             'From': caller_num
                         }
+                    # add extra params
+                    extra_params = self.get_extra_fs_vars(event)
+                    if extra_params:
+                        params.update(extra_params)
                     spawn_raw(self.send_to_url, ring_url, params)
 
-    def on_channel_hangup(self, event):
-        """Capture Channel Hangup
+    def on_channel_hangup_complete(self, event):
+        """Capture Channel Hangup Complete
         """
-        # check if found a request uuid
-        # if not, ignore hangup event
-        request_uuid = event['variable_plivo_request_uuid']
+        # if plivo_app != 'true', skip this hangup
+        plivo_app_flag = event['variable_plivo_app'] == 'true'
+        if not plivo_app_flag:
+            return
         direction = event['Call-Direction']
-        if not request_uuid and direction != 'outbound':
-            return
-        call_uuid = event['Unique-ID']
-        reason = event['Hangup-Cause']
-        try:
-            call_req = self.call_requests[request_uuid]
-        except KeyError:
-            return
-        # If there are gateways to try again, spawn originate
-        if call_req.gateways:
-            self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
-                            % (request_uuid, reason))
-            self.spawn_originate(request_uuid)
-            return
-        # Else clean call request
-        hangup_url = call_req.hangup_url
-        self.set_hangup_complete(request_uuid, call_uuid, reason, event,
-                                                    hangup_url)
+        # Handle incoming call hangup
+        if direction == 'inbound':
+            call_uuid = event['Unique-ID']
+            reason = event['Hangup-Cause']
+            hangup_url = event['variable_plivo_hangup_url']
+            if not hangup_url:
+                if self.default_hangup_url:
+                    hangup_url = self.default_hangup_url
+                elif event['variable_plivo_answer_url']:
+                    hangup_url = event['variable_plivo_answer_url']
+                elif self.default_answer_url:
+                    hangup_url = self.default_answer_url
+            request_uuid = None
+            try:
+                self.set_hangup_complete(request_uuid, call_uuid, reason, event, hangup_url)
+            except Exception, e:
+                self.log.error(str(e))
+        # Handle outgoing call hangup
+        else:
+            # check if found a request uuid
+            # if not, ignore hangup event
+            request_uuid = event['variable_plivo_request_uuid']
+            if not request_uuid and direction != 'outbound':
+                return
+            call_uuid = event['Unique-ID']
+            reason = event['Hangup-Cause']
+            try:
+                call_req = self.call_requests[request_uuid]
+            except KeyError:
+                return
+            # If there are gateways to try again, spawn originate
+            if call_req.gateways:
+                self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
+                                % (request_uuid, reason))
+                self.spawn_originate(request_uuid)
+                return
+            # Else clean call request
+            hangup_url = call_req.hangup_url
+            try:
+                self.set_hangup_complete(request_uuid, call_uuid, reason, event, hangup_url)
+            except Exception, e:
+                self.log.error(str(e))
 
     def on_channel_state(self, event):
-        # When tranfer is ready to start,
+        # When transfer is ready to start,
         # channel goes in state CS_RESET
         if event['Channel-State'] == 'CS_RESET':
             call_uuid = event['Unique-ID']
@@ -248,29 +305,73 @@ class RESTInboundSocket(InboundEventSocket):
             spawn_raw(self.send_to_url, self.call_heartbeat_url, params)
 
     def set_hangup_complete(self, request_uuid, call_uuid, reason, event, hangup_url):
-        self.log.info("Call %s Completed, Reason %s, Request uuid %s"
+        params = {}
+        rparams = {}
+        # add extra params
+        params = self.get_extra_fs_vars(event)
+        # case incoming call
+        if not request_uuid:
+            self.log.info("Hangup for Incoming Call %s Completed, HangupCause %s"
+                                        % (call_uuid, reason))
+            if not hangup_url:
+                self.log.debug("No hangupUrl for Incoming Call %s" % call_uuid)
+                return
+        # case outgoing call
+        else:
+            self.log.info("Hangup for Outgoing Call %s Completed, HangupCause %s, RequestUUID %s"
                                         % (call_uuid, reason, request_uuid))
-        try:
-            self.call_requests[request_uuid] = None
-            del self.call_requests[request_uuid]
-        except KeyError, AttributeError:
-            pass
-        self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
+            try:
+                self.call_requests[request_uuid] = None
+                del self.call_requests[request_uuid]
+            except KeyError, AttributeError:
+                pass
+            self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
+            if not hangup_url:
+                self.log.debug("No hangupUrl Outgoing Call %s, RequestUUID %s" % (call_uuid, request_uuid))
+                return
+            params['RequestUUID'] = request_uuid
+
+        # if hangup url, handle http request
         if hangup_url:
             called_num = event['Caller-Destination-Number']
             caller_num = event['Caller-Caller-ID-Number']
-            params = {
-                    'RequestUUID': request_uuid,
-                    'CallUUID': call_uuid or '',
-                    'HangupCause': reason,
-                    'Direction': 'outbound',
-                    'To': called_num or '',
-                    'CallStatus': 'completed',
-                    'From': caller_num or ''
-                }
+            params['CallUUID'] = call_uuid or ''
+            params['HangupCause'] = reason
+            params['Direction'] = event['Call-Direction']
+            params['To'] = called_num or ''
+            params['CallStatus'] = 'completed'
+            params['From'] = caller_num or ''
             spawn_raw(self.send_to_url, hangup_url, params)
-        else:
-            self.log.debug("No hangupUrl for RequestUUID %s" % request_uuid)
+
+            # handle http request for record if found during hangup for incoming call
+            if not request_uuid:
+                record_file = event['variable_plivo_record_file']
+                if record_file:
+                    try:
+                        filepath, filename = os.path.split(record_file)
+                        filename, fileformat = os.path.splitext(filename)
+                        fileformat = fileformat.lstrip('.')
+                        action = event["variable_plivo_record_action"]
+                        method = event["variable_plivo_record_method"]
+                        both_legs = event["variable_plivo_record_both_legs"]
+                        try:
+                            record_ms = str(int(event["variable_record_ms"]))
+                        except ValueError, TypeError:
+                            record_ms = "-1"
+                        digits = event["variable_playback_terminator_used"]
+                        if not digits:
+                            digits = ""
+                        rparams['RecordingFileFormat'] = fileformat
+                        rparams['RecordingFilePath'] = filepath
+                        rparams['RecordingFilename'] = filename
+                        rparams['RecordFile'] = record_file
+                        rparams['RecordingDuration'] = record_ms
+                        rparams['Digits'] = digits
+                        rparams.update(params)
+                        self.log.info('Send record info after hangup: %s' % str(rparams))
+                        spawn_raw(self.send_to_url, action, rparams, method)
+                    except Exception, e:
+                        self.log.warn('Failed to send record info after hangup: %s' % str(e))
 
     def send_to_url(self, url=None, params={}, method=None):
         if method is None:

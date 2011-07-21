@@ -87,22 +87,33 @@ class PlivoRestServer(PlivoRestApi):
         if fs_out_host == '0.0.0.0':
             fs_out_address = '127.0.0.1:%s' % fs_out_port
 
-        default_http_method = helpers.get_conf_value(self._config,
+        self.default_answer_url = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'DEFAULT_ANSWER_URL')
+        self.default_hangup_url = helpers.get_conf_value(self._config,
+                                        'freeswitch', 'DEFAULT_HANGUP_URL')
+        self.default_http_method = helpers.get_conf_value(self._config,
                                         'rest_server', 'DEFAULT_HTTP_METHOD')
-        if not default_http_method or \
-                            default_http_method not in ('GET', 'POST'):
+        if not self.default_http_method in ('GET', 'POST'):
             self.default_http_method = 'POST'
+
         # get call_heartbeat url
         call_heartbeat_url = helpers.get_conf_value(self._config,
                                         'rest_server', 'CALL_HEARTBEAT_URL')
+
+        self.extra_fs_vars = helpers.get_conf_value(self._config,
+                                            'freeswitch', 'EXTRA_FS_VARS')
+
         # create inbound socket instance
         self._rest_inbound_socket = RESTInboundSocket(fs_host, fs_port,
                             fs_password, outbound_address=fs_out_address,
                             auth_id=self.auth_id,
                             auth_token=self.auth_token,
                             log=self.log,
-                            default_http_method=default_http_method,
+                            default_answer_url=self.default_answer_url,
+                            default_hangup_url=self.default_hangup_url,
+                            default_http_method=self.default_http_method,
                             call_heartbeat_url=call_heartbeat_url,
+                            extra_fs_vars=self.extra_fs_vars,
                             trace=self._trace)
         # expose API functions to flask app
         for path, func_desc in urls.URLS.iteritems():
