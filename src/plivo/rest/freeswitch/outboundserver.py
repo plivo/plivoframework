@@ -51,18 +51,19 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         backup_config = self._config
         # create config
         config = helpers.PlivoConfig(self.configfile)
-        # read config
-        config.read()
-
-        if not reload:
-            # create first logger if starting
-            self.create_logger(config=config)
-            self.log.info("Starting ...")
-            self.log.warn("Logger %s" % str(self.log))
-        
         try:
+            # read config
+            config.read()
+
             # set trace flag
             self._trace = config.get('outbound_server', 'TRACE', default='false') == 'true'
+
+            if not reload:
+                # create first logger if starting
+                self.create_logger(config=config)
+                self.log.info("Starting ...")
+                self.log.warn("Logger %s" % str(self.log))
+        
             # create outbound server
             if not reload:
                 self.fs_outbound_address = config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
