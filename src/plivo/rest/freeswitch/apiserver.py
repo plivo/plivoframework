@@ -180,7 +180,7 @@ class PlivoRestServer(PlivoRestApi):
 
             # create new logger if reloading
             if reload:
-                self.create_logger()
+                self.create_logger(config=config)
                 self.log.warn("New logger %s" % str(self.log))
 
             # set new config

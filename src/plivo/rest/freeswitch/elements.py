@@ -1222,9 +1222,14 @@ class Record(Element):
         # Otherwise, continue to next Element
         if self.action and is_valid_url(self.action):
             try:
-                record_ms = str(int(outbound_socket.get_var("record_ms")))
+                record_ms = None
+                #record_ms = str(int(outbound_socket.get_var("record_ms")))
+                record_ms = event.get_header('variable_record_ms')
+                record_ms = str(int(record_ms)) # check if integer
             except ValueError, TypeError:
-                record_ms = "-1"
+                outbound_socket.log.warn("Invalid 'record_ms' : '%s'" % str(record_ms))
+                return
+                #record_ms = "-1"
             record_digits = outbound_socket.get_var("playback_terminator_used")
             outbound_socket.unset("plivo_record_file")
             outbound_socket.unset("plivo_record_action")
@@ -1247,7 +1252,9 @@ class Record(Element):
                     params['Digits'] = record_digits
                 else:
                     params['Digits'] = ""
-            self.fetch_rest_xml(self.action, params, method=self.method)
+            # don't send record result if call has hangup
+            if not outbound_socket.has_hangup():
+                self.fetch_rest_xml(self.action, params, method=self.method)
 
 
 class Redirect(Element):

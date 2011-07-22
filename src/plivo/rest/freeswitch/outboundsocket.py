@@ -27,7 +27,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTHangup
 
 
-MAX_REDIRECT = 1000
+MAX_REDIRECT = 9999
 
 
 class RequestLogger(object):

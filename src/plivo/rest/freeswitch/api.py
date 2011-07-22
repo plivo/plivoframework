@@ -74,8 +74,7 @@ class PlivoRestApi(object):
     def _validate_ip_auth(self):
         """Verify request is from allowed ips
         """
-        allowed_ips = get_conf_value(self._config, 'rest_server',
-                                     'ALLOWED_IPS')
+        allowed_ips = self._config.get('rest_server', 'ALLOWED_IPS', default='')
         if not allowed_ips:
             return True
         for ip in allowed_ips.split(','):
@@ -86,8 +85,8 @@ class PlivoRestApi(object):
     def _validate_http_auth(self):
         """Verify http auth request with values in "Authorization" header
         """
-        key = get_conf_value(self._config, 'rest_server', 'AUTH_ID')
-        secret = get_conf_value(self._config, 'rest_server', 'AUTH_TOKEN')
+        key = self._config.get('common', 'AUTH_ID', default='')
+        secret = self._config.get('common', 'AUTH_TOKEN', default='')
         if not key or not secret:
             return True
         try:
