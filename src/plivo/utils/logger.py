@@ -145,6 +145,10 @@ class Syslog(logging.handlers.SysLogHandler):
 class SysLogger(StdoutLogger):
     def __init__(self, addr='/dev/log', syslogfacility="local0", \
                  loglevel=LOG_DEBUG, servicename=__default_servicename__):
+        if ':' in addr:
+            host, port = addr.split(':', 1)
+            port = int(port)
+            addr = (host, port)
         fac = Syslog.facility_names[syslogfacility]
         h = Syslog(address=addr, facility=fac)
         h.setLevel(loglevel)
