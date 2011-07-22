@@ -113,6 +113,7 @@ class PlivoRestServer(PlivoRestApi):
                 self.app.debug = True
             else:
                 new_log.set_info()
+                self.app.debug = False
         new_log.name = self.name
         self.log = new_log
         self.app._logger = self.log
