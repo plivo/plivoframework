@@ -36,6 +36,7 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self._daemon = daemon
         self._run = False
         self._pidfile = pidfile
+        self.configfile = configfile
         # load config
         self._config = helpers.PlivoConfig(configfile)
         self.load_config()
