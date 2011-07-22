@@ -162,7 +162,7 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
             else:
                 self.log = StdoutLogger()
 
-            debug_mode = config.get('outbound_server', 'DEBUG') == 'true'
+            debug_mode = config.get('outbound_server', 'DEBUG', default='false') == 'true'
             if debug_mode is True or self._trace is True:
                 self.log.set_debug()
             else:
