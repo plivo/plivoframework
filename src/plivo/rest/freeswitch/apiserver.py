@@ -118,22 +118,18 @@ class PlivoRestServer(PlivoRestApi):
         self.app._logger = self.log
 
     def load_config(self, reload=False):
-        backup_config = None
+        # backup config
+        backup_config = self._config
         # create config
         config = helpers.PlivoConfig(self.configfile)
+        # read config
+        config.read()
 
         if not reload:
-            # read config
-            config.read()
-            # create logger first logger if starting
+            # create first logger if starting
             self.create_logger(config=config)
             self.log.info("Starting ...")
             self.log.warn("Logger %s" % str(self.log))
-        else:
-            # backup current config
-            backup_config = self._config
-            # read config
-            config.read()
         
         try:
             # set trace flag

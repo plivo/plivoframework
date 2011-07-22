@@ -47,26 +47,22 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                                 PlivoOutboundEventSocket, filter=None)
 
     def load_config(self, reload=False):
-        backup_config = None
+        # backup config
+        backup_config = self._config
         # create config
         config = helpers.PlivoConfig(self.configfile)
+        # read config
+        config.read()
 
         if not reload:
-            # read config
-            config.read()
-            # create logger first logger if starting
+            # create first logger if starting
             self.create_logger(config=config)
             self.log.info("Starting ...")
             self.log.warn("Logger %s" % str(self.log))
-        else:
-            # backup current config
-            backup_config = self._config
-            # read config
-            config.read()
         
         try:
             # set trace flag
-            self._trace = self._config.get('outbound_server', 'TRACE', default='false') == 'true'
+            self._trace = config.get('outbound_server', 'TRACE', default='false') == 'true'
             # create outbound server
             if not reload:
                 self.fs_outbound_address = config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
