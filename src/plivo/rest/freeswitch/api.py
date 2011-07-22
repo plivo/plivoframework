@@ -270,7 +270,7 @@ class PlivoRestApi(object):
 
         if self._rest_inbound_socket:
             try:
-                self._rest_inbound_socket.reload_config()
+                self._rest_inbound_socket.get_server().reload()
                 extra = "rest_server"
                 outbound_pidfile = self._rest_inbound_socket.get_server().fs_out_pidfile
                 if outbound_pidfile:

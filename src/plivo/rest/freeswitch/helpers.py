@@ -238,34 +238,53 @@ class HTTPJsonConfig(object):
 class PlivoConfig(object):
     def __init__(self, source):
         self._cfg = ConfigParser.SafeConfigParser()
+        self._cfg.optionxform = str # make case sensitive
         self._source = source
         self._json_cfg = None
         self._json_source = None
+        self._cache = {}
+
+    def _set_cache(self):
+        if self._json_cfg:
+            self._cache = dict(self._json_cfg)
+        else:
+            self._cache = {}
+            for section in self._cfg.sections():
+                self._cache[section] = {}
+                for var, val in self._cfg.items(section):
+                    self._cache[section][var] = val 
 
     def read(self):
         self._cfg.read(self._source)
         try:
-            json_source = self._cfg.get('common', 'JSON_CONFIG_URL')
-        except:
-            json_source = None
-        if json_source:
-            self._json_source = json_source
+            self._json_source = self._cfg.get('common', 'JSON_CONFIG_URL')
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            self._json_source = None
+        if self._json_source:
             self._json_cfg = HTTPJsonConfig()
             self._json_cfg.read(self._json_source)
         else:
             self._json_source = None
             self._json_cfg = None
+        self._set_cache()
 
-    def get(self, section, key):
-        if self._json_cfg:
-            return self._json_cfg.get(section, key)
-        else:
+    def dumps(self):
+        return self._cache
+
+    def __getitem__(self, section):
+        return self._cache[section]
+
+    def get(self, section, key, **kwargs):
+        try:
+            return self._cache[section][key]
+        except KeyError, e:
             try:
-                value = self._cfg.get(section, key)
-                return str(value)
-            except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-                return ""
+                d = kwargs['default']
+                return d
+            except KeyError:
+                raise e
 
     def reload(self):
         self.read()
+
 

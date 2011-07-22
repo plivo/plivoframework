@@ -46,46 +46,66 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                                 PlivoOutboundEventSocket, filter=None)
 
     def load_config(self, reload=False):
-        # load config
-        self._config.read()
-        # create logger
-        self.create_logger()
+        backup_config = None
         if not reload:
+            # read config
+            self._config.read()
+            # create logger first logger if starting
+            self.create_logger()
             self.log.info("Starting ...")
-        self.log.warn("logger %s" % str(self.log))
-        # set trace flag
-        self._trace = self._config.get('outbound_server', 'TRACE') == 'true'
-        self.log.warn("trace %s" % str(self._trace))
-        # create outbound server
-        if not reload:
-            self.fs_outbound_address = self._config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
-            self.fs_host, fs_port = self.fs_outbound_address.split(':', 1)
-            self.fs_port = int(fs_port)
-            self.log.warn("outbound_server %s" % str(self.fs_outbound_address))
+            self.log.warn("Logger %s" % str(self.log))
+        else:
+            # backup current config
+            backup_config = self._config
+            # create new config
+            self._config = helpers.PlivoConfig(self.configfile)
         
-        self.default_answer_url = self._config.get('common', 'DEFAULT_ANSWER_URL')
-        self.log.warn("default_answer_url %s" % str(self.default_answer_url))
-        
-        self.default_hangup_url = self._config.get('common', 'DEFAULT_HANGUP_URL')
-        self.log.warn("default_hangup_url %s" % str(self.default_hangup_url))
-        
-        self.default_http_method = self._config.get('common', 'DEFAULT_HTTP_METHOD')
-        if not self.default_http_method in ('GET', 'POST'):
-            self.default_http_method = 'POST'
-        self.log.warn("default_http_method %s" % str(self.default_http_method))
+        try:
+            # read config
+            self._config.read()
+            # set trace flag
+            self._trace = self._config.get('outbound_server', 'TRACE', default='false') == 'true'
+            # create outbound server
+            if not reload:
+                self.fs_outbound_address = self._config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
+                self.fs_host, fs_port = self.fs_outbound_address.split(':', 1)
+                self.fs_port = int(fs_port)
+            
+            self.default_answer_url = self._config.get('common', 'DEFAULT_ANSWER_URL')
+            
+            self.default_hangup_url = self._config.get('common', 'DEFAULT_HANGUP_URL', default='')
+            
+            self.default_http_method = self._config.get('common', 'DEFAULT_HTTP_METHOD', default='')
+            if not self.default_http_method in ('GET', 'POST'):
+                self.default_http_method = 'POST'
 
-        self.auth_id = self._config.get('common', 'AUTH_ID')
-        self.log.warn("auth_id %s" % str(self.auth_id))
-        self.auth_token = self._config.get('common', 'AUTH_TOKEN')
-        self.log.warn("auth_token %s" % str(self.auth_token))
+            self.auth_id = self._config.get('common', 'AUTH_ID')
+            self.auth_token = self._config.get('common', 'AUTH_TOKEN')
 
-        self.extra_fs_vars = self._config.get('common', 'EXTRA_FS_VARS')
-        self.log.warn("extra_fs_vars %s" % str(self.extra_fs_vars))
+            self.extra_fs_vars = self._config.get('common', 'EXTRA_FS_VARS', default='')
+
+            # create new logger if reloading
+            if reload:
+                self.create_logger()
+                self.log.warn("New logger %s" % str(self.log))
+            self.log.info("Config : %s" % str(self._config.dumps()))
+
+        except Exception, e:
+            if backup_config:
+                self._config = backup_config
+                self.load_config()
+                self.log.warn("Error reloading config: %s" % str(e))
+                self.log.warn("Rollback to the last config")
+                self.log.info("Config : %s" % str(self._config.dumps()))
+            else:
+                sys.stderr.write("Error loading config: %s" % str(e))
+                sys.stderr.flush()
+                raise e
 
     def reload(self):
-        self.log.warn("Reloading ...")
+        self.log.warn("Reload ...")
         self.load_config(reload=True)
-        self.log.warn("Reloading done")
+        self.log.warn("Reload done")
 
     def _get_request_id(self):
         try:
@@ -158,8 +178,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         GROUP : determine the group running the daemon
         """
         # get user/group from config
-        user = self._config.get('outbound_server', 'USER')
-        group = self._config.get('outbound_server', 'GROUP')
+        user = self._config.get('outbound_server', 'USER', default='')
+        group = self._config.get('outbound_server', 'GROUP', default='')
         if not user or not group:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
