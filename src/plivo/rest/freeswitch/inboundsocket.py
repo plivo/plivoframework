@@ -194,21 +194,14 @@ class RESTInboundSocket(InboundEventSocket):
         if not plivo_app_flag:
             return
         direction = event['Call-Direction']
+
         # Handle incoming call hangup
         if direction == 'inbound':
             call_uuid = event['Unique-ID']
             reason = event['Hangup-Cause']
-            hangup_url = event['variable_plivo_hangup_url']
-            if not hangup_url:
-                if self.get_server().default_hangup_url:
-                    hangup_url = self.get_server().default_hangup_url
-                elif event['variable_plivo_answer_url']:
-                    hangup_url = event['variable_plivo_answer_url']
-                elif self.get_server().default_answer_url:
-                    hangup_url = self.get_server().default_answer_url
-            request_uuid = None
+            # send hangup
             try:
-                self.set_hangup_complete(request_uuid, call_uuid, reason, event, hangup_url)
+                self.set_hangup_complete(None, call_uuid, reason, event, None)
             except Exception, e:
                 self.log.error(str(e))
         # Handle outgoing call hangup
@@ -230,8 +223,9 @@ class RESTInboundSocket(InboundEventSocket):
                                 % (request_uuid, reason))
                 self.spawn_originate(request_uuid)
                 return
-            # Else clean call request
+            # else clean call request
             hangup_url = call_req.hangup_url
+            # send hangup
             try:
                 self.set_hangup_complete(request_uuid, call_uuid, reason, event, hangup_url)
             except Exception, e:
@@ -297,19 +291,37 @@ class RESTInboundSocket(InboundEventSocket):
 
     def set_hangup_complete(self, request_uuid, call_uuid, reason, event, hangup_url):
         params = {}
-        rparams = {}
         # add extra params
         params = self.get_extra_fs_vars(event)
+
         # case incoming call
         if not request_uuid:
-            self.log.info("Hangup for Incoming Call %s Completed, HangupCause %s"
-                                        % (call_uuid, reason))
+            self.log.info("Hangup for Incoming CallUUID %s Completed, HangupCause %s" \
+                                                        % (call_uuid, reason))
+            # get hangup url
+            hangup_url = event['variable_plivo_hangup_url']
+            if hangup_url:
+                self.log.debug("Using HangupUrl for CallUUID %s" \
+                                                        % call_uuid)
+            else:
+                if self.get_server().default_hangup_url:
+                    hangup_url = self.get_server().default_hangup_url
+                    self.log.debug("Using HangupUrl from DefaultHangupUrl for CallUUID %s" \
+                                                        % call_uuid)
+                elif event['variable_plivo_answer_url']:
+                    hangup_url = event['variable_plivo_answer_url']
+                    self.log.debug("Using HangupUrl from AnswerUrl for CallUUID %s" \
+                                                        % call_uuid)
+                elif self.get_server().default_answer_url:
+                    hangup_url = self.get_server().default_answer_url
+                    self.log.debug("Using HangupUrl from DefaultAnswerUrl for CallUUID %s" \
+                                                        % call_uuid)
             if not hangup_url:
-                self.log.debug("No hangupUrl for Incoming Call %s" % call_uuid)
+                self.log.debug("No HangupUrl for Incoming CallUUID %s" % call_uuid)
                 return
-        # case outgoing call
+        # case outgoing call, add params
         else:
-            self.log.info("Hangup for Outgoing Call %s Completed, HangupCause %s, RequestUUID %s"
+            self.log.info("Hangup for Outgoing CallUUID %s Completed, HangupCause %s, RequestUUID %s"
                                         % (call_uuid, reason, request_uuid))
             try:
                 self.call_requests[request_uuid] = None
@@ -318,7 +330,7 @@ class RESTInboundSocket(InboundEventSocket):
                 pass
             self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
             if not hangup_url:
-                self.log.debug("No hangupUrl Outgoing Call %s, RequestUUID %s" % (call_uuid, request_uuid))
+                self.log.debug("No HangupUrl for Outgoing Call %s, RequestUUID %s" % (call_uuid, request_uuid))
                 return
             forwarded_from = get_substring(':', '@', event['variable_sip_h_Diversion'])
             aleg_uuid = event['Caller-Unique-ID']
