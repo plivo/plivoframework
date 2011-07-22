@@ -333,7 +333,6 @@ class RESTInboundSocket(InboundEventSocket):
                 params['ALegRequestUUID'] = aleg_request_uuid
             if sched_hangup_id:
                 params['ScheduledHangupId'] = sched_hangup_id
-
         # if hangup url, handle http request
         if hangup_url:
             called_num = event['Caller-Destination-Number']
@@ -345,36 +344,6 @@ class RESTInboundSocket(InboundEventSocket):
             params['CallStatus'] = 'completed'
             params['From'] = caller_num or ''
             spawn_raw(self.send_to_url, hangup_url, params)
-
-            # handle http request for record if found during hangup for incoming call
-            if not request_uuid:
-                record_file = event['variable_plivo_record_file']
-                if record_file:
-                    try:
-                        filepath, filename = os.path.split(record_file)
-                        filename, fileformat = os.path.splitext(filename)
-                        fileformat = fileformat.lstrip('.')
-                        action = event["variable_plivo_record_action"]
-                        method = event["variable_plivo_record_method"]
-                        both_legs = event["variable_plivo_record_both_legs"]
-                        try:
-                            record_ms = str(int(event["variable_record_ms"]))
-                        except ValueError, TypeError:
-                            record_ms = "-1"
-                        digits = event["variable_playback_terminator_used"]
-                        if not digits:
-                            digits = ""
-                        rparams['RecordingFileFormat'] = fileformat
-                        rparams['RecordingFilePath'] = filepath
-                        rparams['RecordingFilename'] = filename
-                        rparams['RecordFile'] = record_file
-                        rparams['RecordingDuration'] = record_ms
-                        rparams['Digits'] = digits
-                        rparams.update(params)
-                        self.log.info('Send record info after hangup: %s' % str(rparams))
-                        spawn_raw(self.send_to_url, action, rparams, method)
-                    except Exception, e:
-                        self.log.warn('Failed to send record info after hangup: %s' % str(e))
 
     def send_to_url(self, url=None, params={}, method=None):
         if method is None:

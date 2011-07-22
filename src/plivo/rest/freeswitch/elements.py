@@ -1187,14 +1187,6 @@ class Record(Element):
             filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                                 outbound_socket.call_uuid)
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
-        if self.action and self.method:
-            outbound_socket.set("plivo_record_file=%s" % record_file)
-            outbound_socket.set("plivo_record_action=%s" % self.action)
-            outbound_socket.set("plivo_record_method=%s" % self.method)
-            if self.both_legs:
-                outbound_socket.set("plivo_record_both_legs=true")
-            else:
-                outbound_socket.unset("plivo_record_both_legs")
 
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
@@ -1223,18 +1215,12 @@ class Record(Element):
         if self.action and is_valid_url(self.action):
             try:
                 record_ms = None
-                #record_ms = str(int(outbound_socket.get_var("record_ms")))
                 record_ms = event.get_header('variable_record_ms')
                 record_ms = str(int(record_ms)) # check if integer
             except ValueError, TypeError:
                 outbound_socket.log.warn("Invalid 'record_ms' : '%s'" % str(record_ms))
                 return
-                #record_ms = "-1"
-            record_digits = outbound_socket.get_var("playback_terminator_used")
-            outbound_socket.unset("plivo_record_file")
-            outbound_socket.unset("plivo_record_action")
-            outbound_socket.unset("plivo_record_method")
-            outbound_socket.unset("plivo_record_both_legs")
+            record_digits = event.get_header("variable_playback_terminator_used")
             params = {}
             params['RecordingFileFormat'] = self.file_format
             params['RecordingFilePath'] = self.file_path
@@ -1253,8 +1239,7 @@ class Record(Element):
                 else:
                     params['Digits'] = ""
             # don't send record result if call has hangup
-            if not outbound_socket.has_hangup():
-                self.fetch_rest_xml(self.action, params, method=self.method)
+            self.fetch_rest_xml(self.action, params, method=self.method)
 
 
 class Redirect(Element):
