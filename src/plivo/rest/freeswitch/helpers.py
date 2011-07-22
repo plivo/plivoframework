@@ -234,6 +234,9 @@ class HTTPJsonConfig(object):
         except KeyError:
             return ""
 
+    def dumps(self):
+        return self.jdata
+
 
 class PlivoConfig(object):
     def __init__(self, source):
@@ -246,7 +249,7 @@ class PlivoConfig(object):
 
     def _set_cache(self):
         if self._json_cfg:
-            self._cache = dict(self._json_cfg)
+            self._cache = dict(self._json_cfg.dumps())
         else:
             self._cache = {}
             for section in self._cfg.sections():

@@ -38,7 +38,7 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self._pidfile = pidfile
         self.configfile = configfile
         # load config
-        self._config = helpers.PlivoConfig(configfile)
+        self._config = None
         self.load_config()
 
         # This is where we define the connection with the
@@ -48,53 +48,56 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
 
     def load_config(self, reload=False):
         backup_config = None
+        # create config
+        config = helpers.PlivoConfig(self.configfile)
+
         if not reload:
             # read config
-            self._config.read()
+            config.read()
             # create logger first logger if starting
-            self.create_logger()
+            self.create_logger(config=config)
             self.log.info("Starting ...")
             self.log.warn("Logger %s" % str(self.log))
         else:
             # backup current config
             backup_config = self._config
-            # create new config
-            self._config = helpers.PlivoConfig(self.configfile)
+            # read config
+            config.read()
         
         try:
-            # read config
-            self._config.read()
             # set trace flag
             self._trace = self._config.get('outbound_server', 'TRACE', default='false') == 'true'
             # create outbound server
             if not reload:
-                self.fs_outbound_address = self._config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
+                self.fs_outbound_address = config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
                 self.fs_host, fs_port = self.fs_outbound_address.split(':', 1)
                 self.fs_port = int(fs_port)
             
-            self.default_answer_url = self._config.get('common', 'DEFAULT_ANSWER_URL')
+            self.default_answer_url = config.get('common', 'DEFAULT_ANSWER_URL')
             
-            self.default_hangup_url = self._config.get('common', 'DEFAULT_HANGUP_URL', default='')
+            self.default_hangup_url = config.get('common', 'DEFAULT_HANGUP_URL', default='')
             
-            self.default_http_method = self._config.get('common', 'DEFAULT_HTTP_METHOD', default='')
+            self.default_http_method = config.get('common', 'DEFAULT_HTTP_METHOD', default='')
             if not self.default_http_method in ('GET', 'POST'):
                 self.default_http_method = 'POST'
 
-            self.auth_id = self._config.get('common', 'AUTH_ID')
-            self.auth_token = self._config.get('common', 'AUTH_TOKEN')
+            self.auth_id = config.get('common', 'AUTH_ID')
+            self.auth_token = config.get('common', 'AUTH_TOKEN')
 
-            self.extra_fs_vars = self._config.get('common', 'EXTRA_FS_VARS', default='')
+            self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
 
             # create new logger if reloading
             if reload:
-                self.create_logger()
+                self.create_logger(config=config)
                 self.log.warn("New logger %s" % str(self.log))
+            
+            # set new config
+            self._config = config
             self.log.info("Config : %s" % str(self._config.dumps()))
 
         except Exception, e:
             if backup_config:
                 self._config = backup_config
-                self.load_config()
                 self.log.warn("Error reloading config: %s" % str(e))
                 self.log.warn("Rollback to the last config")
                 self.log.info("Config : %s" % str(self._config.dumps()))
@@ -130,40 +133,40 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                            )
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
-    def create_logger(self):
-        """This will create a logger
+    def create_logger(self, config):
+        """This will create a logger using helpers.PlivoConfig instance
 
         Based on the settings in the configuration file,
         LOG_TYPE will determine if we will log in file, syslog, stdout, http or dummy (no log)
         """
 
         if self._daemon is False:
-            logtype = self._config.get('outbound_server', 'LOG_TYPE')
+            logtype = config.get('outbound_server', 'LOG_TYPE')
             if logtype == 'dummy':
                 self.log = DummyLogger()
             else:
                 self.log = StdoutLogger()
             self.log.set_debug()
         else:
-            logtype = self._config.get('outbound_server', 'LOG_TYPE')
+            logtype = config.get('outbound_server', 'LOG_TYPE')
             if logtype == 'file':
-                logfile = self._config.get('outbound_server', 'LOG_FILE')
+                logfile = config.get('outbound_server', 'LOG_FILE')
                 self.log = FileLogger(logfile)
             elif logtype == 'syslog':
-                syslogaddress = self._config.get('outbound_server', 'SYSLOG_ADDRESS')
-                syslogfacility = self._config.get('outbound_server', 'SYSLOG_FACILITY')
+                syslogaddress = config.get('outbound_server', 'SYSLOG_ADDRESS')
+                syslogfacility = config.get('outbound_server', 'SYSLOG_FACILITY')
                 self.log = SysLogger(syslogaddress, syslogfacility)
             elif logtype == 'dummy':
                 self.log = DummyLogger()
             elif logtype == 'http':
-                url = self._config.get('outbound_server', 'HTTP_LOG_URL')
-                method = self._config.get('outbound_server', 'HTTP_LOG_METHOD')
-                fallback_file = self._config.get('outbound_server', 'HTTP_LOG_FILE_FAILURE')
+                url = config.get('outbound_server', 'HTTP_LOG_URL')
+                method = config.get('outbound_server', 'HTTP_LOG_METHOD')
+                fallback_file = config.get('outbound_server', 'HTTP_LOG_FILE_FAILURE')
                 self.log = HTTPLogger(url=url, method=method, fallback_file=fallback_file)
             else:
                 self.log = StdoutLogger()
 
-            debug_mode = self._config.get('outbound_server', 'DEBUG') == 'true'
+            debug_mode = config.get('outbound_server', 'DEBUG') == 'true'
             if debug_mode is True or self._trace is True:
                 self.log.set_debug()
             else:
