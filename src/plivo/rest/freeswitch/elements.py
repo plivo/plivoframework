@@ -33,7 +33,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'hangupOnStar': 'false',
                 'recordFilePath': '',
                 'recordFileFormat': 'mp3',
-                'recordFilename': '',
+                'recordFileName': '',
                 'action': '',
                 'method': 'POST',
                 'callbackUrl': '',
@@ -48,7 +48,10 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'timeLimit': 0,
                 'confirmSound': '',
                 'confirmKey': '',
-                'dialMusic': ''
+                'dialMusic': '',
+                'redirect': 'true',
+                'callbackUrl': '',
+                'callbackMethod': 'POST'
         },
         'GetDigits': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -91,7 +94,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'playBeep': 'true',
                 'filePath': '/usr/local/freeswitch/recordings/',
                 'fileFormat': 'mp3',
-                'filename': '',
+                'fileName': '',
                 'bothLegs': 'false'
         },
         'Redirect': {
@@ -202,7 +205,7 @@ class Conference(Element):
         (default "" so recording wont happen)
     recordFileFormat: file format in which recording tis saved
         (default mp3)
-    recordFilename: By default empty, if provided this name will be used for the recording
+    recordFileName: By default empty, if provided this name will be used for the recording
         (any unique name)
     action: redirect to this URL after leaving conference
     method: submit to 'action' url using GET or POST
@@ -281,16 +284,16 @@ class Conference(Element):
         if self.record_file_format not in ('wav', 'mp3'):
             raise RESTFormatException("Format must be 'wav' or 'mp3'")
         self.record_filename = \
-                            self.extract_attribute_value("recordFilename")
+                            self.extract_attribute_value("recordFileName")
 
         self.method = self.extract_attribute_value("method")
         if not self.method in ('GET', 'POST'):
-            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
+            raise RESTAttributeException("method must be 'GET' or 'POST'")
         self.action = self.extract_attribute_value("action")
 
         self.callback_method = self.extract_attribute_value("callbackMethod")
         if not self.callback_method in ('GET', 'POST'):
-            raise RESTAttributeException("callbackMethod, must be 'GET' or 'POST'")
+            raise RESTAttributeException("callbackMethod must be 'GET' or 'POST'")
         self.callback_url = self.extract_attribute_value("callbackUrl")
         self.digits_match = self.extract_attribute_value("digitsMatch")
 
@@ -334,6 +337,17 @@ class Conference(Element):
         params['ConferenceUUID'] = self.conf_id or ''
         params['ConferenceMemberID'] = self.member_id or ''
         params['ConferenceAction'] = 'exit'
+        spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
+
+    def _notify_recording_conf(self, outboundsocket, record_file):
+        if not self.callback_url and not self.conf_id and not self.member_id:
+            return
+        params = {}
+        params['ConferenceName'] = self.room
+        params['ConferenceUUID'] = self.conf_id or ''
+        params['ConferenceMemberID'] = self.member_id or ''
+        params['ConferenceAction'] = 'record'
+        params['RecordFile'] = record_file or ''
         spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
 
     def execute(self, outbound_socket):
@@ -454,6 +468,8 @@ class Conference(Element):
                     outbound_socket.bgapi("conference %s record %s" % (self.room, record_file))
                     outbound_socket.log.info("Conference: Room %s, recording to file %s" \
                                     % (self.room, record_file))
+                    # notify recording room
+                    self._notify_recording_conf(outbound_socket, record_file)
 
                 # wait conference ending for this member
                 outbound_socket.log.debug("Conference: Room %s, waiting end ..." % self.room)
@@ -479,6 +495,8 @@ class Conference(Element):
                 params['ConferenceName'] = self.room
                 params['ConferenceUUID'] = self.conf_id or ''
                 params['ConferenceMemberID'] = self.member_id or ''
+                if record_file:
+                    params['RecordFile'] = record_file
                 self.fetch_rest_xml(self.action, params, method=self.method)
 
 
@@ -497,6 +515,8 @@ class Dial(Element):
                 Can be a list of files separated by comma
     redirect: if 'false', don't redirect to 'action', only request url 
         and continue to next element. (default 'true')
+    callbackUrl: url to request when bridge starts and bridge ends
+    callbackMethod: submit to 'callbackUrl' url using GET or POST
     """
     DEFAULT_TIMEOUT = 30
     DEFAULT_TIMELIMIT = 14400
@@ -539,13 +559,17 @@ class Dial(Element):
         self.dial_music = self.extract_attribute_value("dialMusic")
         self.hangup_on_star = self.extract_attribute_value("hangupOnStar") \
                                                                 == 'true'
-        self.redirect = self.extract_attribute_value("redirect") \
-                                                        == 'true'
+        self.redirect = self.extract_attribute_value("redirect") == 'true'
 
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
-            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
+            raise RESTAttributeException("method must be 'GET' or 'POST'")
         self.method = method
+
+        self.callback_url = self.extract_attribute_value("callbackUrl")
+        self.callback_method = self.extract_attribute_value("callbackMethod")
+        if not self.callback_method in ('GET', 'POST'):
+            raise RESTAttributeException("callbackMethod must be 'GET' or 'POST'")
 
     def _prepare_moh(self):
         mohs = []
@@ -585,6 +609,12 @@ class Dial(Element):
         count = 0
         for gw in number_instance.gateways:
             num_options = []
+
+            if self.callback_url and self.callback_method:
+                num_options.append('plivo_dial_callback_url=%s' % self.callback_url)
+                num_options.append('plivo_dial_callback_method=%s' % self.callback_method)
+                num_options.append('plivo_dial_callback_aleg=%s' % outbound_socket.get_channel_unique_id())
+
             if option_send_digits:
                 num_options.append(option_send_digits)
             try:
@@ -806,7 +836,7 @@ class GetDigits(Element):
 
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
-            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
+            raise RESTAttributeException("method must be 'GET' or 'POST'")
         self.method = method
 
         if action and is_valid_url(action):
@@ -1132,7 +1162,7 @@ class Record(Element):
     finishOnKey: Stop recording on this key
     fileFormat: file format (default mp3)
     filePath: complete file path to save the file to
-    filename: Default empty, if given this will be used for the recording
+    fileName: Default empty, if given this will be used for the recording
     bothLegs: record both legs (true/false, default false)
               no beep will be played
     """
@@ -1162,13 +1192,13 @@ class Record(Element):
         self.file_format = self.extract_attribute_value("fileFormat")
         if self.file_format not in ('wav', 'mp3'):
             raise RESTFormatException("Format must be 'wav' or 'mp3'")
-        self.filename = self.extract_attribute_value("filename")
+        self.filename = self.extract_attribute_value("fileName")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
 
         self.action = self.extract_attribute_value("action")
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
-            raise RESTAttributeException("Method, must be 'GET' or 'POST'")
+            raise RESTAttributeException("method must be 'GET' or 'POST'")
         self.method = method
 
         if max_length < 1:
@@ -1224,7 +1254,7 @@ class Record(Element):
             params = {}
             params['RecordingFileFormat'] = self.file_format
             params['RecordingFilePath'] = self.file_path
-            params['RecordingFilename'] = filename
+            params['RecordingFileName'] = filename
             params['RecordFile'] = record_file
             if self.both_legs:
                 # RecordingDuration not available for bothLegs

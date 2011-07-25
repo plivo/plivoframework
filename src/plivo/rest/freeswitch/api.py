@@ -726,7 +726,7 @@ class PlivoRestApi(object):
         CallUUID: Unique Call ID to which the action should occur to.
         FileFormat: file format, can be be "mp3" or "wav" (default "mp3")
         FilePath: complete file path to save the file to
-        Filename: Default empty, if given this will be used for the recording
+        FileName: Default empty, if given this will be used for the recording
         TimeLimit: Max recording duration in seconds
         """
         msg = ""
@@ -735,7 +735,7 @@ class PlivoRestApi(object):
         calluuid = get_post_param(request, 'CallUUID')
         fileformat = get_post_param(request, 'FileFormat')
         filepath = get_post_param(request, 'FilePath')
-        filename = get_post_param(request, 'Filename')
+        filename = get_post_param(request, 'FileName')
         timelimit = get_post_param(request, 'TimeLimit')
         if not calluuid:
             msg = "CallUUID Parameter must be present"
@@ -1021,7 +1021,7 @@ class PlivoRestApi(object):
         ConferenceName: conference room name
         FileFormat: file format, can be be "mp3" or "wav" (default "mp3")
         FilePath: complete file path to save the file to
-        Filename: Default empty, if given this will be used for the recording
+        FileName: Default empty, if given this will be used for the recording
         """
         msg = ""
         result = False
@@ -1029,7 +1029,7 @@ class PlivoRestApi(object):
         room = get_post_param(request, 'ConferenceName')
         fileformat = get_post_param(request, 'FileFormat')
         filepath = get_post_param(request, 'FilePath')
-        filename = get_post_param(request, 'Filename')
+        filename = get_post_param(request, 'FileName')
 
         if not room:
             msg = "ConferenceName Parameter must be present"
