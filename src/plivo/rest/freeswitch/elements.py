@@ -339,17 +339,6 @@ class Conference(Element):
         params['ConferenceAction'] = 'exit'
         spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
 
-    def _notify_recording_conf(self, outboundsocket, record_file):
-        if not self.callback_url and not self.conf_id and not self.member_id:
-            return
-        params = {}
-        params['ConferenceName'] = self.room
-        params['ConferenceUUID'] = self.conf_id or ''
-        params['ConferenceMemberID'] = self.member_id or ''
-        params['ConferenceAction'] = 'record'
-        params['RecordFile'] = record_file or ''
-        spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
-
     def execute(self, outbound_socket):
         flags = []
         # settings for conference room
@@ -468,8 +457,6 @@ class Conference(Element):
                     outbound_socket.bgapi("conference %s record %s" % (self.room, record_file))
                     outbound_socket.log.info("Conference: Room %s, recording to file %s" \
                                     % (self.room, record_file))
-                    # notify recording room
-                    self._notify_recording_conf(outbound_socket, record_file)
 
                 # wait conference ending for this member
                 outbound_socket.log.debug("Conference: Room %s, waiting end ..." % self.room)
