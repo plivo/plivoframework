@@ -126,7 +126,7 @@ class RESTInboundSocket(InboundEventSocket):
                 return
             # only send if not already ringing/early state
             if not call_req.state_flag:
-                # set state flag to true
+                # set state flag to 'Ringing'
                 call_req.state_flag = 'Ringing'
                 # clear gateways to avoid retry
                 call_req.gateways = []
@@ -162,7 +162,7 @@ class RESTInboundSocket(InboundEventSocket):
                 return
             # only send if not already ringing/early state
             if not call_req.state_flag:
-                # set state flag to true
+                # set state flag to 'EarlyMedia'
                 call_req.state_flag = 'EarlyMedia'
                 # clear gateways to avoid retry
                 call_req.gateways = []
@@ -439,18 +439,22 @@ class RESTInboundSocket(InboundEventSocket):
         _options = []
         # Set plivo app flag
         _options.append("plivo_app=true")
+        # Add codecs option
         if gw.codecs:
             _options.append("absolute_codec_string=%s" % gw.codecs)
+        # Add timeout option
         if gw.timeout:
             _options.append("originate_timeout=%s" % gw.timeout)
+        # Set early media
         _options.append("ignore_early_media=true")
+        # Build originate dial string
         options = ','.join(_options)
         outbound_str = "'socket:%s async full' inline" \
                         % self.get_server().fs_out_address
 
         dial_str = "originate {%s,%s}%s/%s %s" \
             % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
-
+        # Execute originate on background
         bg_api_response = self.bgapi(dial_str)
         job_uuid = bg_api_response.get_job_uuid()
         self.bk_jobs[job_uuid] = request_uuid
@@ -508,7 +512,6 @@ class RESTInboundSocket(InboundEventSocket):
                 self.log.error("Call Hangup Failed -- %s not found" \
                             % (callid))
                 return False
-            callid = "RequestUUID %s" % request_uuid
             cmd = "hupall NORMAL_CLEARING plivo_request_uuid %s" % request_uuid
         res = self.api(cmd)
         if not res.is_success():
