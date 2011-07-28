@@ -865,6 +865,8 @@ class GetDigits(Element):
                 self.sound_files.append(pause_str)
             elif isinstance(child_instance, Speak):
                 text = child_instance.text
+                # escape simple quote
+                text = text.replace("'", "\\'")
                 loop = child_instance.loop_times
                 child_type = child_instance.item_type
                 method = child_instance.method
