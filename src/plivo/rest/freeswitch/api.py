@@ -430,7 +430,7 @@ class PlivoRestApi(object):
         if set to value X we will wait X seconds when start ringing and then
         hang up
 
-        [OriginateDialString]: Additional Originate dialstring to be executed
+        [ExtraDialString]: Additional Originate dialstring to be executed
         while making the outbound call
 
         [SendDigits]: A string of keys to dial after connecting to the number.
