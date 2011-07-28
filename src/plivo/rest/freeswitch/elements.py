@@ -662,22 +662,42 @@ class Dial(Element):
             return
         # Create dialstring
         self.dial_str = ':_:'.join(numbers)
+        
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
+
         # Set time limit: when reached, B Leg is hung up
         sched_hangup_id = str(uuid.uuid1())
         dial_time_limit = "api_on_answer='sched_api +%d %s 'uuid_transfer %s -bleg hangup:ALLOTTED_TIMEOUT inline''" \
                       % (self.time_limit, sched_hangup_id, outbound_socket.get_channel_unique_id())
-        if len(numbers) > 1:
-            self.dial_str = '<%s>%s' % (dial_time_limit, self.dial_str)
+        
+        # Set confirm sound and key or unset if not provided
+        if self.confirm_sound:
+            # Use confirm key if present else just play music
+            if self.confirm_key:
+                confirm_music_str = "group_confirm_file=%s" % self.confirm_sound
+                confirm_key_str = "group_confirm_key=%s" % self.confirm_key
+            else:
+                confirm_music_str = "group_confirm_file=playback %s" % self.confirm_sound
+                confirm_key_str = "group_confirm_key=exec"
+            # Cancel the leg timeout after the call is answered
+            confirm_cancel = "group_confirm_cancel_timeout=1"
+            dial_confirm = ",%s,%s,%s" % (confirm_music_str, confirm_key_str, confirm_cancel)
         else:
-            self.dial_str = '{%s}%s' % (dial_time_limit, self.dial_str)
+            dial_confirm = ''
+        
+        # Append time limit and group confirm to dial string
+        if len(numbers) > 1:
+            self.dial_str = '<%s%s>%s' % (dial_time_limit, dial_confirm, self.dial_str)
+        else:
+            self.dial_str = '{%s%s}%s' % (dial_time_limit, dial_confirm, self.dial_str)
                 
         # Set hangup on '*' or unset if not provided
         if self.hangup_on_star:
             outbound_socket.set("bridge_terminate_key=*")
         else:
             outbound_socket.unset("bridge_terminate_key")
+        
         # Play Dial music or bridge the early media accordingly
         mohs = self._prepare_moh()
         if not mohs:
@@ -692,23 +712,7 @@ class Dial(Element):
             outbound_socket.set("bridge_early_media=true")
             outbound_socket.set("instant_ringback=true")
             outbound_socket.set("ringback=%s" % play_str)
-        # Set confirm sound and key or unset if not provided
-        if self.confirm_sound:
-            # Use confirm key if present else just play music
-            if self.confirm_key:
-                confirm_music_str = "group_confirm_file=%s" % self.confirm_sound
-                confirm_key_str = "group_confirm_key=%s" % self.confirm_key
-            else:
-                confirm_music_str = "group_confirm_file=playback %s" % self.confirm_sound
-                confirm_key_str = "group_confirm_key=exec"
-            # Cancel the leg timeout after the call is answered
-            outbound_socket.set("group_confirm_cancel_timeout=1")
-            outbound_socket.set(confirm_music_str)
-            outbound_socket.set(confirm_key_str)
-        else:
-            outbound_socket.unset("group_confirm_cancel_timeout")
-            outbound_socket.unset("group_confirm_file")
-            outbound_socket.unset("group_confirm_key")
+
         # Start dial
         outbound_socket.log.info("Dial Started %s" % self.dial_str)
         bleg_uuid = ''
