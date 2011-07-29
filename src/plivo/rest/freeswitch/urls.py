@@ -25,6 +25,8 @@ URLS = {
         '/' + PLIVO_VERSION + '/BulkCall/': (PlivoRestApi.bulk_call, ['POST']),
         # API to originate a single call
         '/' + PLIVO_VERSION + '/Call/': (PlivoRestApi.call, ['POST']),
+        # API to originate a call group simultaneously
+        '/' + PLIVO_VERSION + '/GroupCall/': (PlivoRestApi.group_call, ['POST']),
         # API to hangup a single call
         '/' + PLIVO_VERSION + '/HangupCall/': (PlivoRestApi.hangup_call, ['POST']),
         # API to transfer a single call

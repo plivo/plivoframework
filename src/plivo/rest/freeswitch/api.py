@@ -44,6 +44,10 @@ class Gateway(object):
         self.codecs = codecs
         self.timeout = timeout
         self.extra_dial_string = extra_dial_string
+                
+    def __repr__(self):
+        return "<Gateway RequestUUID=%s To=%s Gw=%s Codecs=%s Timeout=%s ExtraDialString=%s>" \
+            % (self.request_uuid, self.to, self.gw, self.codecs, self.timeout, self.extra_dial_string)
 
 
 class CallRequest(object):
@@ -64,6 +68,10 @@ class CallRequest(object):
         self.ring_url = ring_url
         self.hangup_url = hangup_url
         self.state_flag = None
+
+    def __repr__(self):
+        return "<CallRequest RequestUUID=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s>" \
+            % (self.request_uuid, self.gateways, self.answer_url, self.ring_url, self.hangup_url, str(self.state_flag))
 
 
 
@@ -145,6 +153,8 @@ class PlivoRestApi(object):
         # append args
         args_list.append("plivo_request_uuid=%s" % request_uuid)
         args_list.append("plivo_answer_url=%s" % answer_url)
+        args_list.append("plivo_ring_url=%s" % ring_url)
+        args_list.append("plivo_hangup_url=%s" % hangup_url)
         args_list.append("origination_caller_id_number=%s" % caller_id)
 
         # set extra_dial_string
@@ -159,13 +169,12 @@ class PlivoRestApi(object):
         if hangup_on_ring == 0:
             args_list.append("execute_on_ring='hangup ORIGINATOR_CANCEL'")
         elif hangup_on_ring > 0:
-                args_list.append("execute_on_ring='sched_hangup +%d ORIGINATOR_CANCEL'" \
+            args_list.append("execute_on_ring='sched_hangup +%d ORIGINATOR_CANCEL'" \
                                                                 % hangup_on_ring)
 
         # set send_digits
         if send_digits:
-            args_list.append("execute_on_answer='send_dtmf %s'" \
-                                                % send_digits)
+            args_list.append("execute_on_answer='send_dtmf %s'" % send_digits)
 
         # set time_limit
         try:
@@ -175,7 +184,7 @@ class PlivoRestApi(object):
         if time_limit > 0:
             # create sched_hangup_id
             sched_hangup_id = str(uuid.uuid1())
-            args_list.append("api_on_answer='sched_api +%d %s hupall ALLOTTED_TIMEOUT plivo_request_uuid %s'" \
+            args_list.append("api_on_answer='sched_api +%d %s 'hupall ALLOTTED_TIMEOUT plivo_request_uuid %s''" \
                                                 % (time_limit, sched_hangup_id, request_uuid))
             args_list.append("plivo_sched_hangup_id=%s" % sched_hangup_id)
 
@@ -497,7 +506,7 @@ class PlivoRestApi(object):
                 if len(to_str_list) < 2:
                     msg = "BulkCalls should be used for at least 2 numbers"
                 elif len(to_str_list) != len(gw_str_list):
-                    msg = "'To' parameter length does not match 'GW' Length"
+                    msg = "'To' parameter length does not match 'Gateways' Length"
                 else:
                     for to in to_str_list:
                         try:
@@ -1282,4 +1291,186 @@ class PlivoRestApi(object):
         msg = "Conference List Failed"
         return flask.jsonify(Success=result, Message=msg)
 
+    @auth_protect
+    def group_call(self):
+        """Make Outbound Group Calls in one request
+        Allow initiating group outbound calls via the REST API. To make a
+        group outbound call, make an HTTP POST request to the resource URI.
+
+        POST Parameters
+        ----------------
+
+        Required Parameters - You must POST the following parameters:
+
+        Delimiter: Any special character (with the exception of '/' and ',') 
+        which will be used as a delimiter for the string of parameters below. E.g. '<'
+
+        From: The phone number to use as the caller id for the call without
+        the leading +
+
+        To: The numbers to call without the leading +
+
+        Gateways: Comma separated string of gateways to dial the call out
+
+        GatewayCodecs: Comma separated string of codecs for gateways
+
+        GatewayTimeouts: Comma separated string of timeouts for gateways
+
+        GatewayRetries: Comma separated string of retries for gateways
+
+        AnswerUrl: The URL that should be requested for XML when the call
+        connects. Similar to the URL for your inbound calls
+
+        TimeLimit: Define the max time of the calls
+
+        Optional Parameters - You may POST the following parameters:
+
+        [HangupUrl]: URL that Plivo will notify to, with POST params when
+        calls ends
+
+        [RingUrl]: URL that Plivo will notify to, with POST params when
+        calls starts ringing
+
+        [HangupOnRing]: If Set to 0 we will hangup as soon as the number ring,
+        if set to value X we will wait X seconds when start ringing and then
+        hang up
+
+        [ExtraDialString]: Additional Originate dialstring to be executed
+        while making the outbound call
+
+        [RejectCauses]: List of reject causes for each number (comma ',' separated). 
+        If attempt to call one number failed with a reject cause matching in this parameter,
+        there isn't more call attempts for this number.
+
+        [SendDigits]: A string of keys to dial after connecting to the number.
+        Valid digits in the string include: any digit (0-9), '#' and '*'.
+        Very useful, if you want to connect to a company phone number,
+        and wanted to dial extension 1234 and then the pound key,
+        use SendDigits=1234#.
+        Remember to URL-encode this string, since the '#' character has
+        special meaning in a URL.
+        To wait before sending DTMF to the extension, you can add leading 'w'
+        characters. Each 'w' character waits 0.5 seconds instead of sending a
+        digit.
+        """
+        msg = ""
+        result = False
+        request_uuid = str(uuid.uuid1())
+        default_reject_causes = "NO_ANSWER ORIGINATOR_CANCEL ALLOTTED_TIMEOUT NO_USER_RESPONSE CALL_REJECTED"
+
+        caller_id = get_post_param(request, 'From')
+        to_str = get_post_param(request, 'To')
+        gw_str = get_post_param(request, 'Gateways')
+        answer_url = get_post_param(request, 'AnswerUrl')
+        delimiter = get_post_param(request, 'Delimiter')
+
+        if delimiter in (',', '/'):
+            msg = "This Delimiter is not allowed"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not caller_id or not to_str or not gw_str or not answer_url or not delimiter:
+            msg = "Mandatory Parameters Missing"
+            return flask.jsonify(Success=result, Message=msg)
+        elif not is_valid_url(answer_url):
+            msg = "AnswerUrl is not Valid"
+            return flask.jsonify(Success=result, Message=msg)
+
+        hangup_url = get_post_param(request, 'HangupUrl')
+        ring_url = get_post_param(request, 'RingUrl')
+        if hangup_url and not is_valid_url(hangup_url):
+            msg = "HangupUrl is not Valid"
+            return flask.jsonify(Success=result, Message=msg)
+        elif ring_url and not is_valid_url(ring_url):
+            msg = "RingUrl is not Valid"
+            return flask.jsonify(Success=result, Message=msg)
+
+
+        extra_dial_string = get_post_param(request, 'ExtraDialString')
+        gw_codecs_str = get_post_param(request, 'GatewayCodecs')
+        gw_timeouts_str = get_post_param(request, 'GatewayTimeouts')
+        gw_retries_str = get_post_param(request, 'GatewayRetries')
+        send_digits_str = get_post_param(request, 'SendDigits')
+        time_limit_str = get_post_param(request, 'TimeLimit')
+        hangup_on_ring_str = get_post_param(request, 'HangupOnRing')
+        confirm_sound = get_post_param(request, 'ConfirmSound')
+        confirm_key = get_post_param(request, 'ConfirmKey')
+        reject_causes = get_post_param(request, 'RejectCauses')
+        if reject_causes:
+            reject_causes = " ".join([ r.strip() for r in reject_causes.split(',') ])
+
+        to_str_list = to_str.split(delimiter)
+        gw_str_list = gw_str.split(delimiter)
+        gw_codecs_str_list = gw_codecs_str.split(delimiter)
+        gw_timeouts_str_list = gw_timeouts_str.split(delimiter)
+        gw_retries_str_list = gw_retries_str.split(delimiter)
+        send_digits_list = send_digits_str.split(delimiter)
+        time_limit_list = time_limit_str.split(delimiter)
+        hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
+
+        if len(to_str_list) < 2:
+            msg = "GroupCall should be used for at least 2 numbers"
+            return flask.jsonify(Success=result, Message=msg)
+        elif len(to_str_list) != len(gw_str_list):
+            msg = "'To' parameter length does not match 'Gateways' Length"
+            return flask.jsonify(Success=result, Message=msg)
+
+
+        # set group
+        group_list = []
+        group_options = []
+        # set confirm
+        confirm_options = ""
+        if confirm_sound:
+            if confirm_key:
+                confirm_options = "group_confirm_file=%s,group_confirm_key=%s" \
+                        % (confirm_sound, confirm_key)
+            else:
+                confirm_options = "group_confirm_file=playback %s" % confirm_sound
+        group_options.append(confirm_options)
+
+        # build calls
+        for to in to_str_list:
+            try:
+                gw = gw_str_list.pop(0)
+            except IndexError:
+                break
+            try:
+                gw_codecs = gw_codecs_str_list.pop(0)
+            except IndexError:
+                gw_codecs = ""
+            try:
+                gw_timeouts = gw_timeouts_str_list.pop(0)
+            except IndexError:
+                gw_timeouts = ""
+            try:
+                gw_retries = gw_retries_str_list.pop(0)
+            except IndexError:
+                gw_retries = ""
+            try:
+                send_digits = send_digits_list.pop(0)
+            except IndexError:
+                send_digits = ""
+            try:
+                time_limit = time_limit_list.pop(0)
+            except IndexError:
+                time_limit = ""
+            try:
+                hangup_on_ring = hangup_on_ring_list.pop(0)
+            except IndexError:
+                hangup_on_ring = ""
+
+            call_req = self._prepare_call_request(
+                        caller_id, to, extra_dial_string,
+                        gw, gw_codecs, gw_timeouts, gw_retries,
+                        send_digits, time_limit, hangup_on_ring,
+                        answer_url, ring_url, hangup_url)
+            group_list.append(call_req)
+
+        # now do the calls !
+        if self._rest_inbound_socket.group_originate(request_uuid, group_list, group_options, reject_causes):
+            msg = "GroupCall Request Executed"
+            result = True
+            return flask.jsonify(Success=result, Message=msg, RequestUUID=request_uuid)
+
+        msg = "GroupCall Request Failed"
+        return flask.jsonify(Success=result, Message=msg)
 

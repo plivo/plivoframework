@@ -72,6 +72,20 @@ class RESTInboundSocket(InboundEventSocket):
             request_uuid = self.bk_jobs.pop(job_uuid, None)
             if not request_uuid:
                 return
+
+            # case GroupCall
+            if event['variable_plivo_group_call'] == 'true':
+                status = status.strip()
+                reason = reason.strip()
+                if status[:3] != '+OK':
+                    self.log.info("GroupCall Attempt Done for RequestUUID %s (%s)" \
+                                                    % (request_uuid, reason))
+                    return
+                self.log.error("GroupCall Attempt Failed for RequestUUID %s (%s)" \
+                                                    % (request_uuid, reason))
+                return
+
+            # case Call and BulkCall
             try:
                 call_req = self.call_requests[request_uuid]
             except KeyError:
@@ -120,35 +134,45 @@ class RESTInboundSocket(InboundEventSocket):
         direction = event['Call-Direction']
         # Detect ringing state
         if request_uuid and direction == 'outbound':
-            try:
-                call_req = self.call_requests[request_uuid]
-            except (KeyError, AttributeError):
-                return
-            # only send if not already ringing/early state
-            if not call_req.state_flag:
-                # set state flag to 'Ringing'
-                call_req.state_flag = 'Ringing'
-                # clear gateways to avoid retry
-                call_req.gateways = []
+            # case GroupCall
+            if event['variable_plivo_group_call'] == 'true':
+                # get ring_url
+                ring_url = event['variable_plivo_ring_url']
+            # case BulkCall and Call
+            else:
+                try:
+                    call_req = self.call_requests[request_uuid]
+                except (KeyError, AttributeError):
+                    return
+                # only send if not already ringing/early state
+                if not call_req.state_flag:
+                    # set state flag to 'Ringing'
+                    call_req.state_flag = 'Ringing'
+                    # clear gateways to avoid retry
+                    call_req.gateways = []
+                    # get ring_url
+                    ring_url = call_req.ring_url
+                else:
+                    return
+
+            # send ring if ring_url found
+            if ring_url:
                 called_num = event['Caller-Destination-Number']
                 caller_num = event['Caller-Caller-ID-Number']
                 self.log.info("Call from %s to %s Ringing for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
-                # send ring if ring_url found
-                ring_url = call_req.ring_url
-                if ring_url:
-                    params = {
-                            'To': called_num,
-                            'RequestUUID': request_uuid,
-                            'Direction': direction,
-                            'CallStatus': 'ringing',
-                            'From': caller_num
-                        }
-                    # add extra params
-                    extra_params = self.get_extra_fs_vars(event)
-                    if extra_params:
-                        params.update(extra_params)
-                    spawn_raw(self.send_to_url, ring_url, params)
+                params = {
+                        'To': called_num,
+                        'RequestUUID': request_uuid,
+                        'Direction': direction,
+                        'CallStatus': 'ringing',
+                        'From': caller_num
+                    }
+                # add extra params
+                extra_params = self.get_extra_fs_vars(event)
+                if extra_params:
+                    params.update(extra_params)
+                spawn_raw(self.send_to_url, ring_url, params)
 
     def on_channel_progress_media(self, event):
         request_uuid = event['variable_plivo_request_uuid']
@@ -255,20 +279,28 @@ class RESTInboundSocket(InboundEventSocket):
             request_uuid = event['variable_plivo_request_uuid']
             if not request_uuid and direction != 'outbound':
                 return
+
             call_uuid = event['Unique-ID']
             reason = event['Hangup-Cause']
-            try:
-                call_req = self.call_requests[request_uuid]
-            except KeyError:
-                return
-            # If there are gateways to try again, spawn originate
-            if call_req.gateways:
-                self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
-                                % (request_uuid, reason))
-                self.spawn_originate(request_uuid)
-                return
-            # else clean call request
-            hangup_url = call_req.hangup_url
+
+            # case GroupCall
+            if event['variable_plivo_group_call'] == 'true':
+                hangup_url = event['variable_plivo_hangup_url']
+            # case BulkCall and Call
+            else:
+                try:
+                    call_req = self.call_requests[request_uuid]
+                except KeyError:
+                    return
+                # If there are gateways to try again, spawn originate
+                if call_req.gateways:
+                    self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
+                                    % (request_uuid, reason))
+                    self.spawn_originate(request_uuid)
+                    return
+                # else clean call request
+                hangup_url = call_req.hangup_url
+
             # send hangup
             try:
                 self.set_hangup_complete(request_uuid, call_uuid, reason, event, hangup_url)
@@ -461,6 +493,70 @@ class RESTInboundSocket(InboundEventSocket):
         if not job_uuid:
             self.log.error("Call Failed for RequestUUID %s -- JobUUID not received" \
                                                             % request_uuid)
+            return False
+        return True
+
+    def group_originate(self, request_uuid, group_list, group_options=[], reject_causes=''):
+        self.log.debug("GroupCall => %s %s" % (str(request_uuid), str(group_options)))
+
+        outbound_str = "'socket:%s async full' inline" % self.get_server().fs_out_address
+        # Set plivo app flag and request uuid
+        group_options.append('plivo_request_uuid=%s' % request_uuid)
+        group_options.append("plivo_app=true")
+        group_options.append("plivo_group_call=true")
+
+        dial_calls = []
+
+        for call in group_list:
+            dial_gws = []
+            for gw in call.gateways:
+                _options = []
+                # Add codecs option
+                if gw.codecs:
+                    _options.append("absolute_codec_string=%s" % gw.codecs)
+                # Add timeout option
+                if gw.timeout:
+                    _options.append("originate_timeout=%s" % gw.timeout)
+                # Set early media
+                _options.append("ignore_early_media=true")
+                if gw.extra_dial_string:
+                    _options.append(gw.extra_dial_string)
+                # Build gateway dial string
+                options = ','.join(_options)
+                gw_str = '[%s]%s/%s' % (options, gw.gw, gw.to)
+                dial_gws.append(gw_str)
+            # Build call dial string
+            dial_call_str = ",".join(dial_gws)
+            if reject_causes:
+                dial_call_str = "{fail_on_single_reject='%s'}%s" % (reject_causes, dial_call_str)
+            dial_calls.append(dial_call_str)
+
+        # Build global dial string
+        dial_str = ":_:".join(dial_calls)
+        global_options = ",".join(group_options)
+        if global_options:
+            if len(dial_calls) > 1:
+                dial_str = "<%s>%s" % (global_options, dial_str)
+            else:
+                if dial_str[0] == '{':
+                    dial_str = "{%s,%s" % (global_options, dial_str[1:])
+                else:
+                    dial_str = "{%s}%s" % (global_options, dial_str)
+
+        # Execute originate on background
+        dial_str = "originate %s %s" \
+                % (dial_str, outbound_str)
+        self.log.debug(str(dial_str))
+
+        bg_api_response = self.bgapi(dial_str)
+        job_uuid = bg_api_response.get_job_uuid()
+        self.bk_jobs[job_uuid] = request_uuid
+        self.log.debug(str(bg_api_response))
+        if not job_uuid:
+            self.log.error("GroupCall Failed for RequestUUID %s -- JobUUID not received" \
+                                                            % request_uuid)
+            return False
+        return True
 
     def bulk_originate(self, request_uuid_list):
         if request_uuid_list:
