@@ -400,10 +400,13 @@ class PlivoRestApi(object):
 
         Required Parameters - You must POST the following parameters:
 
+        Delimiter: Any special character (with the exception of '/' and ',') 
+        which will be used as a delimiter for the string of parameters below. E.g. '<'
+
         From: The phone number to use as the caller id for the call without
         the leading +
 
-        To: The number to call without the leading +
+        To: The numbers to call without the leading +
 
         Gateways: Comma separated string of gateways to dial the call out
 
@@ -1278,4 +1281,5 @@ class PlivoRestApi(object):
                 return flask.jsonify(Success=result, Message=msg)
         msg = "Conference List Failed"
         return flask.jsonify(Success=result, Message=msg)
+
 
