@@ -546,7 +546,7 @@ class RESTInboundSocket(InboundEventSocket):
         # Execute originate on background
         dial_str = "originate %s %s" \
                 % (dial_str, outbound_str)
-        self.log.debug(str(dial_str))
+        self.log.debug("GroupCall : %s" % str(dial_str))
 
         bg_api_response = self.bgapi(dial_str)
         job_uuid = bg_api_response.get_job_uuid()
