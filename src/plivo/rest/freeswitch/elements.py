@@ -739,6 +739,9 @@ class Dial(Element):
                     if not hangup_cause:
                         hangup_cause = outbound_socket.get_var('hangup_cause')
                         reason = '%s (A leg)' % hangup_cause
+                        if not hangup_cause:
+                            hangup_cause = 'NORMAL_CLEARING'
+                            reason = '%s (A leg)' % hangup_cause
             outbound_socket.log.info("Dial Finished with reason: %s" \
                                      % reason)
             # Unschedule hangup task
