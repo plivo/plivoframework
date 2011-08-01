@@ -685,7 +685,7 @@ class Dial(Element):
             dial_confirm = ",%s,%s,%s" % (confirm_music_str, confirm_key_str, confirm_cancel)
         else:
             dial_confirm = ''
-        
+
         # Append time limit and group confirm to dial string
         if len(numbers) > 1:
             self.dial_str = '<%s%s>%s' % (dial_time_limit, dial_confirm, self.dial_str)

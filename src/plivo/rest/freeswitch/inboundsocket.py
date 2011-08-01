@@ -14,7 +14,7 @@ from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
 
 
-EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CHANNEL_ANSWER"
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE"
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -210,30 +210,38 @@ class RESTInboundSocket(InboundEventSocket):
                         params.update(extra_params)
                     spawn_raw(self.send_to_url, ring_url, params)
 
-    def on_channel_answer(self, event):
-        # request Dial callbackUrl if needed
-        ck_url = event['variable_plivo_dial_callback_url']
-        if not ck_url:
+    def on_call_update(self, event):
+        # if plivo_app != 'true', check b leg Dial callback  
+        plivo_app_flag = event['variable_plivo_app'] == 'true'
+        if not plivo_app_flag:
+            # request Dial callbackUrl if needed
+            aleg_uuid = event['Bridged-To']
+            if not aleg_uuid:
+                return
+            bleg_uuid = event['Unique-ID']
+            if not bleg_uuid:
+                return
+            disposition = event['variable_endpoint_disposition']
+            if disposition != 'ANSWER':
+                return
+            ck_url = event['variable_plivo_dial_callback_url']
+            if not ck_url:
+                return
+            ck_method = event['variable_plivo_dial_callback_method']
+            if not ck_method:
+                return
+            params = {'DialBLegUUID': bleg_uuid,
+                      'DialALegUUID': aleg_uuid,
+                      'DialBLegStatus': 'answer',
+                      'CallUUID': aleg_uuid
+                     }
+            spawn_raw(self.send_to_url, ck_url, params, ck_method)
             return
-        ck_method = event['variable_plivo_dial_callback_method']
-        if not ck_method:
-            return
-        aleg_uuid = event['variable_plivo_dial_callback_aleg']
-        if not aleg_uuid:
-            return
-        bleg_uuid = event['Unique-ID']
-        params = {'DialBLegUUID': bleg_uuid,
-                  'DialALegUUID': aleg_uuid,
-                  'DialBLegStatus': 'answer',
-                  'CallUUID': aleg_uuid
-                 }
-        spawn_raw(self.send_to_url, ck_url, params, ck_method)
-        return
 
     def on_channel_hangup_complete(self, event):
         """Capture Channel Hangup Complete
         """
-        # if plivo_app != 'true', skip this hangup
+        # if plivo_app != 'true', check b leg Dial callback  
         plivo_app_flag = event['variable_plivo_app'] == 'true'
         if not plivo_app_flag:
             # request Dial callbackUrl if needed
