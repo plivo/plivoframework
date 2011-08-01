@@ -320,7 +320,7 @@ class Conference(Element):
         return mohs
 
     def _notify_enter_conf(self, outboundsocket):
-        if not self.callback_url and not self.conf_id and not self.member_id:
+        if not self.callback_url or not self.conf_id or not self.member_id:
             return
         params = {}
         params['ConferenceName'] = self.room
@@ -330,7 +330,7 @@ class Conference(Element):
         spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
 
     def _notify_exit_conf(self, outboundsocket):
-        if not self.callback_url and not self.conf_id and not self.member_id:
+        if not self.callback_url or not self.conf_id or not self.member_id:
             return
         params = {}
         params['ConferenceName'] = self.room
