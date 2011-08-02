@@ -325,9 +325,10 @@ class PlivoRestApi(object):
         AnswerUrl: The URL that should be requested for XML when the call
         connects
 
-        TimeLimit: Define the max time of the call
 
         Optional Parameters - You may POST the following parameters:
+
+        [TimeLimit]: Define the max time of the call
 
         [HangupUrl]: URL that Plivo will notify to, with POST params when
         calls ends
@@ -339,7 +340,7 @@ class PlivoRestApi(object):
         if set to value X we will wait X seconds when start ringing and then
         hang up
 
-        [OriginateDialString]: Additional Originate dialstring to be executed
+        [ExtraDialString]: Additional Originate dialstring to be executed
         while making the outbound call
 
         [SendDigits]: A string of keys to dial after connecting to the number.
@@ -428,9 +429,9 @@ class PlivoRestApi(object):
         AnswerUrl: The URL that should be requested for XML when the call
         connects. Similar to the URL for your inbound calls
 
-        TimeLimit: Define the max time of the calls
-
         Optional Parameters - You may POST the following parameters:
+
+        [TimeLimit]: Define the max time of the call
 
         [HangupUrl]: URL that Plivo will notify to, with POST params when
         calls ends
@@ -758,7 +759,7 @@ class PlivoRestApi(object):
             msg = "FileFormat Parameter must be 'mp3' or 'wav'"
             return flask.jsonify(Success=result, Message=msg)
         if not timelimit:
-            timelimit = 3600
+            timelimit = 60
         else:
             try:
                 timelimit = int(timelimit)
@@ -961,7 +962,7 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' for kicking all members
+        MemberID: conference member id or 'all' to make all members deaf
         """
         msg = ""
         result = False
@@ -996,7 +997,7 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' for kicking all members
+        MemberID: conference member id or 'all' to make all members undeaf
         """
         msg = ""
         result = False
@@ -1352,6 +1353,10 @@ class PlivoRestApi(object):
         To wait before sending DTMF to the extension, you can add leading 'w'
         characters. Each 'w' character waits 0.5 seconds instead of sending a
         digit.
+
+        [ConfirmSound]: Sound to play to called party before bridging call.
+
+        [ConfirmKey]: A one key digits the called party must press to accept the call.
         """
         msg = ""
         result = False

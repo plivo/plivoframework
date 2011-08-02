@@ -6,6 +6,10 @@ import os.path
 from datetime import datetime
 import re
 import uuid
+try:
+    import xml.etree.cElementTree as etree
+except ImportError:
+    from xml.etree.elementtree import ElementTree as etree
 
 import gevent
 from gevent import spawn_raw
@@ -297,27 +301,47 @@ class Conference(Element):
         self.callback_url = self.extract_attribute_value("callbackUrl")
         self.digits_match = self.extract_attribute_value("digitsMatch")
 
-    def _prepare_moh(self):
-        mohs = []
+    def _prepare_moh(self, outbound_socket):
+        sound_files = []
         if not self.moh_sound:
-            return mohs
-        for audio_path in self.moh_sound.split(','):
-            # local file case :
-            if not is_valid_url(audio_path) and file_exists(audio_path):
-                    mohs.append(audio_path)
-            # remote file case :
-            else:
-                if url_exists(audio_path):
-                    if audio_path[:7].lower() == 'http://':
-                        audio_path = audio_path[7:]
-                        mohs.append("shout://%s" % audio_path)
-                    elif audio_path[:8].lower() == 'https://':
-                        audio_path = audio_path[8:]
-                        mohs.append("shout://%s" % audio_path)
-                    elif audio_path[:6].lower() == 'ftp://':
-                        audio_path = audio_path[6:]
-                        mohs.append("shout://%s" % audio_path)
-        return mohs
+            return sound_files
+        outbound_socket.log.info('Fetching remote sound from restxml %s' % self.moh_sound)
+        try:
+            response = outbound_socket.send_to_url(self.moh_sound, params={}, method='POST')
+            doc = etree.fromstring(response)
+            if doc.tag != 'Response':
+                outbound_socket.log.warn('No Response Tag Present')
+                return sound_files
+
+            # build play string from remote restxml
+            for element in doc:
+                # Play element
+                if element.tag == 'Play':
+                    child_instance = Play()
+                    child_instance.parse_element(element)
+                    sound_file = child_instance.sound_file_path
+                    if sound_file:
+                        loop = child_instance.loop_times
+                        if loop == 0:
+                            loop = MAX_LOOPS  # Add a high number to Play infinitely
+                        # Play the file loop number of times
+                        for i in range(loop):
+                            sound_files.append(sound_file)
+                        # Infinite Loop, so ignore other children
+                        if loop == MAX_LOOPS:
+                            break
+                # Wait element
+                elif element.tag == 'Wait':
+                    child_instance = Wait()
+                    child_instance.parse_element(element)
+                    pause_secs = child_instance.length
+                    pause_str = 'file_string://silence_stream://%s' % (pause_secs * 1000)
+                    sound_files.append(pause_str)
+        except Exception, e:
+            outbound_socket.log.warn('Fetching remote sound from restxml failed: %s' % str(e))
+        finally:
+            outbound_socket.log.info('Fetching remote sound from restxml done')
+            return sound_files
 
     def _notify_enter_conf(self, outboundsocket):
         if not self.callback_url or not self.conf_id or not self.member_id:
@@ -361,15 +385,14 @@ class Conference(Element):
             record_file = None
 
         # set moh sound
-        mohs = self._prepare_moh()
-        if not mohs:
-            outbound_socket.unset("conference_moh_sound")
-        else:
+        mohs = self._prepare_moh(outbound_socket)
+        if mohs:
             outbound_socket.set("playback_delimiter=!")
-            play_str = "file_string://silence_stream://1"
-            for moh in mohs:
-                play_str = "%s!%s" % (play_str, moh)
+            play_str = '!'.join(mohs)
+            play_str = "file_string://silence_stream://1!%s" % play_str
             outbound_socket.set("conference_moh_sound=%s" % play_str)
+        else:
+            outbound_socket.unset("conference_moh_sound")
         # set member flags
         if self.muted:
             flags.append("muted")
@@ -410,6 +433,7 @@ class Conference(Element):
         # and set extra features for conference
         # else conference element ending here
         try:
+            digit_realm = ''
             if event['Event-Subclass'] == 'conference::maintenance' \
                 and event['Action'] == 'add-member':
                 self.member_id = event['Member-ID']
@@ -420,7 +444,6 @@ class Conference(Element):
                 self._notify_enter_conf(outbound_socket)
 
                 # set bind digit actions
-                digit_realm = ''
                 if self.digits_match and self.callback_url:
                     # create event template
                     event_template = "Event-Name=CUSTOM,Event-Subclass=conference::maintenance,Action=digits-match,Unique-ID=%s,Callback-Url=%s,Callback-Method=%s,Member-ID=%s,Conference-Name=%s,Conference-Unique-ID=%s" \
@@ -469,7 +492,8 @@ class Conference(Element):
                     elif self.exit_sound == 'beep:2':
                         outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
             # unset digit realm
-            outbound_socket.digit_action_set_realm("none")
+            if digit_realm:
+                outbound_socket.clear_digit_action(digit_realm)
 
         finally:
             # notify channel has left room
@@ -558,26 +582,71 @@ class Dial(Element):
         if not self.callback_method in ('GET', 'POST'):
             raise RESTAttributeException("callbackMethod must be 'GET' or 'POST'")
 
-    def _prepare_moh(self):
-        mohs = []
-        if not self.dial_music:
-            return mohs
-        for audio_path in self.dial_music.split(','):
-            # local file case :
-            if not is_valid_url(audio_path) and file_exists(audio_path):
-                mohs.append(audio_path)
-            # remote file case :
-            elif url_exists(audio_path):
-                    if audio_path[:7].lower() == "http://":
-                        audio_path = audio_path[7:]
-                        mohs.append("shout://%s" % audio_path)
-                    elif audio_path[:8].lower() == "https://":
-                        audio_path = audio_path[8:]
-                        mohs.append("shout://%s" % audio_path)
-                    elif audio_path[:6].lower() == "ftp://":
-                        audio_path = audio_path[6:]
-                        mohs.append("shout://%s" % audio_path)
-        return mohs
+    def _prepare_play_string(self, outbound_socket, remote_url):
+        sound_files = []
+        if not remote_url:
+            return sound_files
+        outbound_socket.log.info('Fetching remote sound from restxml %s' % remote_url)
+        try:
+            response = outbound_socket.send_to_url(remote_url, params={}, method='POST')
+            doc = etree.fromstring(response)
+            if doc.tag != 'Response':
+                outbound_socket.log.warn('No Response Tag Present')
+                return sound_files
+
+            # build play string from remote restxml
+            for element in doc:
+                # Play element
+                if element.tag == 'Play':
+                    child_instance = Play()
+                    child_instance.parse_element(element)
+                    sound_file = child_instance.sound_file_path
+                    if sound_file:
+                        loop = child_instance.loop_times
+                        if loop == 0:
+                            loop = MAX_LOOPS  # Add a high number to Play infinitely
+                        # Play the file loop number of times
+                        for i in range(loop):
+                            sound_files.append(sound_file)
+                        # Infinite Loop, so ignore other children
+                        if loop == MAX_LOOPS:
+                            break
+                # Speak element
+                elif element.tag == 'Speak':
+                    child_instance = Speak()
+                    child_instance.parse_element(element)
+                    text = child_instance.text
+                    # escape simple quote
+                    text = text.replace("'", "\\'")
+                    loop = child_instance.loop_times
+                    child_type = child_instance.item_type
+                    method = child_instance.method
+                    say_str = ''
+                    if child_type and method:
+                        language = child_instance.language
+                        say_args = "%s.wav %s %s %s '%s'" \
+                                        % (language, language, child_type, method, text)
+                        say_str = "${say_string %s}" % say_args
+                    else:
+                        engine = child_instance.engine
+                        voice = child_instance.voice
+                        say_str = "say:%s:%s:'%s'" % (engine, voice, text)
+                    if not say_str:
+                        continue
+                    for i in range(loop):
+                        sound_files.append(say_str)
+                # Wait element
+                elif element.tag == 'Wait':
+                    child_instance = Wait()
+                    child_instance.parse_element(element)
+                    pause_secs = child_instance.length
+                    pause_str = 'file_string://silence_stream://%s' % (pause_secs * 1000)
+                    sound_files.append(pause_str)
+        except Exception, e:
+            outbound_socket.log.warn('Fetching remote sound from restxml failed: %s' % str(e))
+        finally:
+            outbound_socket.log.info('Fetching remote sound from restxml done for %s' % remote_url)
+            return sound_files
 
     def create_number(self, number_instance, outbound_socket):
         num_gw = []
@@ -672,19 +741,22 @@ class Dial(Element):
                       % (self.time_limit, sched_hangup_id, outbound_socket.get_channel_unique_id())
         
         # Set confirm sound and key or unset if not provided
+        dial_confirm = ''
         if self.confirm_sound:
-            # Use confirm key if present else just play music
-            if self.confirm_key:
-                confirm_music_str = "group_confirm_file=%s" % self.confirm_sound
-                confirm_key_str = "group_confirm_key=%s" % self.confirm_key
-            else:
-                confirm_music_str = "group_confirm_file=playback %s" % self.confirm_sound
-                confirm_key_str = "group_confirm_key=exec"
-            # Cancel the leg timeout after the call is answered
-            confirm_cancel = "group_confirm_cancel_timeout=1"
-            dial_confirm = ",%s,%s,%s" % (confirm_music_str, confirm_key_str, confirm_cancel)
-        else:
-            dial_confirm = ''
+            confirm_sounds = self._prepare_play_string(outbound_socket, self.confirm_sound)
+            if confirm_sounds:
+                play_str = '!'.join(confirm_sounds)
+                play_str = "file_string://silence_stream://1!%s" % play_str
+                # Use confirm key if present else just play music
+                if self.confirm_key:
+                    confirm_music_str = "group_confirm_file=%s" % play_str
+                    confirm_key_str = "group_confirm_key=%s" % self.confirm_key
+                else:
+                    confirm_music_str = "group_confirm_file=playback %s" % play_str
+                    confirm_key_str = "group_confirm_key=exec"
+                # Cancel the leg timeout after the call is answered
+                confirm_cancel = "group_confirm_cancel_timeout=1"
+                dial_confirm = ",%s,%s,%s,playback_delimiter=!" % (confirm_music_str, confirm_key_str, confirm_cancel)
 
         # Append time limit and group confirm to dial string
         if len(numbers) > 1:
@@ -699,19 +771,20 @@ class Dial(Element):
             outbound_socket.unset("bridge_terminate_key")
         
         # Play Dial music or bridge the early media accordingly
-        mohs = self._prepare_moh()
-        if not mohs:
+        ringbacks = ''
+        if self.dial_music:
+            ringbacks = self._prepare_play_string(outbound_socket, self.dial_music)
+            if ringbacks:
+                outbound_socket.set("playback_delimiter=!")
+                play_str = '!'.join(ringbacks)
+                play_str = "file_string://silence_stream://1!%s" % play_str
+                outbound_socket.set("bridge_early_media=true")
+                outbound_socket.set("instant_ringback=true")
+                outbound_socket.set("ringback=%s" % play_str)
+        if not ringbacks:
             outbound_socket.set("bridge_early_media=true")
             outbound_socket.unset("instant_ringback")
             outbound_socket.unset("ringback")
-        else:
-            outbound_socket.set("playback_delimiter=!")
-            play_str = "file_string://silence_stream://1"
-            for moh in mohs:
-                play_str = "%s!%s" % (play_str, moh)
-            outbound_socket.set("bridge_early_media=true")
-            outbound_socket.set("instant_ringback=true")
-            outbound_socket.set("ringback=%s" % play_str)
 
         # Start dial
         outbound_socket.log.info("Dial Started %s" % self.dial_str)
@@ -867,8 +940,8 @@ class GetDigits(Element):
                         break
             elif isinstance(child_instance, Wait):
                 pause_secs = child_instance.length
-                pause_str = play_str = 'silence_stream://%s'\
-                                                        % (pause_secs * 1000)
+                pause_str = 'file_string://silence_stream://%s'\
+                                % (pause_secs * 1000)
                 self.sound_files.append(pause_str)
             elif isinstance(child_instance, Speak):
                 text = child_instance.text
@@ -877,6 +950,7 @@ class GetDigits(Element):
                 loop = child_instance.loop_times
                 child_type = child_instance.item_type
                 method = child_instance.method
+                say_str = ''
                 if child_type and method:
                     language = child_instance.language
                     say_args = "%s.wav %s %s %s '%s'" \
@@ -886,10 +960,10 @@ class GetDigits(Element):
                     engine = child_instance.engine
                     voice = child_instance.voice
                     say_str = "say:%s:%s:'%s'" % (engine, voice, text)
+                if not say_str:
+                    continue
                 for i in range(loop):
                     self.sound_files.append(say_str)
-            else:
-                pass  # Ignore invalid nested Element
 
         outbound_socket.log.info("GetDigits Started %s" % self.sound_files)
         if self.play_beep:
@@ -1041,7 +1115,7 @@ class Wait(Element):
                                                     % self.length)
         if self.transfer:
             outbound_socket.log.warn("Wait with transfer enabled")
-            pause_str = 'silence_stream://%s'\
+            pause_str = 'file_string://silence_stream://%s'\
                                     % str(self.length * 1000)
             outbound_socket.playback(pause_str)
         else:
@@ -1082,7 +1156,7 @@ class Play(Element):
 
         if not is_valid_url(audio_path):
             if file_exists(audio_path):
-                self.sound_file_path = audio_path
+                self.sound_file_path = "file_string://%s" % audio_path
         else:
             if url_exists(audio_path):
                 if audio_path[:7].lower() == "http://":
@@ -1360,9 +1434,9 @@ class Speak(Element):
 
     def execute(self, outbound_socket):
         if self.item_type and self.method:
-                say_args = "%s %s %s %s" \
-                        % (self.language, self.item_type,
-                           self.method, self.text)
+            say_args = "%s %s %s %s" \
+                    % (self.language, self.item_type,
+                       self.method, self.text)
         else:
             say_args = "%s|%s|%s" % (self.engine, self.voice, self.text)
         if self.item_type and self.method:
