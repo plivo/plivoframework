@@ -714,6 +714,8 @@ class Dial(Element):
             outbound_socket.set("effective_caller_id_number=%s" % self.caller_id)
         else:
             outbound_socket.unset("effective_caller_id_number")
+        # Set continue on fail
+        outbound_socket.set("continue_on_fail=true")
         # Set ring flag if dial will ring.
         # But first set plivo_dial_rang to false
         # to be sure we don't get it from an old Dial
