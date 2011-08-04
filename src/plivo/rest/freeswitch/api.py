@@ -567,9 +567,6 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        The following parameters are available for you to POST when modifying
-        a phone call:
-
         Call ID Parameters: One of these parameters must be supplied :
 
         CallUUID: Unique Call ID to which the action should occur to.
@@ -608,9 +605,6 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        The following parameters are available for you to POST when transfering
-        a phone call:
-
         CallUUID: Unique Call ID to which the action should occur to.
 
         Url: A valid URL that returns RESTXML. Plivo will immediately fetch
@@ -659,9 +653,6 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        The following parameters are available for you to POST when transfering
-        a phone call:
-
         CallUUID: Unique Call ID to which the action should occur to.
 
         Time: When hanging up call in seconds.
@@ -688,13 +679,13 @@ class PlivoRestApi(object):
                     msg = "Time Parameter must be > 0 !"
                 else:
                     sched_id = str(uuid.uuid1())
-                    res = self._rest_inbound_socket.api("sched_api %s +%d uuid_kill %s ALLOTTED_TIMEOUT" \
-                                                        % (sched_id, time, call_uuid))
+                    res = self._rest_inbound_socket.api("sched_api +%d %s uuid_kill %s ALLOTTED_TIMEOUT" \
+                                                        % (time, sched_id, call_uuid))
                     if res.is_success():
-                        msg = "Scheduled Hangup Done with SchedHangupId %s" % sched_id
+                        msg = "ScheduleHangup Done with SchedHangupId %s" % sched_id
                         result = True
                     else:
-                        msg = "Scheduled Hangup Failed: %s" % res.get_response()
+                        msg = "ScheduleHangup Failed: %s" % res.get_response()
             except ValueError:
                 msg = "Invalid Time Parameter !"
         return flask.jsonify(Success=result, Message=msg, SchedHangupId=sched_id)
@@ -709,9 +700,6 @@ class PlivoRestApi(object):
 
         POST Parameters
         ---------------
-        The following parameters are available for you to POST when transfering
-        a phone call:
-
         SchedHangupId: id of the scheduled hangup.
         """
         msg = ""
@@ -719,7 +707,7 @@ class PlivoRestApi(object):
 
         sched_id = get_post_param(request, 'SchedHangupId')
         if not sched_id:
-            msg = "Id Parameter must be present"
+            msg = "SchedHangupId Parameter must be present"
         else:
             res = self._rest_inbound_socket.api("sched_del %s" % sched_id)
             if res.is_success():
@@ -1477,5 +1465,155 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg, RequestUUID=request_uuid)
 
         msg = "GroupCall Request Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def play(self):
+        """Play something to a Call or bridged leg or both legs.
+        Allow playing a sound to a Call via the REST API. To play sound,
+        make an HTTP POST request to the resource URI.
+
+        POST Parameters
+        ----------------
+
+        Required Parameters - You must POST the following parameters:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        Sounds: Comma separated list of sound files to play.
+
+        Optional Paramaters:
+
+        [Legs]: 'aleg'|'bleg'|'both'. On which leg(s) to play something.
+                'aleg' means only play on the Call.
+                'bleg' means only play on the bridged leg of the Call.
+                'both' means play on the Call and the bridged leg of the Call.
+                Default is 'aleg' .
+
+        """
+        msg = ""
+        result = False
+
+        calluuid = get_post_param(request, 'CallUUID')
+        sounds = get_post_param(request, 'Sounds')
+        legs = get_post_param(request, 'Legs')
+
+        if not calluuid:
+            msg = "CallUUID Parameter Missing"
+            return flask.jsonify(Success=result, Message=msg)
+        if not sounds:
+            msg = "Sounds Parameter Missing"
+            return flask.jsonify(Success=result, Message=msg)
+        if not legs:
+            legs = 'aleg'
+
+        sounds_list = sounds.split(',')
+        if not sounds_list:
+            msg = "Sounds Parameter is Invalid"
+            return flask.jsonify(Success=result, Message=msg)
+
+        # now do the job !
+        if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, schedule=0):
+            msg = "Play Request Executed"
+            result = True
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "Play Request Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def schedule_play(self):
+        """Schedule playing something to a Call or bridged leg or both legs.
+        Allow to schedule playing a sound to a Call via the REST API. To play sound,
+        make an HTTP POST request to the resource URI.
+
+        POST Parameters
+        ----------------
+
+        Required Parameters - You must POST the following parameters:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        Sounds: Comma separated list of sound files to play.
+
+        Time: When playing sounds in seconds.
+
+        Optional Paramaters:
+
+        [Legs]: 'aleg'|'bleg'|'both'. On which leg(s) to play something.
+                'aleg' means only play on the Call.
+                'bleg' means only play on the bridged leg of the Call.
+                'both' means play on the Call and the bridged leg of the Call.
+                Default is 'aleg' .
+
+
+        Returns a scheduled task with id SchedPlayId that you can use to cancel play.
+        """
+        msg = ""
+        result = False
+
+        calluuid = get_post_param(request, 'CallUUID')
+        sounds = get_post_param(request, 'Sounds')
+        legs = get_post_param(request, 'Legs')
+        time = get_post_param(request, 'Time')
+
+        if not calluuid:
+            msg = "CallUUID Parameter Missing"
+            return flask.jsonify(Success=result, Message=msg)
+        if not sounds:
+            msg = "Sounds Parameter Missing"
+            return flask.jsonify(Success=result, Message=msg)
+        if not legs:
+            legs = 'aleg'
+        if not time:
+            msg = "Time Parameter Must be Present"
+            return flask.jsonify(Success=result, Message=msg)
+        try:
+            time = int(time)
+        except ValueError:
+            msg = "Time Parameter is Invalid"
+            return flask.jsonify(Success=result, Message=msg)
+        if time <=0:
+            msg = "Time Parameter must be > 0"
+            return flask.jsonify(Success=result, Message=msg)
+
+        sounds_list = sounds.split(',')
+        if not sounds_list:
+            msg = "Sounds Parameter is Invalid"
+            return flask.jsonify(Success=result, Message=msg)
+
+        # now do the job !
+        sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, schedule=time)
+        if sched_id:
+            msg = "SchedulePlay Request Done with SchedPlayId %s" % sched_id
+            result = True
+            return flask.jsonify(Success=result, Message=msg, SchedPlayId=sched_id)
+        msg = "SchedulePlay Request Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def cancel_scheduled_play(self):
+        """Cancel a Scheduled Call Play
+        Unschedule a play on a call.
+
+        To unschedule a play, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+        SchedPlayId: id of the scheduled play.
+        """
+        msg = ""
+        result = False
+
+        sched_id = get_post_param(request, 'SchedPlayId')
+        if not sched_id:
+            msg = "SchedPlayId Parameter must be present"
+        else:
+            res = self._rest_inbound_socket.api("sched_del %s" % sched_id)
+            if res.is_success():
+                msg = "Scheduled Play Canceled"
+                result = True
+            else:
+                msg = "Scheduled Play Cancelation Failed: %s" % res.get_response()
         return flask.jsonify(Success=result, Message=msg)
 

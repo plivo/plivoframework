@@ -5,6 +5,7 @@ from gevent import monkey
 monkey.patch_all()
 
 import os.path
+import uuid
 
 from gevent import spawn_raw
 from gevent import pool
@@ -674,3 +675,45 @@ class RESTInboundSocket(InboundEventSocket):
                                     % (cmd, job_uuid))
                 return False
         return False
+
+    def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", schedule=0):
+        if schedule <= 0:
+            name = "Call Play"
+        else:
+            name = "Call SchedulePlay"
+        if not call_uuid:
+            self.log.error("%s Failed -- Missing CallUUID" % name)
+            return False
+        if not sounds_list:
+            self.log.error("%s Failed -- Missing Sounds" % name)
+            return False
+        if not legs in ('aleg', 'bleg', 'both'):
+            self.log.error("%s Failed -- Invalid legs arg '%s'" % (name, str(legs)))
+            return False
+
+        # build command
+        play_str = 'playback::'
+        play_str += '!'.join(['file_string://'+sound for sound in sounds_list])
+        cmd = "uuid_broadcast %s %s %s" % (call_uuid, play_str, legs)
+
+        # case no schedule
+        if schedule <= 0:
+            bg_api_response = self.bgapi(cmd)
+            job_uuid = bg_api_response.get_job_uuid()
+            if not job_uuid:
+                self.log.error("%s Failed '%s' -- JobUUID not received" % (name, cmd))
+                return False
+            self.log.info("%s '%s' with JobUUID %s" % (name, cmd, job_uuid))
+            return True
+
+        # case schedule
+        sched_id = str(uuid.uuid1())
+        sched_cmd = "sched_api +%d %s %s" % (schedule, sched_id, cmd)
+        res = self.api(sched_cmd)
+        if res.is_success():
+            self.log.info("%s '%s' with SchedPlayId %s" % (name, sched_cmd, sched_id))
+            return sched_id
+        else:
+            self.log.error("%s Failed: %s" % (name, res.get_response()))
+        return False
+

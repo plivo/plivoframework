@@ -41,6 +41,12 @@ URLS = {
         '/' + PLIVO_VERSION + '/RecordStart/': (PlivoRestApi.record_start, ['POST']),
         # API to stop recording a call
         '/' + PLIVO_VERSION + '/RecordStop/': (PlivoRestApi.record_stop, ['POST']),
+        # API to play something on a single call
+        '/' + PLIVO_VERSION + '/Play/': (PlivoRestApi.play, ['POST']),
+        # API to schedule playing something  on a single call
+        '/' + PLIVO_VERSION + '/SchedulePlay/': (PlivoRestApi.schedule_play, ['POST']),
+        # API to cancel a scheduled play on a single call
+        '/' + PLIVO_VERSION + '/CancelScheduledPlay/': (PlivoRestApi.cancel_scheduled_play, ['POST']),
         # API to mute a member in a conference
         '/' + PLIVO_VERSION + '/ConferenceMute/': (PlivoRestApi.conference_mute, ['POST']),
         # API to unmute a member in a conference
