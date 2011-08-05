@@ -381,15 +381,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         params = {}
         for x in range(MAX_REDIRECT):
             try:
+                # update call status if needed
                 if self.has_hangup():
-                    raise RESTHangup()
+                    self.session_params['CallStatus'] = 'completed'
                 # case answer url, add extra vars to http request :
                 if x == 0:
                     params = self.get_extra_fs_vars(event=self.get_channel())
+                # fetch remote restxml
                 self.fetch_xml(params=params)
+                # check hangup
+                if self.has_hangup():
+                    raise RESTHangup()
                 if not self.xml_response:
                     self.log.warn('No XML Response')
                     return
+                # parse and execute restxml
                 self.lex_xml()
                 self.parse_xml()
                 self.execute_xml()
