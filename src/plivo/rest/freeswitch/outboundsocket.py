@@ -185,12 +185,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self._action_queue.put(event)
 
     def on_custom(self, event):
+        # case conference event
         if self.current_element == 'Conference':
             # special case to get Member-ID for Conference
             if event['Event-Subclass'] == 'conference::maintenance' \
                 and event['Action'] == 'add-member' \
                 and event['Unique-ID'] == self.get_channel_unique_id():
-                self.log.debug("Entered conference")
+                self.log.debug("Entered Conference")
                 self._action_queue.put(event)
             # special case for hangupOnStar in Conference
             elif event['Event-Subclass'] == 'conference::maintenance' \
@@ -206,7 +207,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             elif event['Event-Subclass'] == 'conference::maintenance' \
                 and event['Action'] == 'digits-match' \
                 and event['Unique-ID'] == self.get_channel_unique_id():
-                self.log.debug("Digits match on conference")
+                self.log.debug("Digits match on Conference")
                 digits_action = event['Callback-Url'] 
                 digits_method = event['Callback-Method']
                 if digits_action and digits_method:
@@ -216,6 +217,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     params['ConferenceName'] = event['Conference-Name'] or ''
                     params['ConferenceDigitsMatch'] = event['Digits-Match'] or ''
                     params['ConferenceAction'] = 'digits'
+                    spawn_raw(self.send_to_url, digits_action, params, digits_method)
+        # case dial event
+        elif self.current_element == 'Dial':
+            if event['Event-Subclass'] == 'plivo::dial' \
+                and event['Action'] == 'digits-match' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                self.log.debug("Digits match on Dial")
+                digits_action = event['Callback-Url'] 
+                digits_method = event['Callback-Method']
+                if digits_action and digits_method:
+                    params = {}
+                    params['DialDigitsMatch'] = event['Digits-Match'] or ''
+                    params['DialAction'] = 'digits'
+                    params['DialALegUUID'] = event['Unique-ID']
+                    params['DialBLegUUID'] = event['variable_bridge_uuid']
                     spawn_raw(self.send_to_url, digits_action, params, digits_method)
 
     def has_hangup(self):
@@ -260,15 +276,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def _run(self):
         self.connect()
-        #self.filter('Event-Name /(CHANNEL_HANGUP|CHANNEL_EXECUTE_COMPLETE|CUSTOM)/')
         self.resume()
         # Linger to get all remaining events before closing
         self.linger()
         self.myevents()
         if self._is_eventjson:
-            self.eventjson('CUSTOM conference::maintenance')
+            self.eventjson('CUSTOM conference::maintenance plivo::dial')
         else:
-            self.eventplain('CUSTOM conference::maintenance')
+            self.eventplain('CUSTOM conference::maintenance plivo::dial')
         # Set plivo app flag
         self.set('plivo_app=true')
         # Don't hangup after bridge

@@ -55,7 +55,8 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'dialMusic': '',
                 'redirect': 'true',
                 'callbackUrl': '',
-                'callbackMethod': 'POST'
+                'callbackMethod': 'POST',
+                'digitsMatch': ''
         },
         'GetDigits': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -581,6 +582,7 @@ class Dial(Element):
         self.callback_method = self.extract_attribute_value("callbackMethod")
         if not self.callback_method in ('GET', 'POST'):
             raise RESTAttributeException("callbackMethod must be 'GET' or 'POST'")
+        self.digits_match = self.extract_attribute_value("digitsMatch")
 
     def _prepare_play_string(self, outbound_socket, remote_url):
         sound_files = []
@@ -789,12 +791,36 @@ class Dial(Element):
             outbound_socket.unset("ringback")
 
         # Start dial
-        outbound_socket.log.info("Dial Started %s" % self.dial_str)
         bleg_uuid = ''
         dial_rang = ''
+        digit_realm = ''
+        hangup_cause = 'NORMAL_CLEARING'
+        outbound_socket.log.info("Dial Started %s" % self.dial_str)
         try:
-            outbound_socket.bridge(self.dial_str)
+            # execute bridge
+            outbound_socket.bridge(self.dial_str, lock=False)
+
+            # set bind digit actions
+            if self.digits_match and self.callback_url:
+                # create event template
+                event_template = "Event-Name=CUSTOM,Event-Subclass=plivo::dial,Action=digits-match,Unique-ID=%s,Callback-Url=%s,Callback-Method=%s" \
+                    % (outbound_socket.get_channel_unique_id(), self.callback_url, self.callback_method)
+                digit_realm = "plivo_bda_dial_%s" % outbound_socket.get_channel_unique_id()
+                # for each digits match, set digit binding action
+                for dmatch in self.digits_match.split(','):
+                    dmatch = dmatch.strip()
+                    if dmatch:
+                        raw_event = "%s,Digits-Match=%s" % (event_template, dmatch)
+                        cmd = "%s,%s,exec:event,'%s'" % (digit_realm, dmatch, raw_event)
+                        outbound_socket.bind_digit_action(cmd) 
+            # set digit realm
+            if digit_realm:
+                outbound_socket.digit_action_set_realm(digit_realm)
+
+            # waiting event
             event = outbound_socket.wait_for_action()
+
+            # parse received events
             if event['Event-Name'] == 'CHANNEL_UNBRIDGE':
                 bleg_uuid = event['variable_bridge_uuid'] or ''
                 event = outbound_socket.wait_for_action()
