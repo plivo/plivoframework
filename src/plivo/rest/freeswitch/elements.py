@@ -1351,7 +1351,6 @@ class Record(Element):
             except ValueError, TypeError:
                 outbound_socket.log.warn("Invalid 'record_ms' : '%s'" % str(record_ms))
                 return
-            record_digits = event.get_header("variable_playback_terminator_used")
             params = {}
             params['RecordingFileFormat'] = self.file_format
             params['RecordingFilePath'] = self.file_path
@@ -1365,11 +1364,12 @@ class Record(Element):
                 params['Digits'] = ""
             else:
                 params['RecordingDuration'] = record_ms
+                record_digits = event.get_header("variable_playback_terminator_used")
                 if record_digits:
                     params['Digits'] = record_digits
                 else:
                     params['Digits'] = ""
-            # don't send record result if call has hangup
+            # fetch xml
             self.fetch_rest_xml(self.action, params, method=self.method)
 
 
