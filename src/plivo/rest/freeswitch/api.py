@@ -1084,7 +1084,9 @@ class PlivoRestApi(object):
             msg = "RecordFile Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
 
-        res = self._rest_inbound_socket.conference_api(room, "norecord %s" % recordfile)
+        res = self._rest_inbound_socket.conference_api(room, 
+                                        "norecord %s" % recordfile
+                                        async=False)
         if not res:
             msg = "Conference RecordStop Failed"
             result = False
