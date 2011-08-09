@@ -1058,7 +1058,7 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
         msg = "Conference RecordStart Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return flask.jsonify(Success=result, Message=msg, RecordFile=recordfile)
 
     @auth_protect
     def conference_record_stop(self):
