@@ -1344,25 +1344,25 @@ class Record(Element):
         # If action is set, redirect to this url
         # Otherwise, continue to next Element
         if self.action and is_valid_url(self.action):
-            try:
-                record_ms = None
-                record_ms = event.get_header('variable_record_ms')
-                record_ms = str(int(record_ms)) # check if integer
-            except ValueError, TypeError:
-                outbound_socket.log.warn("Invalid 'record_ms' : '%s'" % str(record_ms))
-                return
             params = {}
             params['RecordingFileFormat'] = self.file_format
             params['RecordingFilePath'] = self.file_path
             params['RecordingFileName'] = filename
             params['RecordFile'] = record_file
+            # case bothLegs is True
             if self.both_legs:
-                # RecordingDuration not available for bothLegs
-                # because recording is in progress
+                # RecordingDuration not available for bothLegs because recording is in progress
                 # Digits is empty for the same reason
                 params['RecordingDuration'] = "-1"
                 params['Digits'] = ""
+            # case bothLegs is False
             else:
+                try:
+                    record_ms = event.get_header('variable_record_ms')
+                    record_ms = str(int(record_ms)) # check if integer
+                except ValueError, TypeError:
+                    outbound_socket.log.warn("Invalid 'record_ms' : '%s'" % str(record_ms))
+                    record_ms = "-1"
                 params['RecordingDuration'] = record_ms
                 record_digits = event.get_header("variable_playback_terminator_used")
                 if record_digits:
