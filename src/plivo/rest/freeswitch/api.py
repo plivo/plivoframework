@@ -758,7 +758,7 @@ class PlivoRestApi(object):
         if filepath:
             filepath = os.path.normpath(filepath) + os.sep
         if not filename:
-            filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), room)
+            filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"), calluuid)
         recordfile = "%s%s.%s" % (filepath, filename, fileformat)
         res = self._rest_inbound_socket.api("uuid_record %s start %s %d" \
                 % (calluuid, recordfile, timelimit))
