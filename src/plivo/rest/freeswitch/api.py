@@ -1085,7 +1085,7 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
 
         res = self._rest_inbound_socket.conference_api(room, 
-                                        "norecord %s" % recordfile
+                                        "norecord %s" % recordfile,
                                         async=False)
         if not res:
             msg = "Conference RecordStop Failed"
