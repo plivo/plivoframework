@@ -411,7 +411,7 @@ class RESTInboundSocket(InboundEventSocket):
             try:
                 self.call_requests[request_uuid] = None
                 del self.call_requests[request_uuid]
-            except KeyError, AttributeError:
+            except (KeyError, AttributeError):
                 pass
             self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
             if not hangup_url:
