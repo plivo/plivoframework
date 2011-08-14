@@ -208,7 +208,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 and event['Action'] == 'digits-match' \
                 and event['Unique-ID'] == self.get_channel_unique_id():
                 self.log.debug("Digits match on Conference")
-                digits_action = event['Callback-Url'] 
+                digits_action = event['Callback-Url']
                 digits_method = event['Callback-Method']
                 if digits_action and digits_method:
                     params = {}
@@ -224,7 +224,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 and event['Action'] == 'digits-match' \
                 and event['Unique-ID'] == self.get_channel_unique_id():
                 self.log.debug("Digits match on Dial")
-                digits_action = event['Callback-Url'] 
+                digits_action = event['Callback-Url']
                 digits_method = event['Callback-Method']
                 if digits_action and digits_method:
                     params = {}
@@ -247,7 +247,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def get_extra_fs_vars(self, event):
         params = {}
-        if not event or not self.extra_fs_vars: 
+        if not event or not self.extra_fs_vars:
             return params
         for var in self.extra_fs_vars.split(','):
             var = var.strip()
@@ -325,7 +325,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = channel.get_header('variable_plivo_sched_hangup_id')
-            # Don't post hangup in outbound direction 
+            # Don't post hangup in outbound direction
             # because it is handled by inboundsocket
             self.default_hangup_url = None
             self.hangup_url = None

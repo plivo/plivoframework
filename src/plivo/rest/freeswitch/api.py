@@ -44,7 +44,7 @@ class Gateway(object):
         self.codecs = codecs
         self.timeout = timeout
         self.extra_dial_string = extra_dial_string
-                
+
     def __repr__(self):
         return "<Gateway RequestUUID=%s To=%s Gw=%s Codecs=%s Timeout=%s ExtraDialString=%s>" \
             % (self.request_uuid, self.to, self.gw, self.codecs, self.timeout, self.extra_dial_string)
@@ -410,7 +410,7 @@ class PlivoRestApi(object):
 
         Required Parameters - You must POST the following parameters:
 
-        Delimiter: Any special character (with the exception of '/' and ',') 
+        Delimiter: Any special character (with the exception of '/' and ',')
         which will be used as a delimiter for the string of parameters below. E.g. '<'
 
         From: The phone number to use as the caller id for the call without
@@ -1084,7 +1084,7 @@ class PlivoRestApi(object):
             msg = "RecordFile Parameter must be present"
             return flask.jsonify(Success=result, Message=msg)
 
-        res = self._rest_inbound_socket.conference_api(room, 
+        res = self._rest_inbound_socket.conference_api(room,
                                         "norecord %s" % recordfile,
                                         async=False)
         if not res:
@@ -1229,7 +1229,7 @@ class PlivoRestApi(object):
             result = False
             return flask.jsonify(Success=result, Message=msg)
         try:
-            member_list = self._parse_conference_xml_list(res, member_filter=members, 
+            member_list = self._parse_conference_xml_list(res, member_filter=members,
                                 uuid_filter=calluuids, mute_filter=onlymuted, deaf_filter=onlydeaf)
             msg = "Conference ListMembers Executed"
             result = True
@@ -1269,7 +1269,7 @@ class PlivoRestApi(object):
         res = self._rest_inbound_socket.conference_api(room='', command="xml_list", async=False)
         if res:
             try:
-                confs = self._parse_conference_xml_list(res, member_filter=members, 
+                confs = self._parse_conference_xml_list(res, member_filter=members,
                                 uuid_filter=calluuids, mute_filter=onlymuted, deaf_filter=onlydeaf)
                 msg = "Conference List Executed"
                 result = True
@@ -1293,7 +1293,7 @@ class PlivoRestApi(object):
 
         Required Parameters - You must POST the following parameters:
 
-        Delimiter: Any special character (with the exception of '/' and ',') 
+        Delimiter: Any special character (with the exception of '/' and ',')
         which will be used as a delimiter for the string of parameters below. E.g. '<'
 
         From: The phone number to use as the caller id for the call without
@@ -1329,7 +1329,7 @@ class PlivoRestApi(object):
         [ExtraDialString]: Additional Originate dialstring to be executed
         while making the outbound call
 
-        [RejectCauses]: List of reject causes for each number (comma ',' separated). 
+        [RejectCauses]: List of reject causes for each number (comma ',' separated).
         If attempt to call one number failed with a reject cause matching in this parameter,
         there isn't more call attempts for this number.
 
@@ -1618,4 +1618,3 @@ class PlivoRestApi(object):
             else:
                 msg = "Scheduled Play Cancelation Failed: %s" % res.get_response()
         return flask.jsonify(Success=result, Message=msg)
-
