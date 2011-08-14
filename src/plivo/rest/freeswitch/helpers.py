@@ -110,7 +110,7 @@ class HTTPUrlRequest(urllib2.Request):
 class HTTPRequest:
     """Helper class for preparing HTTP requests.
     """
-    USER_AGENT = 'Plivo'
+    USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.35 Safari/535.1'
 
     def __init__(self, auth_id='', auth_token=''):
         """initialize a object

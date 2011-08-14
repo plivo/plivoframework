@@ -1184,7 +1184,7 @@ class Play(Element):
 
         if not is_valid_url(audio_path):
             if file_exists(audio_path):
-                self.sound_file_path = "file_string://%s" % audio_path
+                self.sound_file_path = self.convert_file_name("audio_path")
         else:
             if url_exists(audio_path):
                 audio_path = normalize_url_space(audio_path)
@@ -1228,6 +1228,15 @@ class Play(Element):
             return
         else:
             outbound_socket.log.error("Invalid Sound File - Ignoring Play")
+
+        def is_mp3(self, file_name):
+            return (file_name[-3:] == "mp3")
+
+        def convert_file_name(self, file_name):
+            if is_mp3(file_name):
+                return "shout://%s" % file_name
+            else:
+                return "file_string://%s" % file_name
 
 
 class PreAnswer(Element):
