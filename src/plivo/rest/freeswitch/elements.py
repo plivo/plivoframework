@@ -15,7 +15,7 @@ import gevent
 from gevent import spawn_raw
 
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
-                                                        file_exists
+                                        file_exists, normalize_url_space
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
@@ -214,7 +214,7 @@ class Conference(Element):
         (any unique name)
     action: redirect to this URL after leaving conference
     method: submit to 'action' url using GET or POST
-    callbackUrl: url to request when call enters/leaves conference 
+    callbackUrl: url to request when call enters/leaves conference
             or has pressed digits matching (digitsMatch)
     callbackMethod: submit to 'callbackUrl' url using GET or POST
     digitsMatch: a list of matching digits to send with callbackUrl
@@ -456,7 +456,7 @@ class Conference(Element):
                         if dmatch:
                             raw_event = "%s,Digits-Match=%s" % (event_template, dmatch)
                             cmd = "%s,%s,exec:event,'%s'" % (digit_realm, dmatch, raw_event)
-                            outbound_socket.bind_digit_action(cmd) 
+                            outbound_socket.bind_digit_action(cmd)
                 # set hangup on star
                 if self.hangup_on_star:
                     # create event template
@@ -464,7 +464,7 @@ class Conference(Element):
                         % (outbound_socket.get_channel_unique_id(), self.member_id, self.room, self.conf_id)
                     digit_realm = "plivo_bda_%s" % outbound_socket.get_channel_unique_id()
                     cmd = "%s,*,exec:event,'%s'" % (digit_realm, raw_event)
-                    outbound_socket.bind_digit_action(cmd) 
+                    outbound_socket.bind_digit_action(cmd)
                 # set digit realm
                 if digit_realm:
                     outbound_socket.digit_action_set_realm(digit_realm)
@@ -516,7 +516,7 @@ class Conference(Element):
 class Dial(Element):
     """Dial another phone number and connect it to this call
 
-    action: submit the result of the dial and redirect to this URL 
+    action: submit the result of the dial and redirect to this URL
     method: submit to 'action' url using GET or POST
     hangupOnStar: hangup the b leg if a leg presses start and this is true
     callerId: caller id to be send to the dialed number
@@ -525,7 +525,7 @@ class Dial(Element):
     confirmKey: Key to be pressed to bridge the call.
     dialMusic: Play music to a leg while doing a dial to b leg
                 Can be a list of files separated by comma
-    redirect: if 'false', don't redirect to 'action', only request url 
+    redirect: if 'false', don't redirect to 'action', only request url
         and continue to next element. (default 'true')
     callbackUrl: url to request when bridge starts and bridge ends
     callbackMethod: submit to 'callbackUrl' url using GET or POST
@@ -735,7 +735,7 @@ class Dial(Element):
             return
         # Create dialstring
         self.dial_str = ':_:'.join(numbers)
-        
+
         # Don't hangup after bridge !
         outbound_socket.set("hangup_after_bridge=false")
 
@@ -743,7 +743,7 @@ class Dial(Element):
         sched_hangup_id = str(uuid.uuid1())
         dial_time_limit = "api_on_answer='sched_api +%d %s 'uuid_transfer %s -bleg hangup:ALLOTTED_TIMEOUT inline''" \
                       % (self.time_limit, sched_hangup_id, outbound_socket.get_channel_unique_id())
-        
+
         # Set confirm sound and key or unset if not provided
         dial_confirm = ''
         if self.confirm_sound:
@@ -767,13 +767,13 @@ class Dial(Element):
             self.dial_str = '<%s%s>%s' % (dial_time_limit, dial_confirm, self.dial_str)
         else:
             self.dial_str = '{%s%s}%s' % (dial_time_limit, dial_confirm, self.dial_str)
-                
+
         # Set hangup on '*' or unset if not provided
         if self.hangup_on_star:
             outbound_socket.set("bridge_terminate_key=*")
         else:
             outbound_socket.unset("bridge_terminate_key")
-        
+
         # Play Dial music or bridge the early media accordingly
         ringbacks = ''
         if self.dial_music:
@@ -812,7 +812,7 @@ class Dial(Element):
                     if dmatch:
                         raw_event = "%s,Digits-Match=%s" % (event_template, dmatch)
                         cmd = "%s,%s,exec:event,'%s'" % (digit_realm, dmatch, raw_event)
-                        outbound_socket.bind_digit_action(cmd) 
+                        outbound_socket.bind_digit_action(cmd)
             # set digit realm
             if digit_realm:
                 outbound_socket.digit_action_set_realm(digit_realm)
@@ -1187,6 +1187,7 @@ class Play(Element):
                 self.sound_file_path = "file_string://%s" % audio_path
         else:
             if url_exists(audio_path):
+                audio_path = normalize_url_space(audio_path)
                 if audio_path[:7].lower() == "http://":
                     audio_path = audio_path[7:]
                 elif audio_path[:8].lower() == "https://":

@@ -50,6 +50,8 @@ def url_exists(url):
 def file_exists(filepath):
     return os.path.isfile(filepath)
 
+def normalize_url_space(url):
+    return url.strip().replace(' ', '+')
 
 def get_post_param(request, key):
     try:
@@ -188,17 +190,17 @@ class HTTPRequest:
         return response
 
 
-
-
 def get_config(filename):
     config = ConfigParser.SafeConfigParser()
     config.read(filename)
     return config
 
+
 def get_json_config(url):
     config = HTTPJsonConfig()
     config.read(url)
     return config
+
 
 def get_conf_value(config, section, key):
     try:
@@ -255,7 +257,7 @@ class PlivoConfig(object):
             for section in self._cfg.sections():
                 self._cache[section] = {}
                 for var, val in self._cfg.items(section):
-                    self._cache[section][var] = val 
+                    self._cache[section][var] = val
 
     def read(self):
         self._cfg.read(self._source)
@@ -289,5 +291,3 @@ class PlivoConfig(object):
 
     def reload(self):
         self.read()
-
-
