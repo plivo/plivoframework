@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Plivo Installation script for CentOS 5.5/5.6
+# Plivo Installation script for CentOS 5 and 6
 # and Debian based distros (Debian 5.0 , Ubuntu 10.04 and above)
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
@@ -85,52 +85,61 @@ case $DIST in
     'CENTOS')
         yum -y update
         yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel
+        if [ $PY_MAJOR_VERSION -eq 2 ]; then
 
-        which git &>/dev/null
-        if [ $? -ne 0 ]; then
-            #install the RPMFORGE Repository
-            if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
-            then
-                # Install RPMFORGE Repo
-                rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
-echo '
-[rpmforge]
-name = Red Hat Enterprise $releasever - RPMforge.net - dag
-mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
-enabled = 0
-protect = 0
-gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
-gpgcheck = 1
-' > /etc/yum.repos.d/rpmforge.repo
+            if [ $PY_MINOR_VERSION -eq 4 ]; then
+
+                which git &>/dev/null
+                if [ $? -ne 0 ]; then
+                    #install the RPMFORGE Repository
+                    if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
+                    then
+                        # Install RPMFORGE Repo
+                        rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
+                echo '
+                [rpmforge]
+                name = Red Hat Enterprise $releasever - RPMforge.net - dag
+                mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
+                enabled = 0
+                protect = 0
+                gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
+                gpgcheck = 1
+                ' > /etc/yum.repos.d/rpmforge.repo
+                    fi
+                    yum -y --enablerepo=rpmforge install git-core
+                fi
+
+                # Setup Env
+                mkdir -p $REAL_PATH/deploy
+                DEPLOY=$REAL_PATH/deploy
+                cd $DEPLOY
+                cd $REAL_PATH/deploy
+
+                # Install Isolated copy of python
+                mkdir source
+                cd source
+                wget http://www.python.org/ftp/python/$CENTOS_PYTHON_VERSION/Python-$CENTOS_PYTHON_VERSION.tgz
+                tar -xvf Python-$CENTOS_PYTHON_VERSION.tgz
+                cd Python-$CENTOS_PYTHON_VERSION
+                ./configure --prefix=$DEPLOY
+                make && make install
+                # This is what does all the magic by setting upgraded python
+                export PATH=$DEPLOY/bin:$PATH
+
+                # Install easy_install
+                cd $DEPLOY/source
+                wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+                $DEPLOY/bin/python ez_setup.py
+
+                EASY_INSTALL=$(which easy_install)
+                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
+                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
+            else
+                yum -y install git-core
+                easy_install virtualenv
+                easy_install pip
             fi
-            yum -y --enablerepo=rpmforge install git-core
         fi
-
-        # Setup Env
-        mkdir -p $REAL_PATH/deploy
-        DEPLOY=$REAL_PATH/deploy
-        cd $DEPLOY
-        cd $REAL_PATH/deploy
-
-        # Install Isolated copy of python
-        mkdir source
-        cd source
-        wget http://www.python.org/ftp/python/$CENTOS_PYTHON_VERSION/Python-$CENTOS_PYTHON_VERSION.tgz
-        tar -xvf Python-$CENTOS_PYTHON_VERSION.tgz
-        cd Python-$CENTOS_PYTHON_VERSION
-        ./configure --prefix=$DEPLOY
-        make && make install
-        # This is what does all the magic by setting upgraded python
-        export PATH=$DEPLOY/bin:$PATH
-
-        # Install easy_install
-        cd $DEPLOY/source
-        wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
-        $DEPLOY/bin/python ez_setup.py
-
-        EASY_INSTALL=$(which easy_install)
-        $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
-        $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
     ;;
 esac
 
