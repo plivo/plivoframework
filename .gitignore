@@ -1,9 +1,9 @@
-*.pyc
-*egg*
-dist*
 build*
-src/dist*
-src/build*
-src/*egg*
-.idea
+dist*
 docs/_build/*
+*egg*
+.idea
+*.pyc
+src/build*
+src/dist*
+src/*egg*
