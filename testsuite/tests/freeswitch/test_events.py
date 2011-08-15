@@ -29,8 +29,6 @@ Task-Runtime: 1294076056
 """
 
 
-
-
     def test_command_reply(self):
         ev = Event(self.EVENT_COMMAND_REPLY)
         self.assertEquals(ev.get_content_type(), "command/reply")

@@ -3,13 +3,14 @@
 
 from unittest import TestCase
 
-from plivo.core.freeswitch.inboundsocket import InboundEventSocket
-from plivo.core.freeswitch.eventtypes import Event
-from plivo.core.errors import ConnectError
 import gevent
 from gevent import socket
 from gevent import Timeout
 from gevent.server import StreamServer
+
+from plivo.core.freeswitch.inboundsocket import InboundEventSocket
+from plivo.core.freeswitch.eventtypes import Event
+from plivo.core.errors import ConnectError
 
 
 class TestClient(object):
@@ -183,7 +184,7 @@ Task-Runtime: 1294132816
 
 class TestInboundEventSocket(InboundEventSocket):
     def __init__(self, host, port, password, filter='ALL', pool_size=500, connect_timeout=5):
-        InboundEventSocket.__init__(self, host, port, password, filter, pool_size=pool_size, 
+        InboundEventSocket.__init__(self, host, port, password, filter, pool_size=pool_size,
                                         connect_timeout=connect_timeout, eventjson=False)
         self.heartbeat_events = []
         self.re_schedule_events = []

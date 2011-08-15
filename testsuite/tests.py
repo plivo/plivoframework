@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
+import os
+import sys
 import unittest
 
 
@@ -23,8 +25,6 @@ def run():
 
 
 if __name__ == '__main__':
-    import os
-    import sys
     #sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     sys.path.insert(0, '.')
     run()
