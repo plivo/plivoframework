@@ -96,7 +96,7 @@ case $DIST in
                     then
                         # Install RPMFORGE Repo
                         rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
-echo '
+                        echo '
 [rpmforge]
 name = Red Hat Enterprise $releasever - RPMforge.net - dag
 mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
