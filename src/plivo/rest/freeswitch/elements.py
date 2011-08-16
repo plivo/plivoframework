@@ -1195,7 +1195,7 @@ class Play(Element):
         if not self.sound_file_path:
             url = normalize_url_space(self.temp_audio_path)
             if url_exists(url):
-                file_name =  self.get_resource(outbound_socket, url)
+                file_name = self.get_resource(outbound_socket, url)
                 if file_name:
                     self.sound_file_path = self.convert_file_name(file_name)
 
@@ -1367,7 +1367,7 @@ class Record(Element):
             outbound_socket.set("media_bug_answer_req=true")
             outbound_socket.record_session(record_file)
             outbound_socket.api("sched_api +%s none uuid_record %s stop %s" \
-                                % (self.max_length, 
+                                % (self.max_length,
                                    outbound_socket.get_channel_unique_id(),
                                    record_file)
                                )

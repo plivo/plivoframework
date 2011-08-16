@@ -321,7 +321,7 @@ class ResourceCache(object):
         root_path = os.path.abspath(os.path.dirname(__file__))
         self.cache_path = os.path.join(root_path, cache_path)
         self.cache_params_file = cache_params_file
-        if not os.path.exists(cache_path):
+        if not os.path.exists(self.cache_path):
             os.makedirs(self.cache_path)
         self.cache_params_path = os.path.join(self.cache_path, cache_params_file)
         open(self.cache_params_path, "a").close()
