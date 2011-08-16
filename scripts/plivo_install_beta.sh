@@ -96,15 +96,15 @@ case $DIST in
                     then
                         # Install RPMFORGE Repo
                         rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
-                echo '
-                [rpmforge]
-                name = Red Hat Enterprise $releasever - RPMforge.net - dag
-                mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
-                enabled = 0
-                protect = 0
-                gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
-                gpgcheck = 1
-                ' > /etc/yum.repos.d/rpmforge.repo
+echo '
+[rpmforge]
+name = Red Hat Enterprise $releasever - RPMforge.net - dag
+mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
+enabled = 0
+protect = 0
+gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
+gpgcheck = 1
+' > /etc/yum.repos.d/rpmforge.repo
                     fi
                     yum -y --enablerepo=rpmforge install git-core
                 fi
