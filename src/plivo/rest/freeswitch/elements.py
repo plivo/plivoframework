@@ -763,10 +763,10 @@ class Dial(Element):
                 dial_confirm = ",%s,%s,%s,playback_delimiter=!" % (confirm_music_str, confirm_key_str, confirm_cancel)
 
         # Append time limit and group confirm to dial string
-        if len(numbers) > 1:
-            self.dial_str = '<%s%s>%s' % (dial_time_limit, dial_confirm, self.dial_str)
-        else:
-            self.dial_str = '{%s%s}%s' % (dial_time_limit, dial_confirm, self.dial_str)
+        self.dial_str = '<%s%s>%s' % (dial_time_limit, dial_confirm, self.dial_str)
+        # Ugly hack to force use of enterprise originate because simple originate lacks speak support in ringback
+        if len(numbers) < 2:
+            self.dial_str += ':_:'
 
         # Set hangup on '*' or unset if not provided
         if self.hangup_on_star:
