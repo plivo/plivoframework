@@ -1269,7 +1269,9 @@ class Record(Element):
     method: submit to 'action' url using GET or POST
     maxLength: maximum number of seconds to record (default 60)
     timeout: seconds of silence before considering the recording complete (default 500)
+            Only used when bothLegs is 'false' !
     playBeep: play a beep before recording (true/false, default true)
+            Only used when bothLegs is 'false' !
     finishOnKey: Stop recording on this key
     fileFormat: file format (default mp3)
     filePath: complete file path to save the file to
@@ -1312,13 +1314,23 @@ class Record(Element):
             raise RESTAttributeException("method must be 'GET' or 'POST'")
         self.method = method
 
+        # Validate maxLength
+        try:
+            max_length = int(max_length)
+        except (ValueError, TypeError):
+            raise RESTFormatException("Record 'maxLength' must be a positive integer")
         if max_length < 1:
             raise RESTFormatException("Record 'maxLength' must be a positive integer")
-        self.max_length = max_length
+        self.max_length = str(max_length)
+        # Validate timeout
+        try:
+            timeout = int(timeout)
+        except (ValueError, TypeError):
+            raise RESTFormatException("Record 'timeout' must be a positive integer")
         if timeout < 1:
             raise RESTFormatException("Record 'timeout' must be a positive integer")
-        self.timeout = timeout
-        # :TODO Validate Finish on Key
+        self.timeout = str(timeout)
+        # Finish on Key
         self.finish_on_key = finish_on_key
 
     def execute(self, outbound_socket):
@@ -1326,13 +1338,18 @@ class Record(Element):
             filename = self.filename
         else:
             filename = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
-                                outbound_socket.call_uuid)
+                                outbound_socket.get_channel_unique_id())
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
 
         if self.both_legs:
             outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.set("media_bug_answer_req=true")
             outbound_socket.record_session(record_file)
+            outbound_socket.api("sched_api +%s none uuid_record %s stop %s" \
+                                % (self.max_length, 
+                                   outbound_socket.get_channel_unique_id(),
+                                   record_file)
+                               )
             outbound_socket.log.info("Record Both Executed")
         else:
             if self.play_beep:
