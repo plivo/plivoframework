@@ -40,6 +40,11 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         # load config
         self._config = None
         self.load_config()
+        # create a cache instance if enabled
+        if self.cache_path and self.cache_params_file:
+            self.cache = helpers.ResourceCache(self.cache_path, self.cache_params_file)
+        else:
+            self.cache = None
 
         # This is where we define the connection with the
         # Plivo XML element Processor
@@ -63,17 +68,17 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                 self.create_logger(config=config)
                 self.log.info("Starting ...")
                 self.log.warn("Logger %s" % str(self.log))
-        
+
             # create outbound server
             if not reload:
                 self.fs_outbound_address = config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
                 self.fs_host, fs_port = self.fs_outbound_address.split(':', 1)
                 self.fs_port = int(fs_port)
-            
+
             self.default_answer_url = config.get('common', 'DEFAULT_ANSWER_URL')
-            
+
             self.default_hangup_url = config.get('common', 'DEFAULT_HANGUP_URL', default='')
-            
+
             self.default_http_method = config.get('common', 'DEFAULT_HTTP_METHOD', default='')
             if not self.default_http_method in ('GET', 'POST'):
                 self.default_http_method = 'POST'
@@ -83,11 +88,15 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
 
             self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
 
+            # load cache params
+            self.cache_path = config.get('common', 'CACHE_PATH', default='')
+            self.cache_params_file = config.get('common', 'CACHE_PARAM_FILE', default='')
+
             # create new logger if reloading
             if reload:
                 self.create_logger(config=config)
                 self.log.warn("New logger %s" % str(self.log))
-            
+
             # set new config
             self._config = config
             self.log.info("Config : %s" % str(self._config.dumps()))
@@ -118,7 +127,7 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
     def handle_request(self, socket, address):
         request_id = self._get_request_id()
         self.log.info("(%d) New request from %s" % (request_id, str(address)))
-        self._requestClass(socket, address, self.log,
+        self._requestClass(socket, address, self.log, self.cache,
                            default_answer_url=self.default_answer_url,
                            default_hangup_url=self.default_hangup_url,
                            default_http_method=self.default_http_method,

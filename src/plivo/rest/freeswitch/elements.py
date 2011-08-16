@@ -320,6 +320,7 @@ class Conference(Element):
                 if element.tag == 'Play':
                     child_instance = Play()
                     child_instance.parse_element(element)
+                    child_instance.prepare(outbound_socket)
                     sound_file = child_instance.sound_file_path
                     if sound_file:
                         loop = child_instance.loop_times
@@ -602,6 +603,7 @@ class Dial(Element):
                 if element.tag == 'Play':
                     child_instance = Play()
                     child_instance.parse_element(element)
+                    child_instance.prepare(outbound_socket)
                     sound_file = child_instance.sound_file_path
                     if sound_file:
                         loop = child_instance.loop_times
@@ -946,11 +948,11 @@ class GetDigits(Element):
         self.finish_on_key = finish_on_key
         self.retries = retries
 
-    def prepare(self):
+    def prepare(self, outbound_socket):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
                 # :TODO Prepare Element concurrently
-                child_instance.prepare()
+                child_instance.prepare(outbound_socket)
 
     def execute(self, outbound_socket):
         for child_instance in self.children:
@@ -1152,7 +1154,7 @@ class Wait(Element):
 
 
 class Play(Element):
-    """Play audio file at a URL
+    """Play local audio file or at a URL
 
     url: url of audio file, MIME type on file must be set correctly
     loop: number of time to play the audio - (0 means infinite)
@@ -1162,6 +1164,7 @@ class Play(Element):
         self.audio_directory = ''
         self.loop_times = 1
         self.sound_file_path = ''
+        self.temp_audio_path = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1184,25 +1187,17 @@ class Play(Element):
 
         if not is_valid_url(audio_path):
             if file_exists(audio_path):
-                self.sound_file_path = self.convert_file_name("audio_path")
+                self.sound_file_path = self.convert_file_name(audio_path)
         else:
-            if url_exists(audio_path):
-                audio_path = normalize_url_space(audio_path)
-                if audio_path[:7].lower() == "http://":
-                    audio_path = audio_path[7:]
-                elif audio_path[:8].lower() == "https://":
-                    audio_path = audio_path[8:]
-                elif audio_path[:6].lower() == "ftp://":
-                    audio_path = audio_path[6:]
-                else:
-                    pass
-                self.sound_file_path = "shout://%s" % audio_path
+            self.temp_audio_path = audio_path
 
-    def prepare(self):
-        # TODO: If Sound File is Audio URL then Check file type format
-        # Download the file, move to audio directory and set sound file path
-        # Create MD5 hash to identify the with filename for caching
-        pass
+    def prepare(self, outbound_socket):
+        if not self.sound_file_path:
+            url = normalize_url_space(self.temp_audio_path)
+            if url_exists(url):
+                file_name =  self.get_resource(outbound_socket, url)
+                if file_name:
+                    self.sound_file_path = self.convert_file_name(file_name)
 
     def execute(self, outbound_socket):
         if self.sound_file_path:
@@ -1229,14 +1224,40 @@ class Play(Element):
         else:
             outbound_socket.log.error("Invalid Sound File - Ignoring Play")
 
-        def is_mp3(self, file_name):
-            return (file_name[-3:] == "mp3")
-
-        def convert_file_name(self, file_name):
-            if is_mp3(file_name):
-                return "shout://%s" % file_name
+    def get_resource(self, outbound_socket, url):
+        full_file_name = url
+        if outbound_socket.cache is not None:
+            rk = outbound_socket.cache.get_resource_key(url)
+            outbound_socket.log.debug("Resource key %s" %rk)
+            #~outbound_socket.cache.delete_resource(rk)
+            resource_key, resource_type, etag, last_modified = outbound_socket.cache.get_resource_params(url)
+            if resource_key is None:
+                outbound_socket.log.info("Resource not found in cache. Download and Cache")
+                try:
+                    full_file_name = outbound_socket.cache.cache_resource(url)
+                except UnsupportedResourceFormat:
+                    outbound_socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
             else:
-                return "file_string://%s" % file_name
+                outbound_socket.log.debug("Resource found in Cache. Check if source is newer")
+                updated, new_etag, new_last_modified = outbound_socket.cache.is_resource_updated(url, etag, last_modified)
+                if not updated:
+                    outbound_socket.log.debug("Source file same. Use Cached Version")
+                    file_name = "%s.%s" % (resource_key, resource_type)
+                    full_file_name = os.path.join(outbound_socket.cache.cache_path, file_name)
+                else:
+                    outbound_socket.log.debug("Source file updated. Download and Cache")
+                    try:
+                        full_file_name = outbound_socket.cache.cache_resource(url)
+                    except UnsupportedResourceFormat:
+                        outbound_socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
+
+        return full_file_name
+
+    def is_mp3(self, file_name):
+        return (file_name[-3:] == "mp3")
+
+    def convert_file_name(self, file_name):
+        return "file_string://%s" % file_name
 
 
 class PreAnswer(Element):
@@ -1249,10 +1270,10 @@ class PreAnswer(Element):
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
 
-    def prepare(self):
+    def prepare(self, outbound_socket):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
-                child_instance.prepare()
+                child_instance.prepare(outbound_socket)
 
     def execute(self, outbound_socket):
         outbound_socket.preanswer()

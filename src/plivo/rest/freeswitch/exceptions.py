@@ -10,10 +10,6 @@ class RESTSyntaxException(Exception):
     pass
 
 
-class UnrecognizedElementException(Exception):
-    pass
-
-
 class RESTAttributeException(Exception):
     pass
 
@@ -25,8 +21,10 @@ class RESTDownloadException(Exception):
 class RESTNoExecuteException(Exception):
     pass
 
+
 class RESTHangup(Exception):
     pass
+
 
 class RESTRedirectException(Exception):
     def __init__(self, url=None, params={}, method=None):
@@ -43,3 +41,10 @@ class RESTRedirectException(Exception):
     def get_params(self):
         return self.params
 
+
+class UnrecognizedElementException(Exception):
+    pass
+
+
+class UnsupportedResourceFormat(Exception):
+    pass

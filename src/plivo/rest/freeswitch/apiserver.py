@@ -55,6 +55,12 @@ class PlivoRestServer(PlivoRestApi):
         self._config = None
         self.load_config()
 
+        # create a cache instance if enabled
+        if self.cache_path and self.cache_params_file:
+            self.cache = helpers.ResourceCache(self.cache_path, self.cache_params_file)
+        else:
+            self.cache = None
+
         # create inbound socket instance
         self._rest_inbound_socket = RESTInboundSocket(server=self)
         # expose API functions to flask app
@@ -123,7 +129,7 @@ class PlivoRestServer(PlivoRestApi):
         backup_config = self._config
         # create config
         config = helpers.PlivoConfig(self.configfile)
-        
+
         try:
             # read config
             config.read()
@@ -152,7 +158,7 @@ class PlivoRestServer(PlivoRestApi):
                 # get outbound socket host/port
                 self.fs_out_address = config.get('outbound_server', 'FS_OUTBOUND_ADDRESS')
                 self.fs_out_host, self.fs_out_port  = self.fs_out_address.split(':', 1)
-                
+
                 # if outbound host is 0.0.0.0, send to 127.0.0.1
                 if self.fs_out_host == '0.0.0.0':
                     self.fs_out_address = '127.0.0.1:%s' % self.fs_out_port
@@ -172,6 +178,10 @@ class PlivoRestServer(PlivoRestApi):
 
             # get call_heartbeat url
             self.call_heartbeat_url = config.get('rest_server', 'CALL_HEARTBEAT_URL', default='')
+
+            # load cache params
+            self.cache_path = config.get('common', 'CACHE_PATH', default='')
+            self.cache_params_file = config.get('common', 'CACHE_PARAM_FILE', default='')
 
             # get pid file for reloading outbound server (ugly hack ...)
             try:
@@ -199,7 +209,7 @@ class PlivoRestServer(PlivoRestApi):
                 sys.stderr.write("Error loading config: %s" % str(e))
                 sys.stderr.flush()
                 raise e
-                
+
     def reload(self):
         self.log.warn("Reload ...")
         self.load_config(reload=True)

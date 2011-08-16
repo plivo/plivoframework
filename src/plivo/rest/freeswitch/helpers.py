@@ -9,14 +9,28 @@ import ConfigParser
 from hashlib import sha1
 import hmac
 import httplib
+import os
 import os.path
 import re
 import urllib
 import urllib2
 import urlparse
+import uuid
+
+# remove depracated warning in python2.6
+try:
+    from hashlib import md5 as _md5
+except ImportError:
+    import md5
+    _md5 = md5.new
 
 from werkzeug.datastructures import MultiDict
 import ujson as json
+
+
+MIME_TYPES = {'audio/mpeg': 'mp3',
+              'audio/x-wav': 'wav',
+              }
 
 
 def get_substring(start_char, end_char, data):
@@ -291,3 +305,101 @@ class PlivoConfig(object):
 
     def reload(self):
         self.read()
+
+
+class CacheErrorHandler(urllib2.HTTPDefaultErrorHandler):
+    def http_error_default(self, req, fp, code, msg, headers):
+        result = urllib2.HTTPError(req.get_full_url(), code, msg, headers, fp)
+        result.status = code
+        return result
+
+
+class ResourceCache(object):
+    """Uses a local directory as a store for cached files.
+    """
+    def __init__(self, cache_path="plivocache/", cache_params_file="plivocache.ini"):
+        root_path = os.path.abspath(os.path.dirname(__file__))
+        self.cache_path = os.path.join(root_path, cache_path)
+        self.cache_params_file = cache_params_file
+        if not os.path.exists(cache_path):
+            os.makedirs(self.cache_path)
+        self.cache_params_path = os.path.join(self.cache_path, cache_params_file)
+        open(self.cache_params_path, "a").close()
+        self.opener = urllib2.build_opener(CacheErrorHandler())
+
+    def get_resource_params(self, url):
+        resource_key = self.get_resource_key(url)
+        if os.path.exists(self.cache_params_path):
+            config = ConfigParser.SafeConfigParser()
+            config.read(self.cache_params_path)
+            try:
+                resource_type = config.get(resource_key, 'resource_type')
+                etag = config.get(resource_key, 'etag')
+                last_modified = config.get(resource_key, 'last_modified')
+                return resource_key, resource_type, etag, last_modified
+            except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+                return None, None, None, None
+
+    def update_resource_params(self, resource_key, resource_type, etag, last_modified):
+        config = ConfigParser.SafeConfigParser()
+        config.add_section(resource_key)
+        if etag is None:
+            etag = ""
+        if last_modified is None:
+            last_modified = ""
+        config.set(resource_key, "etag", etag)
+        config.set(resource_key, "last_modified", last_modified)
+        config.set(resource_key, "resource_type", resource_type)
+        param_file = open(self.cache_params_path,'a', os.O_NONBLOCK)
+        config.write(param_file)
+
+    def delete_resource(self, resource_key):
+        if os.path.exists(self.cache_params_path):
+            config = ConfigParser.SafeConfigParser()
+            config.read(self.cache_params_path)
+            config.remove_section(resource_key)
+            param_file = open(self.cache_params_path,'a', os.O_NONBLOCK)
+            config.write(param_file)
+
+    def cache_resource(self, url):
+        request = urllib2.Request(url)
+        user_agent = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.35 Safari/535.1'
+        request.add_header('User-Agent', user_agent)
+        first_time = self.opener.open(request)
+        try:
+            resource_type = MIME_TYPES[first_time.headers.get('Content-Type')]
+        except KeyError:
+            raise UnsupportedResourceFormat("Resource format not supported")
+
+        etag = first_time.headers.get('ETag')
+        last_modified = first_time.headers.get('Last-Modified')
+        response = urllib2.urlopen(request)
+        resource_key = self.get_resource_key(url)
+        local_name = "%s.%s" % (resource_key, resource_type)
+        cache_full_path = os.path.join(self.cache_path, local_name)
+        f = open(cache_full_path, 'wb')
+        f.write(response.read())
+        f.close()
+        self.update_resource_params(resource_key, resource_type, etag, last_modified)
+        return cache_full_path
+
+    def get_resource_key(self, url):
+        return base64.urlsafe_b64encode(_md5(url).digest())
+
+    def is_resource_updated(self, url, etag, last_modified):
+        no_change = (False, None, None)
+        # if no ETag, then check for 'Last-Modified' header
+        if etag is not None and etag != "":
+            request = urllib2.Request(url)
+            request.add_header('If-None-Match', etag)
+        elif last_modified is not None and last_modified != "":
+            request = urllib2.Request(url)
+            request.add_header('If-Modified-Since', last_modified)
+        else:
+            return no_change
+
+        second_try = self.opener.open(request)
+        if second_try.status == 304:
+            return no_change
+
+        return True, etag, last_modified

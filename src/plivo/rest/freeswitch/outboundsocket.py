@@ -81,7 +81,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                           'Dial',
                          )
 
-    def __init__(self, socket, address, log,
+    def __init__(self, socket, address, log, cache,
                  default_answer_url=None,
                  default_hangup_url=None,
                  default_http_method='POST',
@@ -120,6 +120,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.extra_fs_vars = extra_fs_vars
         # set answered flag
         self.answered = False
+        self.cache = cache
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter=None,
                                      eventjson=True, pool_size=200, trace=trace)
@@ -542,7 +543,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         for element_instance in self.parsed_element:
             if hasattr(element_instance, 'prepare'):
                 # TODO Prepare element concurrently
-                element_instance.prepare()
+                element_instance.prepare(self)
             # Check if it's an inbound call
             if self.session_params['Direction'] == 'inbound':
                 # Answer the call if element need it
@@ -560,9 +561,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if not self.has_hangup():
             xfer_progress = self.get_var('plivo_transfer_progress') == 'true'
             if not xfer_progress:
-                self.log.warn('No more Elements, Hangup Now !')
+                self.log.info('No more Elements, Hangup Now !')
                 self.session_params['CallStatus'] = 'completed'
                 self.session_params['HangupCause'] = 'NORMAL_CLEARING'
                 self.hangup()
             else:
-                self.log.warn('No more Elements, Transfer In Progress !')
+                self.log.info('No more Elements, Transfer In Progress !')
