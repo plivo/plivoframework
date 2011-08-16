@@ -84,7 +84,8 @@ case $DIST in
     ;;
     'CENTOS')
         yum -y update
-        yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel
+        yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
+        yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel which
         if [ $PY_MAJOR_VERSION -eq 2 ]; then
 
             if [ $PY_MINOR_VERSION -eq 4 ]; then
