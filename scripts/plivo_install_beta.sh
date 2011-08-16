@@ -73,6 +73,7 @@ case $DIST in
         if [ "$DEBIAN_VERSION" = "5" ]; then
             echo "deb http://backports.debian.org/debian-backports lenny-backports main" >> /etc/apt/sources.list
             apt-get -y update
+            apt-get -y install autoconf automake autotools-dev binutils bison build-essential cpp curl flex g++ gcc git-core libaudiofile-dev libc6-dev libdb-dev libexpat1 libgdbm-dev libgnutls-dev libmcrypt-dev libncurses5-dev libnewt-dev libpcre3 libpopt-dev libsctp-dev libsqlite3-dev libtiff4 libtiff4-dev libtool libx11-dev libxml2 libxml2-dev lksctp-tools lynx m4 make mcrypt ncftp nmap openssl sox sqlite3 ssl-cert ssl-cert unixodbc-dev unzip zip zlib1g-dev zlib1g-dev
             apt-get -y install git-core python-setuptools python-dev build-essential
             apt-get -y install -t lenny-backports libevent-1.4-2 libevent-dev
         else
