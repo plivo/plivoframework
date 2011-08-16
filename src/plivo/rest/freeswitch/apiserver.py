@@ -296,8 +296,8 @@ class PlivoRestServer(PlivoRestApi):
                 sleep_for = retries * 10
                 self.log.error("Reconnecting in %d seconds" % sleep_for)
                 gevent.sleep(sleep_for)
-                # don't sleep more than 120 secs
-                if retries < 12:
+                # don't sleep more than 30 secs
+                if retries < 3:
                     retries += 1
         except (SystemExit, KeyboardInterrupt):
             pass
