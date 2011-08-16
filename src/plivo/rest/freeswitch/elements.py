@@ -396,7 +396,7 @@ class Conference(Element):
             outbound_socket.unset("conference_moh_sound")
         # set member flags
         if self.muted:
-            flags.append("muted")
+            flags.append("mute")
         if self.start_on_enter:
             flags.append("moderator")
         else:
