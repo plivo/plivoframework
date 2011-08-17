@@ -163,6 +163,7 @@ class RESTInboundSocket(InboundEventSocket):
             if ring_url:
                 called_num = event['Caller-Destination-Number']
                 caller_num = event['Caller-Caller-ID-Number']
+                call_uuid = event['Unique-ID'] or ''
                 self.log.info("Call from %s to %s Ringing for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
                 params = {
@@ -170,7 +171,8 @@ class RESTInboundSocket(InboundEventSocket):
                         'RequestUUID': request_uuid,
                         'Direction': direction,
                         'CallStatus': 'ringing',
-                        'From': caller_num
+                        'From': caller_num,
+                        'CallUUID': call_uuid
                     }
                 # add extra params
                 extra_params = self.get_extra_fs_vars(event)
@@ -196,6 +198,7 @@ class RESTInboundSocket(InboundEventSocket):
                 call_req.gateways = []
                 called_num = event['Caller-Destination-Number']
                 caller_num = event['Caller-Caller-ID-Number']
+                call_uuid = event['Unique-ID'] or ''
                 self.log.info("Call from %s to %s in EarlyMedia for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
                 # send ring if ring_url found
@@ -206,7 +209,8 @@ class RESTInboundSocket(InboundEventSocket):
                             'RequestUUID': request_uuid,
                             'Direction': direction,
                             'CallStatus': 'ringing',
-                            'From': caller_num
+                            'From': caller_num,
+                            'CallUUID': call_uuid
                         }
                     # add extra params
                     extra_params = self.get_extra_fs_vars(event)
