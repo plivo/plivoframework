@@ -287,6 +287,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # Linger to get all remaining events before closing
         self.linger()
         self.myevents()
+        self.divert_events('on')
         if self._is_eventjson:
             self.eventjson('CUSTOM conference::maintenance plivo::dial')
         else:
