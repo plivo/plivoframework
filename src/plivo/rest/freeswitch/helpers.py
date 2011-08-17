@@ -403,3 +403,33 @@ class ResourceCache(object):
             return no_change
 
         return True, etag, last_modified
+
+
+def get_resource(socket, url):
+    full_file_name = url
+    if socket.cache is not None:
+        rk = socket.cache.get_resource_key(url)
+        socket.log.debug("Resource key %s" %rk)
+        #~socket.cache.delete_resource(rk)
+        resource_key, resource_type, etag, last_modified = socket.cache.get_resource_params(url)
+        if resource_key is None:
+            socket.log.info("Resource not found in cache. Download and Cache")
+            try:
+                full_file_name = socket.cache.cache_resource(url)
+            except UnsupportedResourceFormat:
+                socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
+        else:
+            socket.log.debug("Resource found in Cache. Check if source is newer")
+            updated, new_etag, new_last_modified = socket.cache.is_resource_updated(url, etag, last_modified)
+            if not updated:
+                socket.log.debug("Source file same. Use Cached Version")
+                file_name = "%s.%s" % (resource_key, resource_type)
+                full_file_name = os.path.join(socket.cache.cache_path, file_name)
+            else:
+                socket.log.debug("Source file updated. Download and Cache")
+                try:
+                    full_file_name = socket.cache.cache_resource(url)
+                except UnsupportedResourceFormat:
+                    socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
+
+    return full_file_name

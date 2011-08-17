@@ -15,7 +15,8 @@ import gevent
 from gevent import spawn_raw
 
 from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
-                                        file_exists, normalize_url_space
+                                        file_exists, normalize_url_space, \
+                                        get_resource
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
@@ -1187,17 +1188,16 @@ class Play(Element):
 
         if not is_valid_url(audio_path):
             if file_exists(audio_path):
-                self.sound_file_path = self.convert_file_name(audio_path)
+                self.sound_file_path = audio_path
         else:
+            # set to temp path for prepare to process audio caching async
             self.temp_audio_path = audio_path
 
     def prepare(self, outbound_socket):
         if not self.sound_file_path:
             url = normalize_url_space(self.temp_audio_path)
             if url_exists(url):
-                file_name = self.get_resource(outbound_socket, url)
-                if file_name:
-                    self.sound_file_path = self.convert_file_name(file_name)
+                self.sound_file_path = get_resource(outbound_socket, url)
 
     def execute(self, outbound_socket):
         if self.sound_file_path:
@@ -1223,41 +1223,6 @@ class Play(Element):
             return
         else:
             outbound_socket.log.error("Invalid Sound File - Ignoring Play")
-
-    def get_resource(self, outbound_socket, url):
-        full_file_name = url
-        if outbound_socket.cache is not None:
-            rk = outbound_socket.cache.get_resource_key(url)
-            outbound_socket.log.debug("Resource key %s" %rk)
-            #~outbound_socket.cache.delete_resource(rk)
-            resource_key, resource_type, etag, last_modified = outbound_socket.cache.get_resource_params(url)
-            if resource_key is None:
-                outbound_socket.log.info("Resource not found in cache. Download and Cache")
-                try:
-                    full_file_name = outbound_socket.cache.cache_resource(url)
-                except UnsupportedResourceFormat:
-                    outbound_socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
-            else:
-                outbound_socket.log.debug("Resource found in Cache. Check if source is newer")
-                updated, new_etag, new_last_modified = outbound_socket.cache.is_resource_updated(url, etag, last_modified)
-                if not updated:
-                    outbound_socket.log.debug("Source file same. Use Cached Version")
-                    file_name = "%s.%s" % (resource_key, resource_type)
-                    full_file_name = os.path.join(outbound_socket.cache.cache_path, file_name)
-                else:
-                    outbound_socket.log.debug("Source file updated. Download and Cache")
-                    try:
-                        full_file_name = outbound_socket.cache.cache_resource(url)
-                    except UnsupportedResourceFormat:
-                        outbound_socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
-
-        return full_file_name
-
-    def is_mp3(self, file_name):
-        return (file_name[-3:] == "mp3")
-
-    def convert_file_name(self, file_name):
-        return "file_string://%s" % file_name
 
 
 class PreAnswer(Element):
