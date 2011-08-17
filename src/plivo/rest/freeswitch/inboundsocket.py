@@ -12,7 +12,10 @@ from gevent import pool
 import gevent.event
 
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
-from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
+from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring, \
+                                        is_valid_url, url_exists, \
+                                        file_exists, normalize_url_space, \
+                                        get_resource
 
 
 EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE"
@@ -26,7 +29,7 @@ class RESTInboundSocket(InboundEventSocket):
         self.server = server
         self.log = self.server.log
 
-        InboundEventSocket.__init__(self, self.get_server().fs_host, self.get_server().fs_port, self.get_server().fs_password, 
+        InboundEventSocket.__init__(self, self.get_server().fs_host, self.get_server().fs_port, self.get_server().fs_password,
                                     filter=EVENT_FILTER, trace=self.get_server()._trace)
         # Mapping of Key: job-uuid - Value: request_uuid
         self.bk_jobs = {}
@@ -212,7 +215,7 @@ class RESTInboundSocket(InboundEventSocket):
                     spawn_raw(self.send_to_url, ring_url, params)
 
     def on_call_update(self, event):
-        # if plivo_app != 'true', check b leg Dial callback  
+        # if plivo_app != 'true', check b leg Dial callback
         plivo_app_flag = event['variable_plivo_app'] == 'true'
         if not plivo_app_flag:
             # request Dial callbackUrl if needed
@@ -242,7 +245,7 @@ class RESTInboundSocket(InboundEventSocket):
     def on_channel_hangup_complete(self, event):
         """Capture Channel Hangup Complete
         """
-        # if plivo_app != 'true', check b leg Dial callback  
+        # if plivo_app != 'true', check b leg Dial callback
         plivo_app_flag = event['variable_plivo_app'] == 'true'
         if not plivo_app_flag:
             # request Dial callbackUrl if needed
@@ -367,9 +370,9 @@ class RESTInboundSocket(InboundEventSocket):
         request_uuid = event['variable_plivo_request_uuid']
         if request_uuid:
             params['RequestUUID'] = request_uuid
-            
+
         self.log.debug("Got Session Heartbeat from Freeswitch: %s" % params)
-        
+
         if self.get_server().call_heartbeat_url:
             self.log.debug("Sending heartbeat to callback: %s" % self.get_server().call_heartbeat_url)
             spawn_raw(self.send_to_url, self.get_server().call_heartbeat_url, params)
@@ -693,7 +696,18 @@ class RESTInboundSocket(InboundEventSocket):
 
         # build command
         play_str = 'playback::'
-        play_str += '!'.join(['file_string://'+sound for sound in sounds_list])
+
+        for sound in sounds_list:
+            if not is_valid_url(sound):
+                if file_exists(sound):
+                    play_str = "%s!%s" %(play_str, sound)
+            else:
+                url = normalize_url_space(sound)
+                if url_exists(url):
+                    sound_file_path = get_resource(self, url)
+                    if sound_file_path:
+                        play_str = "%s!%s" %(play_str, sound_file_path)
+
         cmd = "uuid_broadcast %s %s %s" % (call_uuid, play_str, legs)
 
         # case no schedule
@@ -716,4 +730,3 @@ class RESTInboundSocket(InboundEventSocket):
         else:
             self.log.error("%s Failed: %s" % (name, res.get_response()))
         return False
-
