@@ -1673,6 +1673,7 @@ class GetSpeech(Element):
             if play_str:
                 outbound_socket.bgapi("uuid_break %s all" \
                     % outbound_socket.get_channel_unique_id())
+            return
         finally:
             timer.cancel()
 
