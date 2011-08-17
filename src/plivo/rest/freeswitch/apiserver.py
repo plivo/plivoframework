@@ -112,14 +112,20 @@ class PlivoRestServer(PlivoRestApi):
                 new_log = HTTPLogger(url=url, method=method, fallback_file=fallback_file)
             else:
                 new_log = StdoutLogger()
-
-            debug_mode = config.get('rest_server', 'DEBUG', default='false') == 'true'
-            if debug_mode is True or self._trace is True:
+            log_level = config.get('rest_server', 'LOG_LEVEL', default='INFO')
+            if log_level == 'DEBUG' or self._trace is True:
                 new_log.set_debug()
                 self.app.debug = True
-            else:
+            elif log_level == 'INFO':
                 new_log.set_info()
                 self.app.debug = False
+            elif log_level == 'ERROR':
+                new_log.set_error()
+                self.app.debug = False
+            elif log_level in ('WARN', 'WARNING'):
+                new_log.set_warn()
+                self.app.debug = False
+
         new_log.name = self.name
         self.log = new_log
         self.app._logger = self.log

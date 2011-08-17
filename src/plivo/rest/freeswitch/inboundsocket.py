@@ -85,7 +85,7 @@ class RESTInboundSocket(InboundEventSocket):
                     self.log.info("GroupCall Attempt Done for RequestUUID %s (%s)" \
                                                     % (request_uuid, reason))
                     return
-                self.log.error("GroupCall Attempt Failed for RequestUUID %s (%s)" \
+                self.log.warn("GroupCall Attempt Failed for RequestUUID %s (%s)" \
                                                     % (request_uuid, reason))
                 return
 
@@ -103,12 +103,12 @@ class RESTInboundSocket(InboundEventSocket):
                 # In case ring/early state done, just warn
                 # releasing call request will be done in hangup event
                 if call_req.state_flag in ('Ringing', 'EarlyMedia'):
-                    self.log.error("Call Attempt Done (%s) for RequestUUID %s but Failed (%s)" \
+                    self.log.warn("Call Attempt Done (%s) for RequestUUID %s but Failed (%s)" \
                                                     % (call_req.state_flag, request_uuid, reason))
                     return
                 # If no more gateways, release call request
                 elif not call_req.gateways:
-                    self.log.error("Call Failed for RequestUUID %s but No More Gateways (%s)" \
+                    self.log.warn("Call Failed for RequestUUID %s but No More Gateways (%s)" \
                                                     % (request_uuid, reason))
                     # set an empty call_uuid
                     call_uuid = ''
