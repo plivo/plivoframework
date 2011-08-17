@@ -185,6 +185,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if self.current_element == 'Dial':
             self._action_queue.put(event)
 
+    def on_detected_speech(self, event):
+        # detect speech for GetSpeech
+        if self.current_element == 'GetSpeech' \
+            and event['Speech-Type'] == 'detected-speech':
+            self._action_queue.put(event)
+
     def on_custom(self, event):
         # case conference event
         if self.current_element == 'Conference':
