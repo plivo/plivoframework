@@ -41,14 +41,13 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self._config = None
         self.load_config()
         # create a cache instance if enabled
+        self.cache = None
         if self.cache_path:
             if self.redis_host and self.redis_port and self.redis_db:
                 self.cache = helpers.ResourceCache(self.cache_path,
                                             self.redis_host,
                                             int(self.redis_port),
                                             int(self.redis_db))
-        else:
-            self.cache = None
 
         # This is where we define the connection with the
         # Plivo XML element Processor
