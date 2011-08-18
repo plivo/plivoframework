@@ -418,6 +418,13 @@ class Conference(Element):
             outbound_socket.set("conference_member_flags=%s" % flags_opt)
         else:
             outbound_socket.unset("conference_member_flags")
+
+        # play beep on exit if enabled
+        if self.exit_sound == 'beep:1':
+            outbound_socket.set("conference_exit_sound=tone_stream://%%(300,200,700)")
+        elif self.exit_sound == 'beep:2':
+            outbound_socket.set("conference_exit_sound=tone_stream://L=2;%%(300,200,700)")
+
         # set new kickall scheduled task if timeLimit > 0
         if self.time_limit > 0:
             # set timeLimit scheduled group name for the room
@@ -496,12 +503,6 @@ class Conference(Element):
                 outbound_socket.log.debug("Conference: Room %s, waiting end ..." % self.room)
                 event = outbound_socket.wait_for_action()
 
-                # play beep on exit if enabled
-                if self.member_id:
-                    if self.exit_sound == 'beep:1':
-                        outbound_socket.api("conference %s play tone_stream://%%(300,200,700) async" % self.room)
-                    elif self.exit_sound == 'beep:2':
-                        outbound_socket.api("conference %s play tone_stream://L=2;%%(300,200,700) async" % self.room)
             # unset digit realm
             if digit_realm:
                 outbound_socket.clear_digit_action(digit_realm)
@@ -510,6 +511,7 @@ class Conference(Element):
             # notify channel has left room
             self._notify_exit_conf(outbound_socket)
             outbound_socket.log.info("Leaving Conference: Room %s" % self.room)
+
             # If action is set, redirect to this url
             # Otherwise, continue to next Element
             if self.action and is_valid_url(self.action):
