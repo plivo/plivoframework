@@ -1133,8 +1133,6 @@ class Wait(Element):
     """Wait for some time to further process the call
 
     length: length of wait time in seconds
-    transferEnabled: break Wait on transfer or hangup
-                    (true/false default false)
     """
     def __init__(self):
         Element.__init__(self)
@@ -1145,9 +1143,7 @@ class Wait(Element):
         try:
             length = int(self.extract_attribute_value('length'))
         except ValueError:
-            raise RESTFormatException("Wait 'length' must be an integer")
-        self.transfer = self.extract_attribute_value("transferEnabled") \
-                            == 'true'
+            raise RESTFormatException("Wait 'length' must be a positive integer")
         if length < 1:
             raise RESTFormatException("Wait 'length' must be a positive integer")
         self.length = length
@@ -1155,13 +1151,9 @@ class Wait(Element):
     def execute(self, outbound_socket):
         outbound_socket.log.info("Wait Started for %d seconds" \
                                                     % self.length)
-        if self.transfer:
-            outbound_socket.log.warn("Wait with transfer enabled")
-            pause_str = 'file_string://silence_stream://%s'\
-                                    % str(self.length * 1000)
-            outbound_socket.playback(pause_str)
-        else:
-            outbound_socket.sleep(str(self.length * 1000), lock=False)
+        pause_str = 'file_string://silence_stream://%s'\
+                                % str(self.length * 1000)
+        outbound_socket.playback(pause_str)
         event = outbound_socket.wait_for_action()
 
 
