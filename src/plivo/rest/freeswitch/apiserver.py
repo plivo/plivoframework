@@ -56,8 +56,12 @@ class PlivoRestServer(PlivoRestApi):
         self.load_config()
 
         # create a cache instance if enabled
-        if self.cache_path and self.cache_params_file:
-            self.cache = helpers.ResourceCache(self.cache_path, self.cache_params_file)
+        if self.cache_path:
+            if self.redis_host and self.redis_port and self.redis_db:
+                self.cache = helpers.ResourceCache(self.cache_path,
+                                            self.redis_host,
+                                            int(self.redis_port),
+                                            int(self.redis_db))
         else:
             self.cache = None
 
@@ -181,7 +185,9 @@ class PlivoRestServer(PlivoRestApi):
 
             # load cache params
             self.cache_path = config.get('common', 'CACHE_PATH', default='')
-            self.cache_params_file = config.get('common', 'CACHE_PARAM_FILE', default='')
+            self.redis_host = config.get('common', 'REDIS_HOST', default='')
+            self.redis_port = config.get('common', 'REDIS_PORT', default='')
+            self.redis_db = config.get('common', 'REDIS_DB', default='')
 
             # get pid file for reloading outbound server (ugly hack ...)
             try:

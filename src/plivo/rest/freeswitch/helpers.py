@@ -12,10 +12,13 @@ import httplib
 import os
 import os.path
 import re
+import redis
 import urllib
 import urllib2
 import urlparse
 import uuid
+import ujson as json
+from werkzeug.datastructures import MultiDict
 
 # remove depracated warning in python2.6
 try:
@@ -23,9 +26,6 @@ try:
 except ImportError:
     import md5
     _md5 = md5.new
-
-from werkzeug.datastructures import MultiDict
-import ujson as json
 
 
 MIME_TYPES = {'audio/mpeg': 'mp3',
@@ -315,51 +315,40 @@ class CacheErrorHandler(urllib2.HTTPDefaultErrorHandler):
 
 
 class ResourceCache(object):
-    """Uses a local directory as a store for cached files.
+    """Uses redis cache as a backend for storing info on cached files.
     """
-    def __init__(self, cache_path="plivocache/", cache_params_file="plivocache.ini"):
+    def __init__(self, cache_path="plivocache/", redis_host='localhost', redis_port=6379, redis_db=0):
+        self.cache = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
         root_path = os.path.abspath(os.path.dirname(__file__))
         self.cache_path = os.path.join(root_path, cache_path)
-        self.cache_params_file = cache_params_file
-        if not os.path.exists(self.cache_path):
+        if not os.path.exists(cache_path):
             os.makedirs(self.cache_path)
-        self.cache_params_path = os.path.join(self.cache_path, cache_params_file)
-        open(self.cache_params_path, "a").close()
         self.opener = urllib2.build_opener(CacheErrorHandler())
 
     def get_resource_params(self, url):
         resource_key = self.get_resource_key(url)
-        if os.path.exists(self.cache_params_path):
-            config = ConfigParser.SafeConfigParser()
-            config.read(self.cache_params_path)
-            try:
-                resource_type = config.get(resource_key, 'resource_type')
-                etag = config.get(resource_key, 'etag')
-                last_modified = config.get(resource_key, 'last_modified')
-                return resource_key, resource_type, etag, last_modified
-            except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-                return None, None, None, None
+        if self.cache.sismember("resource_key", resource_key):
+            resource_type = self.cache.hget("resource_key:%s" % resource_key, "resource_type")
+            etag = self.cache.hget("resource_key:%s" % resource_key, "etag")
+            last_modified = self.cache.hget("resource_key:%s" % resource_key, "last_modified")
+            return resource_key, resource_type, etag, last_modified
+        else:
+            return None, None, None, None
 
     def update_resource_params(self, resource_key, resource_type, etag, last_modified):
-        config = ConfigParser.SafeConfigParser()
-        config.add_section(resource_key)
         if etag is None:
             etag = ""
         if last_modified is None:
             last_modified = ""
-        config.set(resource_key, "etag", etag)
-        config.set(resource_key, "last_modified", last_modified)
-        config.set(resource_key, "resource_type", resource_type)
-        param_file = open(self.cache_params_path,'a', os.O_NONBLOCK)
-        config.write(param_file)
+        self.cache.sadd("resource_key", resource_key)
+        self.cache.hset("resource_key:%s" % resource_key, "resource_type", resource_type)
+        self.cache.hset("resource_key:%s" % resource_key, "etag", etag)
+        self.cache.hset("resource_key:%s" % resource_key, "last_modified", last_modified)
 
     def delete_resource(self, resource_key):
-        if os.path.exists(self.cache_params_path):
-            config = ConfigParser.SafeConfigParser()
-            config.read(self.cache_params_path)
-            config.remove_section(resource_key)
-            param_file = open(self.cache_params_path,'a', os.O_NONBLOCK)
-            config.write(param_file)
+        if self.cache.sismembers("resource_key", resource_key):
+            self.cache.srem("resource_key", resource_key)
+            self.cache.delete("resource_key:%s" % resource_key)
 
     def cache_resource(self, url):
         request = urllib2.Request(url)
