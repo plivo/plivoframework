@@ -12,11 +12,11 @@ import httplib
 import os
 import os.path
 import re
-import redis
 import urllib
 import urllib2
 import urlparse
 import uuid
+import redis
 import ujson as json
 from werkzeug.datastructures import MultiDict
 
