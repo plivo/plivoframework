@@ -337,7 +337,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # because it is handled by inboundsocket
             self.default_hangup_url = None
             self.hangup_url = None
-            self.log.info("HangupUrl not set for outbound call")
             # Set CallStatus to Session Params
             self.session_params['CallStatus'] = 'in-progress'
         else:
