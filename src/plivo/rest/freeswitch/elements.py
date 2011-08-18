@@ -409,8 +409,9 @@ class Conference(Element):
             flags.append("mute")
         if self.start_on_enter:
             flags.append("moderator")
-        else:
-            flags.append("wait-mod")
+        # FIXME wait-mod doesn't work its a conference flags :(
+        #else:
+        #    flags.append("wait-mod")
         if self.end_on_exit:
             flags.append("endconf")
         flags_opt = ','.join(flags)
