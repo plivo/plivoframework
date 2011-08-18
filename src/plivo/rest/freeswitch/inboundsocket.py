@@ -13,7 +13,7 @@ import gevent.event
 
 from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring, \
-                                        is_valid_url, url_exists, \
+                                        is_valid_url, \
                                         file_exists, normalize_url_space, \
                                         get_resource
 
@@ -704,6 +704,7 @@ class RESTInboundSocket(InboundEventSocket):
             return False
 
         # get sound files
+        self.log.debug("Play start GET SOUNDS")
         sounds_to_play = []
         for sound in sounds_list:
             if not is_valid_url(sound):
@@ -713,15 +714,15 @@ class RESTInboundSocket(InboundEventSocket):
                     self.log.warn("%s -- File %s not found" % (name, sound)) 
             else:
                 url = normalize_url_space(sound)
-                if url_exists(url):
-                    sound_file_path = get_resource(self, url)
-                    if sound_file_path:
-                        sounds_to_play.append(sound_file_path)
+                sound_file_path = get_resource(self, url)
+                if sound_file_path:
+                    sounds_to_play.append(sound_file_path)
                 else:
                     self.log.warn("%s -- Url %s not found" % (name, url)) 
         if not sounds_to_play:
             self.log.error("%s Failed -- Sound files not found" % name)
             return False
+        self.log.debug("Play end GET SOUNDS")
 
         # build command
         if legs == 'aleg':
@@ -735,6 +736,7 @@ class RESTInboundSocket(InboundEventSocket):
 
         # case no schedule
         if schedule <= 0:
+            self.log.debug("Play start COMMAND")
             bg_api_response = self.bgapi(cmd)
             job_uuid = bg_api_response.get_job_uuid()
             if not job_uuid:

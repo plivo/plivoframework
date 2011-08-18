@@ -14,7 +14,7 @@ except ImportError:
 import gevent
 from gevent import spawn_raw
 
-from plivo.rest.freeswitch.helpers import is_valid_url, url_exists, \
+from plivo.rest.freeswitch.helpers import is_valid_url, \
                                         file_exists, normalize_url_space, \
                                         get_resource
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
@@ -1207,8 +1207,7 @@ class Play(Element):
     def prepare(self, outbound_socket):
         if not self.sound_file_path:
             url = normalize_url_space(self.temp_audio_path)
-            if url_exists(url):
-                self.sound_file_path = get_resource(outbound_socket, url)
+            self.sound_file_path = get_resource(outbound_socket, url)
 
     def execute(self, outbound_socket):
         if self.sound_file_path:
