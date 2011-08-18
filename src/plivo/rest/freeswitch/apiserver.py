@@ -78,6 +78,9 @@ class PlivoRestServer(PlivoRestApi):
     def get_config(self):
         return self._config
 
+    def get_cache(self):
+        return self.cache
+
     def create_logger(self, config):
         """This will create a logger using helpers.PlivoConfig instance
 

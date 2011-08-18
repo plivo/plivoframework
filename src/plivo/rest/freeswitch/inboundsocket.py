@@ -28,9 +28,13 @@ class RESTInboundSocket(InboundEventSocket):
     def __init__(self, server):
         self.server = server
         self.log = self.server.log
+        self.cache = self.server.get_cache()
 
-        InboundEventSocket.__init__(self, self.get_server().fs_host, self.get_server().fs_port, self.get_server().fs_password,
-                                    filter=EVENT_FILTER, trace=self.get_server()._trace)
+        InboundEventSocket.__init__(self, self.get_server().fs_host, 
+                                    self.get_server().fs_port, 
+                                    self.get_server().fs_password,
+                                    filter=EVENT_FILTER, 
+                                    trace=self.get_server()._trace)
         # Mapping of Key: job-uuid - Value: request_uuid
         self.bk_jobs = {}
         # Transfer jobs: call_uuid - Value: inline dptools to execute
@@ -46,6 +50,7 @@ class RESTInboundSocket(InboundEventSocket):
     def reload_config(self):
         self.get_server().load_config(reload=True)
         self.log = self.server.log
+        self.cache = self.server.get_cache()
 
     def get_extra_fs_vars(self, event):
         params = {}
@@ -698,21 +703,31 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.error("%s Failed -- Invalid legs arg '%s'" % (name, str(legs)))
             return False
 
-        # build command
-        play_str = 'playback::'
-
+        # get sound files
+        sounds_to_play = []
         for sound in sounds_list:
             if not is_valid_url(sound):
                 if file_exists(sound):
-                    play_str = "%s!%s" %(play_str, sound)
+                    sounds_to_play.append(sound)
             else:
                 url = normalize_url_space(sound)
                 if url_exists(url):
                     sound_file_path = get_resource(self, url)
                     if sound_file_path:
-                        play_str = "%s!%s" %(play_str, sound_file_path)
+                        sounds_to_play.append(sound_file_path)
+        if not sounds_to_play:
+            self.log.error("%s Failed -- Sound files not found" % name)
+            return False
 
-        cmd = "uuid_broadcast %s %s %s" % (call_uuid, play_str, legs)
+        # build command
+        if legs == 'aleg':
+            play_str = 'file_string://'
+            play_str += '!'.join(sounds_to_play)
+            cmd = "uuid_displace %s start %s" % (call_uuid, play_str)
+        elif legs in ('bleg', 'both'):
+            play_str = 'playback::file_string://'
+            play_str += '!'.join(sounds_to_play)
+            cmd = "uuid_broadcast %s %s %s" % (call_uuid, play_str, legs)
 
         # case no schedule
         if schedule <= 0:
