@@ -17,6 +17,7 @@ import urllib2
 import urlparse
 import uuid
 import redis
+import redis.exceptions
 import ujson as json
 from werkzeug.datastructures import MultiDict
 
@@ -317,38 +318,54 @@ class CacheErrorHandler(urllib2.HTTPDefaultErrorHandler):
 class ResourceCache(object):
     """Uses redis cache as a backend for storing info on cached files.
     """
-    def __init__(self, cache_path="plivocache/", redis_host='localhost', redis_port=6379, redis_db=0):
-        self.cache = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
+    def __init__(self, cache_path='plivocache/', redis_host='localhost', redis_port=6379, redis_db=0):
+        self.cache_path = os.path.normpath(cache_path) + os.sep
+        self.host = redis_host
+        self.port = redis_port
+        self.db = redis_db
         root_path = os.path.abspath(os.path.dirname(__file__))
         self.cache_path = os.path.join(root_path, cache_path)
         if not os.path.exists(cache_path):
             os.makedirs(self.cache_path)
         self.opener = urllib2.build_opener(CacheErrorHandler())
+        self._connect()
+
+    def _connect(self):
+        self._cx = redis.Redis(host=self.host, port=self.port, db=self.db)
 
     def get_resource_params(self, url):
         resource_key = self.get_resource_key(url)
-        if self.cache.sismember("resource_key", resource_key):
-            resource_type = self.cache.hget("resource_key:%s" % resource_key, "resource_type")
-            etag = self.cache.hget("resource_key:%s" % resource_key, "etag")
-            last_modified = self.cache.hget("resource_key:%s" % resource_key, "last_modified")
-            return resource_key, resource_type, etag, last_modified
-        else:
-            return None, None, None, None
+        try:
+            if self._cx.sismember("resource_key", resource_key):
+                resource_type = self._cx.hget("resource_key:%s" % resource_key, "resource_type")
+                etag = self._cx.hget("resource_key:%s" % resource_key, "etag")
+                last_modified = self._cx.hget("resource_key:%s" % resource_key, "last_modified")
+                return resource_key, resource_type, etag, last_modified
+            else:
+                return None, None, None, None
+        except redis.exceptions.ConnectionError:
+            self._connect()
 
     def update_resource_params(self, resource_key, resource_type, etag, last_modified):
         if etag is None:
             etag = ""
         if last_modified is None:
             last_modified = ""
-        self.cache.sadd("resource_key", resource_key)
-        self.cache.hset("resource_key:%s" % resource_key, "resource_type", resource_type)
-        self.cache.hset("resource_key:%s" % resource_key, "etag", etag)
-        self.cache.hset("resource_key:%s" % resource_key, "last_modified", last_modified)
+        try:
+            self._cx.sadd("resource_key", resource_key)
+            self._cx.hset("resource_key:%s" % resource_key, "resource_type", resource_type)
+            self._cx.hset("resource_key:%s" % resource_key, "etag", etag)
+            self._cx.hset("resource_key:%s" % resource_key, "last_modified", last_modified)
+        except redis.exceptions.ConnectionError:
+            self._connect()
 
     def delete_resource(self, resource_key):
-        if self.cache.sismembers("resource_key", resource_key):
-            self.cache.srem("resource_key", resource_key)
-            self.cache.delete("resource_key:%s" % resource_key)
+        try:
+            if self._cx.sismembers("resource_key", resource_key):
+                self._cx.srem("resource_key", resource_key)
+                self._cx.delete("resource_key:%s" % resource_key)
+        except redis.exceptions.ConnectionError:
+            self._connect()
 
     def cache_resource(self, url):
         request = urllib2.Request(url)
@@ -359,7 +376,6 @@ class ResourceCache(object):
             resource_type = MIME_TYPES[first_time.headers.get('Content-Type')]
         except KeyError:
             raise UnsupportedResourceFormat("Resource format not supported")
-
         etag = first_time.headers.get('ETag')
         last_modified = first_time.headers.get('Last-Modified')
         response = urllib2.urlopen(request)
@@ -386,11 +402,9 @@ class ResourceCache(object):
             request.add_header('If-Modified-Since', last_modified)
         else:
             return no_change
-
         second_try = self.opener.open(request)
         if second_try.status == 304:
             return no_change
-
         return True, etag, last_modified
 
 

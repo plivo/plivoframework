@@ -709,12 +709,16 @@ class RESTInboundSocket(InboundEventSocket):
             if not is_valid_url(sound):
                 if file_exists(sound):
                     sounds_to_play.append(sound)
+                else:
+                    self.log.warn("%s -- File %s not found" % (name, sound)) 
             else:
                 url = normalize_url_space(sound)
                 if url_exists(url):
                     sound_file_path = get_resource(self, url)
                     if sound_file_path:
                         sounds_to_play.append(sound_file_path)
+                else:
+                    self.log.warn("%s -- Url %s not found" % (name, url)) 
         if not sounds_to_play:
             self.log.error("%s Failed -- Sound files not found" % name)
             return False
