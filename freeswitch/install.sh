@@ -44,14 +44,22 @@ case $DIST in
         ;;
     'CENTOS')
         yum -y update
-        yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
 
-        #install the RPMFORGE Repository
-        if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
-            then
-                # Install RPMFORGE Repo
-        rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
-        echo '
+	VERS=$(cat /etc/redhat-release |cut -d' ' -f4 |cut -d'.' -f1)
+
+	if [ "$VERS" = "6" ]
+	then
+		yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel git
+
+	else
+		yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
+
+		#install the RPMFORGE Repository
+		if [ ! -f /etc/yum.repos.d/rpmforge.repo ]
+		then
+			# Install RPMFORGE Repo
+			rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
+echo '
 [rpmforge]
 name = Red Hat Enterprise $releasever - RPMforge.net - dag
 mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
@@ -60,9 +68,9 @@ protect = 0
 gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
 gpgcheck = 1
 ' > /etc/yum.repos.d/rpmforge.repo
-        fi
-
-        yum -y --enablerepo=rpmforge install git-core
+		fi
+		yum -y --enablerepo=rpmforge install git-core
+	fi
     ;;
 esac
 
@@ -75,6 +83,7 @@ sh bootstrap.sh && ./configure
 sed -i -e \
 "s/#applications\/mod_curl/applications\/mod_curl/g" \
 -e "s/#asr_tts\/mod_flite/asr_tts\/mod_flite/g" \
+-e "s/#asr_tts/mod_pocketsphinx/asr_tts/mod_pocketsphinx/g" \
 -e "s/#asr_tts\/mod_tts_commandline/asr_tts\/mod_tts_commandline/g" \
 -e "s/#formats\/mod_shout/formats\/mod_shout/g" \
 -e "s/#endpoints\/mod_dingaling/endpoints\/mod_dingaling/g" \
@@ -101,6 +110,7 @@ sed -i -r \
 -e "s/<\!--\s?<load module=\"mod_shout\"\/>\s?-->/<load module=\"mod_shout\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_tts_commandline\"\/>\s?-->/<load module=\"mod_tts_commandline\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_flite\"\/>\s?-->/<load module=\"mod_flite\"\/>/g" \
+-e "s/<\!--\s?<load module=\"mod_pocketsphinx\"\/>\s?-->/<load module=\"mod_pocketsphinx\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_say_ru\"\/>\s?-->/<load module=\"mod_say_ru\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_say_zh\"\/>\s?-->/<load module=\"mod_say_zh\"\/>/g" \
 -e 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' \

@@ -179,7 +179,7 @@ class HTTPRequest:
         # compute signature and compare signatures
         signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
                                                             digest()).strip()
-        request.add_header("X_PLIVO_SIGNATURE", "%s" % signature)
+        request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
 
         # be sure 100 continue is disabled
         request.add_header("Expect", "")

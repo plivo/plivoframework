@@ -47,6 +47,14 @@ class StdoutLogger(object):
         self.loglevel = LOG_INFO
         self._logger.setLevel(self.loglevel)
 
+    def set_error(self):
+        self.loglevel = LOG_ERROR
+        self._logger.setLevel(self.loglevel)
+
+    def set_warn(self):
+        self.loglevel = LOG_WARN
+        self._logger.setLevel(self.loglevel)
+
     def info(self, msg):
         self._logger.info(str(msg))
 
@@ -176,6 +184,12 @@ class DummyLogger(object):
     def set_info(self):
         pass
 
+    def set_error(self):
+        pass
+
+    def set_warn(self):
+        pass
+
     def info(self, msg):
         pass
 
@@ -266,6 +280,16 @@ class HTTPLogger(object):
         self._logger.setLevel(self.loglevel)
         self._fallback.set_info()
 
+    def set_error(self):
+        self.loglevel = LOG_ERROR
+        self._logger.setLevel(self.loglevel)
+        self._fallback.set_error()
+
+    def set_warn(self):
+        self.loglevel = LOG_WARN
+        self._logger.setLevel(self.loglevel)
+        self._fallback.set_warn()
+
     def info(self, msg):
         try:
             self._logger.info(str(msg))
@@ -295,3 +319,4 @@ class HTTPLogger(object):
             self.info(msg)
         except:
             self._fallback.info(str(msg))
+
