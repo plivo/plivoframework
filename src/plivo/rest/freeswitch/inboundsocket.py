@@ -688,7 +688,10 @@ class RESTInboundSocket(InboundEventSocket):
                 return False
         return False
 
-    def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", schedule=0):
+    def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", length=3600, schedule=0):
+        cmds = []
+        error_count = 0
+
         if schedule <= 0:
             name = "Call Play"
         else:
@@ -723,32 +726,59 @@ class RESTInboundSocket(InboundEventSocket):
             return False
 
         # build command
+        play_str = 'file_string://'
+        play_str += '!'.join(sounds_to_play)
+
+        # aleg case
         if legs == 'aleg':
-            play_str = 'file_string://'
-            play_str += '!'.join(sounds_to_play)
-            cmd = "uuid_displace %s start %s" % (call_uuid, play_str)
-        elif legs in ('bleg', 'both'):
-            play_str = 'playback::file_string://'
-            play_str += '!'.join(sounds_to_play)
-            cmd = "uuid_broadcast %s %s %s" % (call_uuid, play_str, legs)
+            cmd = "uuid_displace %s start %s %d mux" % (call_uuid, play_str, length)
+        # bleg case
+        elif legs  == 'bleg':
+            # get the bleg
+            bleg = self.get_var("bridge_uuid", uuid=call_uuid)
+            if bleg:
+                cmd = "uuid_displace %s start %s %d mux" % (bleg, play_str, length)
+                cmds.append(cmd)
+            else:
+                self.log.error("%s Failed -- No BLeg found" % name)
+                return False
+        # both legs case
+        elif legs == 'both':
+            cmd = "uuid_displace %s start %s %d mux" % (call_uuid, play_str, length)
+            cmds.append(cmd)
+            # get the bleg
+            bleg = self.get_var("bridge_uuid", uuid=call_uuid)
+            if bleg:
+                cmd = "uuid_displace %s start %s %d mux" % (bleg, play_str, length)
+                cmds.append(cmd)
+            else:
+                self.log.error("%s Failed -- No BLeg found" % name)
+                return False
 
         # case no schedule
         if schedule <= 0:
-            bg_api_response = self.bgapi(cmd)
-            job_uuid = bg_api_response.get_job_uuid()
-            if not job_uuid:
-                self.log.error("%s Failed '%s' -- JobUUID not received" % (name, cmd))
+            for cmd in cmds:
+                bg_api_response = self.bgapi(cmd)
+                job_uuid = bg_api_response.get_job_uuid()
+                if not job_uuid:
+                    self.log.error("%s Failed '%s' -- JobUUID not received" % (name, cmd))
+                    error_count += 1
+            if error_count > 0:
                 return False
             self.log.info("%s '%s' with JobUUID %s" % (name, cmd, job_uuid))
             return True
 
         # case schedule
         sched_id = str(uuid.uuid1())
-        sched_cmd = "sched_api +%d %s %s" % (schedule, sched_id, cmd)
-        res = self.api(sched_cmd)
-        if res.is_success():
-            self.log.info("%s '%s' with SchedPlayId %s" % (name, sched_cmd, sched_id))
-            return sched_id
-        else:
-            self.log.error("%s Failed: %s" % (name, res.get_response()))
-        return False
+        for cmd in cmds:
+            sched_cmd = "sched_api +%d %s %s" % (schedule, sched_id, cmd)
+            res = self.api(sched_cmd)
+            if res.is_success():
+                self.log.info("%s '%s' with SchedPlayId %s" % (name, sched_cmd, sched_id))
+            else:
+                self.log.error("%s Failed: %s" % (name, res.get_response()))
+                error_count += 1
+        if error_count > 0:
+            return False
+        return sched_id
+

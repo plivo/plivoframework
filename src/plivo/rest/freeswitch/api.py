@@ -1528,6 +1528,8 @@ class PlivoRestApi(object):
 
         Optional Paramaters:
 
+        [Length]: number of seconds before terminating sounds.
+
         [Legs]: 'aleg'|'bleg'|'both'. On which leg(s) to play something.
                 'aleg' means only play on the Call.
                 'bleg' means only play on the bridged leg of the Call.
@@ -1543,6 +1545,7 @@ class PlivoRestApi(object):
         calluuid = get_post_param(request, 'CallUUID')
         sounds = get_post_param(request, 'Sounds')
         legs = get_post_param(request, 'Legs')
+        length = get_post_param(request, 'Length')
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
@@ -1552,6 +1555,17 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
         if not legs:
             legs = 'aleg'
+        if not length:
+            length = 3600
+        else:
+            try:
+                length = int(length)
+            except (ValueError, TypeError):
+                msg = "Length Parameter must be a positive integer"
+                return flask.jsonify(Success=result, Message=msg)
+            if length < 1:
+                msg = "Length Parameter must be a positive integer"
+                return flask.jsonify(Success=result, Message=msg)
 
         sounds_list = sounds.split(',')
         if not sounds_list:
@@ -1559,7 +1573,7 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
 
         # now do the job !
-        if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, schedule=0):
+        if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, length=length, schedule=0):
             msg = "Play Request Executed"
             result = True
             return flask.jsonify(Success=result, Message=msg)
@@ -1582,8 +1596,10 @@ class PlivoRestApi(object):
         Sounds: Comma separated list of sound files to play.
 
         Time: When playing sounds in seconds.
-
+        
         Optional Paramaters:
+
+        [Length]: number of seconds before terminating sounds.
 
         [Legs]: 'aleg'|'bleg'|'both'. On which leg(s) to play something.
                 'aleg' means only play on the Call.
@@ -1603,6 +1619,7 @@ class PlivoRestApi(object):
         sounds = get_post_param(request, 'Sounds')
         legs = get_post_param(request, 'Legs')
         time = get_post_param(request, 'Time')
+        length = get_post_param(request, 'Length')
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
@@ -1617,12 +1634,23 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
         try:
             time = int(time)
-        except ValueError:
+        except (ValueError, TypeError):
             msg = "Time Parameter is Invalid"
             return flask.jsonify(Success=result, Message=msg)
-        if time <=0:
+        if time < 1:
             msg = "Time Parameter must be > 0"
             return flask.jsonify(Success=result, Message=msg)
+        if not length:
+            length = 3600
+        else:
+            try:
+                length = int(length)
+            except (ValueError, TypeError):
+                msg = "Length Parameter must be a positive integer"
+                return flask.jsonify(Success=result, Message=msg)
+            if length < 1:
+                msg = "Length Parameter must be a positive integer"
+                return flask.jsonify(Success=result, Message=msg)
 
         sounds_list = sounds.split(',')
         if not sounds_list:
@@ -1630,7 +1658,7 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
 
         # now do the job !
-        sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, schedule=time)
+        sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, length=length, schedule=time)
         if sched_id:
             msg = "SchedulePlay Request Done with SchedPlayId %s" % sched_id
             result = True
@@ -1666,3 +1694,12 @@ class PlivoRestApi(object):
             else:
                 msg = "Scheduled Play Cancelation Failed: %s" % res.get_response()
         return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def audio_effects(self):
+        """Add Audio Effects to a Bridged Call
+        
+        To add Audio Effects, you make an HTTP POST request to a
+        resource URI.
+        """
+        pass
