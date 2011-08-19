@@ -412,7 +412,7 @@ def get_resource(socket, url):
     if socket.cache is not None:
         # don't do cache if not a remote file
         if not full_file_name[:7].lower() == "http://" \
-            and not full_file_name[:8].lower() == "https://" \
+            and not full_file_name[:8].lower() == "https://":
             return full_file_name
         rk = socket.cache.get_resource_key(url)
         socket.log.debug("Resource key %s" %rk)
