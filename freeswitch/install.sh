@@ -128,6 +128,11 @@ wget --no-check-certificate $FS_CONF_PATH/default.xml -O default.xml
 [ -f public.xml ] && mv public.xml public.xml.bak
 wget --no-check-certificate $FS_CONF_PATH/public.xml -O public.xml
 
+#Configure Conference @plivo profile
+cd $FS_INSTALLED_PATH/conf/autoload_configs/
+[ -f conference.conf.xml ] && mv conference.conf.xml conference.conf.xml.bak
+wget --no-check-certificate $FS_CONF_PATH/conference.conf.xml -O conference.conf.xml
+
 cd $CURRENT_PATH
 
 # Install Complete
