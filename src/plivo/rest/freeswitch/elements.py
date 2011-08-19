@@ -31,6 +31,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'muted': 'false',
                 'startConferenceOnEnter': 'true',
                 'endConferenceOnExit': 'false',
+                'stayAlone': 'true',
                 'maxMembers': 200,
                 'enterSound': '',
                 'exitSound': '',
@@ -197,8 +198,10 @@ class Conference(Element):
           (default false)
     startConferenceOnEnter: the conference start when this member joins
           (default true)
-    endConferenceOnExit: close conference after this member leaves
-          (default false)
+    endConferenceOnExit: close conference after all members 
+        with this attribute set to 'true' leave. (default false)
+    stayAlone: if 'false' and member is alone, conference is closed and member kicked out 
+          (default true)
     maxMembers: max members in conference
           (0 for max : 200)
     enterSound: sound to play when a member enters
@@ -240,6 +243,7 @@ class Conference(Element):
         self.muted = False
         self.start_on_enter = True
         self.end_on_exit = False
+        self.stay_alone = False
         self.time_limit = self.DEFAULT_TIMELIMIT
         self.max_members = self.DEFAULT_MAXMEMBERS
         self.enter_sound = ''
@@ -268,6 +272,8 @@ class Conference(Element):
         self.start_on_enter = self.extract_attribute_value('startConferenceOnEnter') \
                                 == 'true'
         self.end_on_exit = self.extract_attribute_value('endConferenceOnExit') \
+                                == 'true'
+        self.stay_alone = self.extract_attribute_value('stayAlone') \
                                 == 'true'
         self.hangup_on_star = self.extract_attribute_value('hangupOnStar') \
                                 == 'true'
@@ -379,9 +385,9 @@ class Conference(Element):
         # settings for conference room
         outbound_socket.set("conference_controls=none")
         if self.max_members > 0:
-            outbound_socket.set("max-members=%d" % self.max_members)
+            outbound_socket.set("conference_max_members=%d" % self.max_members)
         else:
-            outbound_socket.unset("max-members")
+            outbound_socket.unset("conference_max_members")
 
         if self.record_file_path:
             file_path = os.path.normpath(self.record_file_path) + os.sep
@@ -409,9 +415,8 @@ class Conference(Element):
             flags.append("mute")
         if self.start_on_enter:
             flags.append("moderator")
-        # FIXME wait-mod doesn't work its a conference flags :(
-        #else:
-        #    flags.append("wait-mod")
+        if not self.stay_alone:
+            flags.append("mintwo")
         if self.end_on_exit:
             flags.append("endconf")
         flags_opt = ','.join(flags)

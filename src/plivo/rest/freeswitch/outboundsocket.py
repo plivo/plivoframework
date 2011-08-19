@@ -81,7 +81,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                           'Dial',
                          )
 
-    def __init__(self, socket, address, log, cache,
+    def __init__(self, socket, address, 
+                 log, cache,
                  default_answer_url=None,
                  default_hangup_url=None,
                  default_http_method='POST',

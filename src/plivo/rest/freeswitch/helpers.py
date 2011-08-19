@@ -437,11 +437,12 @@ def get_resource(socket, url):
     else:
         if full_file_name[:7].lower() == "http://":
             audio_path = full_file_name[7:]
+            full_file_name = "shout://%s" % audio_path
         elif full_file_name[:8].lower() == "https://":
             audio_path = full_file_name[8:]
+            full_file_name = "shout://%s" % audio_path
         elif full_file_name[:6].lower() == "ftp://":
             audio_path = full_file_name[6:]
-
-        full_file_name = "shout://%s" % audio_path
-
+            full_file_name = "shout://%s" % audio_path
     return full_file_name
+
