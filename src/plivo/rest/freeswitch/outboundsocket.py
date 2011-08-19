@@ -281,6 +281,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self._run()
         except RESTHangup:
             self.log.warn('Hangup')
+        except Exception, e:
+            [ self.log.error(line) for line in \
+                        traceback.format_exc().splitlines() ]
+            raise e
+            
 
     def _run(self):
         self.connect()
