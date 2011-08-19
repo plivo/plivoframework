@@ -86,8 +86,7 @@ def is_valid_url(value):
       r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
     # If no domain starters we assume its http and add it
-    if not value.startswith('http://') and not value.startswith('https://') \
-        and not value.startswith('ftp://'):
+    if not value.startswith('http://') and not value.startswith('https://'):
         value = ''.join(['http://', value])
 
     if regex.search(value):
@@ -411,6 +410,10 @@ class ResourceCache(object):
 def get_resource(socket, url):
     full_file_name = url
     if socket.cache is not None:
+        # don't do cache if not a remote file
+        if not full_file_name[:7].lower() == "http://" \
+            and not full_file_name[:8].lower() == "https://" \
+            return full_file_name
         rk = socket.cache.get_resource_key(url)
         socket.log.debug("Resource key %s" %rk)
         #~socket.cache.delete_resource(rk)
@@ -440,9 +443,6 @@ def get_resource(socket, url):
             full_file_name = "shout://%s" % audio_path
         elif full_file_name[:8].lower() == "https://":
             audio_path = full_file_name[8:]
-            full_file_name = "shout://%s" % audio_path
-        elif full_file_name[:6].lower() == "ftp://":
-            audio_path = full_file_name[6:]
             full_file_name = "shout://%s" % audio_path
     return full_file_name
 
