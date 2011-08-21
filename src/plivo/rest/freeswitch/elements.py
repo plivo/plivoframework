@@ -198,9 +198,9 @@ class Conference(Element):
           (default false)
     startConferenceOnEnter: the conference start when this member joins
           (default true)
-    endConferenceOnExit: close conference after all members 
+    endConferenceOnExit: close conference after all members
         with this attribute set to 'true' leave. (default false)
-    stayAlone: if 'false' and member is alone, conference is closed and member kicked out 
+    stayAlone: if 'false' and member is alone, conference is closed and member kicked out
           (default true)
     maxMembers: max members in conference
           (0 for max : 200)
@@ -1195,8 +1195,7 @@ class Play(Element):
             raise RESTFormatException("No File to play set !")
 
         if not is_valid_url(audio_path):
-            if file_exists(audio_path):
-                self.sound_file_path = audio_path
+            self.sound_file_path = audio_path
         else:
             # set to temp path for prepare to process audio caching async
             self.temp_audio_path = audio_path
@@ -1699,4 +1698,3 @@ class GetSpeech(Element):
                     outbound_socket.log.error("GetSpeech result failure, cannot parse result: %s" % str(e))
             # Redirect
             self.fetch_rest_xml(self.action, params, self.method)
-
