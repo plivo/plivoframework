@@ -138,8 +138,10 @@ class Element(object):
         self.attributes = {}
         self.text = ''
         self.children = []
+        self.uri = None
 
     def parse_element(self, element, uri=None):
+        self.uri = uri 
         self.prepare_attributes(element)
         self.prepare_text(element)
 
@@ -942,7 +944,6 @@ class GetDigits(Element):
         self.invalid_digits_sound = \
                             self.extract_attribute_value("invalidDigitsSound")
         self.valid_digits = self.extract_attribute_value("validDigits")
-        action = self.extract_attribute_value("action")
 
         try:
             retries = int(self.extract_attribute_value("retries"))
@@ -956,10 +957,11 @@ class GetDigits(Element):
             raise RESTAttributeException("method must be 'GET' or 'POST'")
         self.method = method
 
+        action = self.extract_attribute_value("action")
         if action and is_valid_url(action):
             self.action = action
         else:
-            self.action = uri
+            self.action = None
         self.num_digits = num_digits
         self.timeout = timeout * 1000
         self.finish_on_key = finish_on_key
@@ -1566,7 +1568,7 @@ class GetSpeech(Element):
         if action and is_valid_url(action):
             self.action = action
         else:
-            self.action = uri
+            self.action = None
 
     def prepare(self, outbound_socket):
         for child_instance in self.children:

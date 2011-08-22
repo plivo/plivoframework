@@ -11,11 +11,12 @@ import hmac
 import httplib
 import os
 import os.path
-import re
 import urllib
 import urllib2
 import urlparse
 import uuid
+import types
+
 import redis
 import redis.exceptions
 import ujson as json
@@ -45,7 +46,6 @@ def get_substring(start_char, end_char, data):
         return ""
     return data[start_pos+len(start_char):end_pos]
 
-
 def url_exists(url):
     p = urlparse.urlparse(url)
     if p[4]:
@@ -61,7 +61,6 @@ def url_exists(url):
     except Exception:
         return False
 
-
 def file_exists(filepath):
     return os.path.isfile(filepath)
 
@@ -74,35 +73,12 @@ def get_post_param(request, key):
     except MultiDict.KeyError:
         return ""
 
-
 def is_valid_url(value):
-    regex = re.compile(
-      r'^(?:http|ftp)s?://'  # http:// or https://
-      r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain
-      r'localhost|'  # localhost
-      r'http://127.0.0.1|'  # 127.0.0.1
-      r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # or ip
-      r'(?::\d+)?'  # optional port
-      r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-
-    # If no domain starters we assume its http and add it
-    if not value.startswith('http://') and not value.startswith('https://'):
-        value = ''.join(['http://', value])
-
-    if regex.search(value):
-        return True
-    # Trivial case failed. Try for possible IDN domain
-    if value:
-        scheme, netloc, path, query, fragment = urlparse.urlsplit(value)
-        try:
-            netloc = netloc.encode('idna')  # IDN -> ACE
-        except UnicodeError:  # invalid domain part
-            return False
-        url = urlparse.urlunsplit((scheme, netloc, path, query, fragment))
-        if regex.search(url):
-            return True
-
-    return False
+    if not value:
+        return False
+    if not isinstance(value, types.StringTypes):
+        return False
+    return value[:7] == 'http://' or value[:8] == 'https://'
 
 
 class HTTPErrorProcessor(urllib2.HTTPErrorProcessor):
