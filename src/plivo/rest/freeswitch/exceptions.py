@@ -42,6 +42,14 @@ class RESTRedirectException(Exception):
         return self.params
 
 
+class RESTSIPRedirectException(Exception):
+    def __init__(self, sip_url=None):
+        self.sip_url = sip_url
+
+    def get_sip_url(self):
+        return self.sip_url
+
+
 class UnrecognizedElementException(Exception):
     pass
 

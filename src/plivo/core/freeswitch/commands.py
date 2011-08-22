@@ -534,3 +534,23 @@ class Commands(object):
         For Inbound connection, uuid argument is mandatory.
         """
         return self._protocol_sendmsg("sched_transfer", args, uuid, lock)
+
+    def redirect(self, args, uuid="", lock=True):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_redirect
+
+        >>> redirect("sip:foo@bar.com")
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("redirect", args, uuid, lock)
+
+    def deflect(self, args, uuid="", lock=True):
+        """
+        Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_deflect
+
+        >>> deflect("sip:foo@bar.com")
+
+        For Inbound connection, uuid argument is mandatory.
+        """
+        return self._protocol_sendmsg("deflect", args, uuid, lock)

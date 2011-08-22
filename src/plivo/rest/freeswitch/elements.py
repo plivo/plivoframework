@@ -14,12 +14,13 @@ except ImportError:
 import gevent
 from gevent import spawn_raw
 
-from plivo.rest.freeswitch.helpers import is_valid_url, \
+from plivo.rest.freeswitch.helpers import is_valid_url, is_sip_url, \
                                         file_exists, normalize_url_space, \
                                         get_resource
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
+                                            RESTSIPRedirectException, \
                                             RESTNoExecuteException, \
                                             RESTHangup
 
@@ -1238,7 +1239,7 @@ class PreAnswer(Element):
     """
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait', 'GetSpeech')
+        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait', 'GetSpeech', 'Redirect')
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1406,22 +1407,43 @@ class Redirect(Element):
         Element.__init__(self)
         self.method = ""
         self.url = ""
+        self.sip_url = ""
+
+    def sip_redirect(self, sip_url):
+        raise RESTSIPRedirectException(sip_url)
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
         method = self.extract_attribute_value("method")
         if not method in ('GET', 'POST'):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
-        self.method = method
         url = element.text.strip()
         if not url:
-            raise RESTFormatException("Redirect must have a URL")
-        if not is_valid_url(url):
-            raise RESTFormatException("Redirect URL not valid!")
-        self.url = url
+            raise RESTFormatException("Redirect must have an URL")
+        if is_valid_url(url):
+            self.method = method
+            self.url = url
+            return
+        elif is_sip_url(url):
+            self.sip_url = url
+            return
+        raise RESTFormatException("Redirect URL '%s' not valid!" % str(url))
 
     def execute(self, outbound_socket):
-        self.fetch_rest_xml(self.url, method=self.method)
+        if self.sip_url:
+            outbound_socket.set("plivo_sip_redirect_uri=%s" % self.sip_url)
+            if outbound_socket.has_answered():
+                outbound_socket.log.debug("Sip redirect using deflect")
+                outbound_socket.deflect(self.sip_url)
+            else:
+                outbound_socket.log.debug("Sip redirect using redirect")
+                outbound_socket.redirect(self.sip_url) 
+            self.sip_redirect(self.sip_url)
+            return
+        elif self.url:
+            self.fetch_rest_xml(self.url, method=self.method)
+            return
+        raise RESTFormatException("Redirect must have an URL")
 
 
 class Speak(Element):

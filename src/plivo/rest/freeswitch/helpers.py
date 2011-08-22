@@ -15,7 +15,6 @@ import urllib
 import urllib2
 import urlparse
 import uuid
-import types
 
 import redis
 import redis.exceptions
@@ -76,9 +75,12 @@ def get_post_param(request, key):
 def is_valid_url(value):
     if not value:
         return False
-    if not isinstance(value, types.StringTypes):
-        return False
     return value[:7] == 'http://' or value[:8] == 'https://'
+
+def is_sip_url(value):
+    if not value:
+        return False
+    return value[:4] == 'sip:'
 
 
 class HTTPErrorProcessor(urllib2.HTTPErrorProcessor):

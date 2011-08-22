@@ -446,6 +446,10 @@ class RESTInboundSocket(InboundEventSocket):
         if hangup_url:
             called_num = event['Caller-Destination-Number']
             caller_num = event['Caller-Caller-ID-Number']
+            sip_uri = event['variable_plivo_sip_redirect_uri'] or ''
+            if sip_uri:
+                params['SipRedirect'] = 'true'
+                params['SipRedirectURI'] = sip_uri
             params['CallUUID'] = call_uuid or ''
             params['HangupCause'] = reason
             params['Direction'] = event['Call-Direction']
