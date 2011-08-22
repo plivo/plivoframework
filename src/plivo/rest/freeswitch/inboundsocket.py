@@ -736,6 +736,7 @@ class RESTInboundSocket(InboundEventSocket):
         # aleg case
         if legs == 'aleg':
             cmd = "uuid_displace %s start %s %d mux" % (call_uuid, play_str, length)
+            cmds.append(cmd)
         # bleg case
         elif legs  == 'bleg':
             # get the bleg
