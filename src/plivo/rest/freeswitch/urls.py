@@ -44,6 +44,8 @@ URLS = {
         '/' + PLIVO_VERSION + '/RecordStop/': (PlivoRestApi.record_stop, ['POST']),
         # API to play something on a single call
         '/' + PLIVO_VERSION + '/Play/': (PlivoRestApi.play, ['POST']),
+        # API to stop play something on a single call
+        '/' + PLIVO_VERSION + '/PlayStop/': (PlivoRestApi.play_stop, ['POST']),
         # API to schedule playing something  on a single call
         '/' + PLIVO_VERSION + '/SchedulePlay/': (PlivoRestApi.schedule_play, ['POST']),
         # API to cancel a scheduled play on a single call

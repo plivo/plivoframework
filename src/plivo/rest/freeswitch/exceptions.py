@@ -42,7 +42,7 @@ class RESTRedirectException(Exception):
         return self.params
 
 
-class RESTSIPRedirectException(Exception):
+class RESTSIPTransferException(Exception):
     def __init__(self, sip_url=None):
         self.sip_url = sip_url
 

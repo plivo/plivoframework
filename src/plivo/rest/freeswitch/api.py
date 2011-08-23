@@ -1536,6 +1536,8 @@ class PlivoRestApi(object):
                 'both' means play on the Call and the bridged leg of the Call.
                 Default is 'aleg' .
 
+        [Mix]: 'true'|'false'. Mix with current audio stream (default 'false')
+
         """
         self._rest_inbound_socket.log.debug("RESTAPI Play with %s" \
                                         % str(request.form.items()))
@@ -1546,6 +1548,7 @@ class PlivoRestApi(object):
         sounds = get_post_param(request, 'Sounds')
         legs = get_post_param(request, 'Legs')
         length = get_post_param(request, 'Length')
+        mix = get_post_param(request, 'Mix') == 'true'
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
@@ -1573,7 +1576,8 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
 
         # now do the job !
-        if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, length=length, schedule=0):
+        if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
+                                            length=length, schedule=0, mix=mix):
             msg = "Play Request Executed"
             result = True
             return flask.jsonify(Success=result, Message=msg)
@@ -1607,6 +1611,7 @@ class PlivoRestApi(object):
                 'both' means play on the Call and the bridged leg of the Call.
                 Default is 'aleg' .
 
+        [Mix]: 'true'|'false'. Mix with current audio stream (default 'false')
 
         Returns a scheduled task with id SchedPlayId that you can use to cancel play.
         """
@@ -1620,6 +1625,7 @@ class PlivoRestApi(object):
         legs = get_post_param(request, 'Legs')
         time = get_post_param(request, 'Time')
         length = get_post_param(request, 'Length')
+        mix = get_post_param(request, 'Mix') == 'true'
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
@@ -1658,7 +1664,8 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=result, Message=msg)
 
         # now do the job !
-        sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, length=length, schedule=time)
+        sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
+                                        length=length, schedule=time, mix=mix)
         if sched_id:
             msg = "SchedulePlay Request Done with SchedPlayId %s" % sched_id
             result = True
@@ -1696,10 +1703,38 @@ class PlivoRestApi(object):
         return flask.jsonify(Success=result, Message=msg)
 
     @auth_protect
-    def audio_effects(self):
-        """Add Audio Effects to a Bridged Call
-        
-        To add Audio Effects, you make an HTTP POST request to a
+    def play_stop(self):
+        """Call PlayStop
+        Stop a play on a call.
+
+        To stop a play, you make an HTTP POST request to a
         resource URI.
+
+        Notes:
+            You can not stop a ScheduledPlay with PlayStop.
+            PlayStop will stop play for both legs (aleg and bleg, if it exists).
+
+        POST Parameters
+        ---------------
+
+        Required Parameters - You must POST the following parameters:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
         """
-        pass
+        self._rest_inbound_socket.log.debug("RESTAPI PlayStop with %s" \
+                                        % str(request.form.items()))
+        msg = ""
+        result = False
+
+        calluuid = get_post_param(request, 'CallUUID')
+
+        if not calluuid:
+            msg = "CallUUID Parameter Missing"
+            return flask.jsonify(Success=result, Message=msg)
+
+        self._rest_inbound_socket.play_stop_on_call(calluuid)
+        msg = "PlayStop executed"
+        result = True
+        return flask.jsonify(Success=result, Message=msg)
+

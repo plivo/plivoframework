@@ -6,6 +6,10 @@ monkey.patch_all()
 
 import os.path
 import uuid
+try:
+    import xml.etree.cElementTree as etree
+except ImportError:
+    from xml.etree.elementtree import ElementTree as etree
 
 from gevent import spawn_raw
 from gevent import pool
@@ -446,10 +450,10 @@ class RESTInboundSocket(InboundEventSocket):
         if hangup_url:
             called_num = event['Caller-Destination-Number']
             caller_num = event['Caller-Caller-ID-Number']
-            sip_uri = event['variable_plivo_sip_redirect_uri'] or ''
+            sip_uri = event['variable_plivo_sip_transfer_uri'] or ''
             if sip_uri:
-                params['SipRedirect'] = 'true'
-                params['SipRedirectURI'] = sip_uri
+                params['SIPTransfer'] = 'true'
+                params['SIPTransferURI'] = sip_uri
             params['CallUUID'] = call_uuid or ''
             params['HangupCause'] = reason
             params['Direction'] = event['Call-Direction']
@@ -692,9 +696,15 @@ class RESTInboundSocket(InboundEventSocket):
                 return False
         return False
 
-    def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", length=3600, schedule=0):
+    def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", length=3600, schedule=0, mix=True):
         cmds = []
         error_count = 0
+        if mix:
+            aflags = "lm"
+            bflags = "lmr"
+        else:
+            aflags = "l"
+            bflags = "lr"
 
         if schedule <= 0:
             name = "Call Play"
@@ -730,47 +740,67 @@ class RESTInboundSocket(InboundEventSocket):
             return False
 
         # build command
-        play_str = 'file_string://'
-        play_str += '!'.join(sounds_to_play)
+        play_str = '!'.join(sounds_to_play)
+        play_aleg = 'file_string://%s' % play_str
+        play_bleg = 'file_string://silence_stream://1!%s' % play_str
+        
+        # get bleg
+        bleg = self.get_var("bridge_uuid", uuid=call_uuid)
 
         # aleg case
         if legs == 'aleg':
-            cmd = "uuid_displace %s start %s %d mux" % (call_uuid, play_str, length)
+            for displace in self._get_displace_media_list(call_uuid):
+                cmd = "uuid_displace %s stop %s" % (call_uuid, displace)
+                cmds.append(cmd)
+            # add displace command
+            cmd = "uuid_displace %s start %s %d %s" % (call_uuid, play_aleg, length, aflags)
             cmds.append(cmd)
         # bleg case
         elif legs  == 'bleg':
-            # get the bleg
-            bleg = self.get_var("bridge_uuid", uuid=call_uuid)
+            # add displace command
             if bleg:
-                cmd = "uuid_displace %s start %s %d mux" % (bleg, play_str, length)
+                for displace in self._get_displace_media_list(call_uuid):
+                    cmd = "uuid_displace %s stop %s" % (call_uuid, displace)
+                    cmds.append(cmd)
+                cmd = "uuid_displace %s start %s %d %s" % (call_uuid, play_bleg, length, bflags)
                 cmds.append(cmd)
             else:
                 self.log.error("%s Failed -- No BLeg found" % name)
                 return False
         # both legs case
         elif legs == 'both':
-            cmd = "uuid_displace %s start %s %d mux" % (call_uuid, play_str, length)
+            for displace in self._get_displace_media_list(call_uuid):
+                cmd = "uuid_displace %s stop %s" % (call_uuid, displace)
+                cmds.append(cmd)
+            # add displace commands
+            cmd = "uuid_displace %s start %s %d %s" % (call_uuid, play_aleg, length, aflags)
             cmds.append(cmd)
             # get the bleg
-            bleg = self.get_var("bridge_uuid", uuid=call_uuid)
             if bleg:
-                cmd = "uuid_displace %s start %s %d mux" % (bleg, play_str, length)
+                cmd = "uuid_displace %s start %s %d %s" % (call_uuid, play_bleg, length, bflags)
                 cmds.append(cmd)
             else:
-                self.log.error("%s Failed -- No BLeg found" % name)
-                return False
+                self.log.warn("%s -- No BLeg found" % name)
+        else:
+            self.log.error("%s Failed -- Invalid Legs '%s'" % (name, legs))
+            return False
 
         # case no schedule
         if schedule <= 0:
             for cmd in cmds:
+                '''
                 bg_api_response = self.bgapi(cmd)
                 job_uuid = bg_api_response.get_job_uuid()
                 if not job_uuid:
                     self.log.error("%s Failed '%s' -- JobUUID not received" % (name, cmd))
                     error_count += 1
+                '''
+                res = self.api(cmd)
+                if not res.is_success():
+                    self.log.error("%s Failed '%s' -- %s" % (name, cmd, res.get_response()))
+                    error_count += 1
             if error_count > 0:
                 return False
-            self.log.info("%s '%s' with JobUUID %s" % (name, cmd, job_uuid))
             return True
 
         # case schedule
@@ -781,9 +811,62 @@ class RESTInboundSocket(InboundEventSocket):
             if res.is_success():
                 self.log.info("%s '%s' with SchedPlayId %s" % (name, sched_cmd, sched_id))
             else:
-                self.log.error("%s Failed: %s" % (name, res.get_response()))
+                self.log.error("%s Failed '%s' -- %s" % (name, sched_cmd, res.get_response()))
                 error_count += 1
         if error_count > 0:
             return False
         return sched_id
+
+    def play_stop_on_call(self, call_uuid=""):
+        cmds = []
+        error_count = 0
+
+        # get bleg
+        bleg = self.get_var("bridge_uuid", uuid=call_uuid)
+
+        for displace in self._get_displace_media_list(call_uuid):
+            cmd = "uuid_displace %s stop %s" % (call_uuid, displace)
+            cmds.append(cmd)
+
+        if not cmds:
+            self.log.warn("PlayStop -- Nothing to stop")
+            return True
+
+        for cmd in cmds:
+            bg_api_response = self.bgapi(cmd)
+            job_uuid = bg_api_response.get_job_uuid()
+            if not job_uuid:
+                self.log.error("PlayStop Failed '%s' -- JobUUID not received" % cmd)
+                error_count += 1
+        if error_count > 0:
+            return False
+        return True
+
+    def _get_displace_media_list(self, uuid=''):
+        if not uuid:
+            return []
+        result = []
+        cmd = "uuid_buglist %s" % uuid
+        res = self.api(cmd)
+        if not res.get_response():
+            self.log.warn("cannot get displace_media_list: no list" % str(e))
+            return result
+        try:
+            doc = etree.fromstring(res.get_response())
+            if doc.tag != 'media-bugs':
+                return result
+            for node in doc:
+                if node.tag == 'media-bug':
+                    try:
+                        func = node.find('function').text
+                        if func == 'displace':
+                            target = node.find('target').text
+                            result.append(target)
+                    except:
+                        continue
+            return result
+        except Exception, e:
+            self.log.warn("cannot get displace_media_list: %s" % str(e))
+            return result
+
 

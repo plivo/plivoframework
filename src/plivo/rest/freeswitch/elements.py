@@ -20,7 +20,7 @@ from plivo.rest.freeswitch.helpers import is_valid_url, is_sip_url, \
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
-                                            RESTSIPRedirectException, \
+                                            RESTSIPTransferException, \
                                             RESTNoExecuteException, \
                                             RESTHangup
 
@@ -105,7 +105,11 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'fileName': '',
                 'bothLegs': 'false'
         },
+        'SIPTransfer': {
+                #url: SET IN ELEMENT BODY
+        },
         'Redirect': {
+                #url: SET IN ELEMENT BODY
                 'method': 'POST'
         },
         'Speak': {
@@ -1239,7 +1243,7 @@ class PreAnswer(Element):
     """
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait', 'GetSpeech', 'Redirect')
+        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait', 'GetSpeech', 'Redirect', 'SIPTransfer')
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1398,6 +1402,34 @@ class Record(Element):
             self.fetch_rest_xml(self.action, params, method=self.method)
 
 
+class SIPTransfer(Element):
+    def __init__(self):
+        Element.__init__(self)
+        self.sip_url = ""
+
+    def parse_element(self, element, uri=None):
+        url = element.text.strip()
+        sip_uris = set()
+        for sip_uri in url.split(','):
+            sip_uri = sip_uri.strip()
+            if is_sip_url(sip_uri):
+                sip_uris.add(sip_uri)
+        self.sip_url = ','.join(list(sip_uris))
+
+    def execute(self, outbound_socket):
+        if self.sip_url:
+            outbound_socket.log.info("SIPTransfer using sip uri '%s'" % str(self.sip_url))
+            outbound_socket.set("plivo_sip_transfer_uri=%s" % self.sip_url)
+            if outbound_socket.has_answered():
+                outbound_socket.log.debug("SIPTransfer using deflect")
+                outbound_socket.deflect(self.sip_url)
+            else:
+                outbound_socket.log.debug("SIPTransfer using redirect")
+                outbound_socket.redirect(self.sip_url) 
+            raise RESTSIPTransferException(self.sip_url)
+        raise RESTFormatException("SIPTransfer must have a sip uri")
+
+
 class Redirect(Element):
     """Redirect call flow to another Url.
     Url is set in element body
@@ -1407,10 +1439,6 @@ class Redirect(Element):
         Element.__init__(self)
         self.method = ""
         self.url = ""
-        self.sip_url = ""
-
-    def sip_redirect(self, sip_url):
-        raise RESTSIPRedirectException(sip_url)
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1424,23 +1452,10 @@ class Redirect(Element):
             self.method = method
             self.url = url
             return
-        elif is_sip_url(url):
-            self.sip_url = url
-            return
         raise RESTFormatException("Redirect URL '%s' not valid!" % str(url))
 
     def execute(self, outbound_socket):
-        if self.sip_url:
-            outbound_socket.set("plivo_sip_redirect_uri=%s" % self.sip_url)
-            if outbound_socket.has_answered():
-                outbound_socket.log.debug("Sip redirect using deflect")
-                outbound_socket.deflect(self.sip_url)
-            else:
-                outbound_socket.log.debug("Sip redirect using redirect")
-                outbound_socket.redirect(self.sip_url) 
-            self.sip_redirect(self.sip_url)
-            return
-        elif self.url:
+        if self.url:
             self.fetch_rest_xml(self.url, method=self.method)
             return
         raise RESTFormatException("Redirect must have an URL")

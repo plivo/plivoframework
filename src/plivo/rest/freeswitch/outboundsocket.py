@@ -24,7 +24,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
                                     UnrecognizedElementException, \
                                     RESTRedirectException, \
-                                    RESTSIPRedirectException, \
+                                    RESTSIPTransferException, \
                                     RESTHangup
 
 
@@ -455,11 +455,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     return
                 gevent.sleep(0.010)
                 continue
-            except RESTSIPRedirectException, sip_redirect:
-                self.session_params['SipRedirect'] = 'true'
-                self.session_params['SipRedirectURI'] = sip_redirect.get_sip_url() \
+            except RESTSIPTransferException, sip_redirect:
+                self.session_params['SIPTransfer'] = 'true'
+                self.session_params['SIPTransferURI'] = sip_redirect.get_sip_url() \
                             or ''
-                self.log.info("End of RESTXML -- Sip Redirect done to %s" % sip_redirect.get_sip_url())
+                self.log.info("End of RESTXML -- SIPTransfer done to %s" % sip_redirect.get_sip_url())
                 return
         self.log.warn('Max Redirect Reached !')
 
