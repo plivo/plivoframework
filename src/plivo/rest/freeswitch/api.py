@@ -1536,7 +1536,7 @@ class PlivoRestApi(object):
                 'both' means play on the Call and the bridged leg of the Call.
                 Default is 'aleg' .
 
-        [Mix]: 'true'|'false'. Mix with current audio stream (default 'false')
+        [Mix]: 'true'|'false'. Mix with current audio stream (default 'true')
 
         """
         self._rest_inbound_socket.log.debug("RESTAPI Play with %s" \
@@ -1548,7 +1548,11 @@ class PlivoRestApi(object):
         sounds = get_post_param(request, 'Sounds')
         legs = get_post_param(request, 'Legs')
         length = get_post_param(request, 'Length')
-        mix = get_post_param(request, 'Mix') == 'true'
+        mix = get_post_param(request, 'Mix')
+        if mix == 'false':
+            mix = False
+        else:
+            mix = True
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
@@ -1611,7 +1615,7 @@ class PlivoRestApi(object):
                 'both' means play on the Call and the bridged leg of the Call.
                 Default is 'aleg' .
 
-        [Mix]: 'true'|'false'. Mix with current audio stream (default 'false')
+        [Mix]: 'true'|'false'. Mix with current audio stream (default 'true')
 
         Returns a scheduled task with id SchedPlayId that you can use to cancel play.
         """
@@ -1625,7 +1629,11 @@ class PlivoRestApi(object):
         legs = get_post_param(request, 'Legs')
         time = get_post_param(request, 'Time')
         length = get_post_param(request, 'Length')
-        mix = get_post_param(request, 'Mix') == 'true'
+        mix = get_post_param(request, 'Mix')
+        if mix == 'false':
+            mix = False
+        else:
+            mix = True
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
