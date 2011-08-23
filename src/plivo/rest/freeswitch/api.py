@@ -1526,7 +1526,7 @@ class PlivoRestApi(object):
 
         Sounds: Comma separated list of sound files to play.
 
-        Optional Paramaters:
+        Optional Parameters:
 
         [Length]: number of seconds before terminating sounds.
 
@@ -1608,7 +1608,7 @@ class PlivoRestApi(object):
 
         Time: When playing sounds in seconds.
         
-        Optional Paramaters:
+        Optional Parameters:
 
         [Length]: number of seconds before terminating sounds.
 
@@ -1749,6 +1749,150 @@ class PlivoRestApi(object):
 
         self._rest_inbound_socket.play_stop_on_call(calluuid)
         msg = "PlayStop executed"
+        result = True
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def sound_touch(self):
+        """Add audio effects on a Call
+
+        To add audio effects on a Call, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+
+        Required Parameters - You must POST the following parameters:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        Optional Parameters:
+
+        [AudioDirection]: 'in' or 'out'. Change incoming or outgoing audio stream. (default 'out')
+
+        [PitchSemiTones]: Adjust the pitch in semitones, values should be between -14 and 14, default 0
+
+        [PitchOctaves: Adjust the pitch in octaves, values should be between -1 and 1, default 0
+
+        [Pitch]: Set the pitch directly, value should be > 0, default 1 (lower = lower tone)
+
+        [Rate]: Set the rate, value should be > 0, default 1 (lower = slower)
+
+        [Tempo]: Set the tempo, value should be > 0, default 1 (lower = slower)
+
+        """
+        self._rest_inbound_socket.log.debug("RESTAPI SoundTouch with %s" \
+                                        % str(request.form.items()))
+        msg = ""
+        result = False
+
+        calluuid = get_post_param(request, 'CallUUID')
+        audiodirection = get_post_param(request, 'AudioDirection')
+
+        if not calluuid:
+            msg = "CallUUID Parameter Missing"
+            return flask.jsonify(Success=result, Message=msg)
+        if not audiodirection:
+            audiodirection = 'out'
+        if not audiodirection in ('in', 'out'):
+            msg = "AudioDirection Parameter Must be 'in' or 'out'"
+            return flask.jsonify(Success=result, Message=msg)
+
+        pitch_s = get_post_param(request, 'PitchSemiTones')
+        if pitch_s:
+            try:
+                pitch_s = float(pitch_s)
+                if not -14 <= pitch_s <= 14:
+                    msg = "PitchSemiTones Parameter must be between -14 and 14"
+                    return flask.jsonify(Success=result, Message=msg)
+            except (ValueError, TypeError):
+                msg = "PitchSemiTones Parameter must be float"
+                return flask.jsonify(Success=result, Message=msg)
+
+        pitch_o = get_post_param(request, 'PitchOctaves')
+        if pitch_o:
+            try:
+                pitch_o = float(pitch_o)
+                if not -1 <= pitch_o <= 1:
+                    msg = "PitchOctaves Parameter must be between -1 and 1"
+                    return flask.jsonify(Success=result, Message=msg)
+            except (ValueError, TypeError):
+                msg = "PitchOctaves Parameter must be float"
+                return flask.jsonify(Success=result, Message=msg)
+                
+        pitch_p = get_post_param(request, 'Pitch')
+        if pitch_p:
+            try:
+                pitch_p = float(pitch_p)
+                if pitch_o <= 0:
+                    msg = "Pitch Parameter must be > 0"
+                    return flask.jsonify(Success=result, Message=msg)
+            except (ValueError, TypeError):
+                msg = "Pitch Parameter must be float"
+                return flask.jsonify(Success=result, Message=msg)
+                
+        pitch_r = get_post_param(request, 'Rate')
+        if pitch_r:
+            try:
+                pitch_r = float(pitch_r)
+                if pitch_r <= 0:
+                    msg = "Rate Parameter must be > 0"
+                    return flask.jsonify(Success=result, Message=msg)
+            except (ValueError, TypeError):
+                msg = "Rate Parameter must be float"
+                return flask.jsonify(Success=result, Message=msg)
+                
+        pitch_t = get_post_param(request, 'Tempo')
+        if pitch_t:
+            try:
+                pitch_t = float(pitch_t)
+                if pitch_t <= 0:
+                    msg = "Tempo Parameter must be > 0"
+                    return flask.jsonify(Success=result, Message=msg)
+            except (ValueError, TypeError):
+                msg = "Tempo Parameter must be float"
+                return flask.jsonify(Success=result, Message=msg)
+
+        if self._rest_inbound_socket.sound_touch(calluuid,
+                        direction=audiodirection, s=pitch_s,
+                        o=pitch_o, p=pitch_p, r=pitch_r, t=pitch_t):
+            msg = "SoundTouch executed"
+            result = True
+        else:
+            msg = "SoundTouch Failed"
+        return flask.jsonify(Success=result, Message=msg)
+
+    @auth_protect
+    def sound_touch_stop(self):
+        """Remove audio effects on a Call
+
+        To remove audio effects on a Call, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+
+        Required Parameters - You must POST the following parameters:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+        """
+        self._rest_inbound_socket.log.debug("RESTAPI SoundTouchStop with %s" \
+                                        % str(request.form.items()))
+        msg = ""
+        result = False
+
+        calluuid = get_post_param(request, 'CallUUID')
+        if not calluuid:
+            msg = "CallUUID Parameter Missing"
+            return flask.jsonify(Success=result, Message=msg)
+        cmd = "soundtouch %s stop" % calluuid
+        bg_api_response = self._rest_inbound_socket.bgapi(cmd)
+        job_uuid = bg_api_response.get_job_uuid()
+        if not job_uuid:
+            self._rest_inbound_socket.log.error("SoundTouchStop Failed '%s' -- JobUUID not received" % cmd)
+            msg = "SoundTouchStop Failed"
+            return flask.jsonify(Success=result, Message=msg)
+        msg = "SoundTouchStop executed"
         result = True
         return flask.jsonify(Success=result, Message=msg)
 

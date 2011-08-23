@@ -88,6 +88,7 @@ sed -i -e \
 -e "s/#formats\/mod_shout/formats\/mod_shout/g" \
 -e "s/#endpoints\/mod_dingaling/endpoints\/mod_dingaling/g" \
 -e "s/#formats\/mod_shell_stream/formats\/mod_shell_stream/g" \
+-e "s/#applications\/mod_soundtouch/applications\/mod_soundtouch/g" \
 -e "s/#say\/mod_say_de/say\/mod_say_de/g" \
 -e "s/#say\/mod_say_es/say\/mod_say_es/g" \
 -e "s/#say\/mod_say_fr/say\/mod_say_fr/g" \
@@ -111,6 +112,7 @@ sed -i -r \
 -e "s/<\!--\s?<load module=\"mod_tts_commandline\"\/>\s?-->/<load module=\"mod_tts_commandline\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_flite\"\/>\s?-->/<load module=\"mod_flite\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_pocketsphinx\"\/>\s?-->/<load module=\"mod_pocketsphinx\"\/>/g" \
+-e "s/<\!--\s?<load module=\"mod_soundtouch\"\/>\s?-->/<load module=\"mod_soundtouch\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_say_ru\"\/>\s?-->/<load module=\"mod_say_ru\"\/>/g" \
 -e "s/<\!--\s?<load module=\"mod_say_zh\"\/>\s?-->/<load module=\"mod_say_zh\"\/>/g" \
 -e 's/mod_say_zh.*$/&\n    <load module="mod_say_de"\/>\n    <load module="mod_say_es"\/>\n    <load module="mod_say_fr"\/>\n    <load module="mod_say_it"\/>\n    <load module="mod_say_nl"\/>\n    <load module="mod_say_hu"\/>\n    <load module="mod_say_th"\/>/' \

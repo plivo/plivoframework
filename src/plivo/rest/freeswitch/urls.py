@@ -50,6 +50,10 @@ URLS = {
         '/' + PLIVO_VERSION + '/SchedulePlay/': (PlivoRestApi.schedule_play, ['POST']),
         # API to cancel a scheduled play on a single call
         '/' + PLIVO_VERSION + '/CancelScheduledPlay/': (PlivoRestApi.cancel_scheduled_play, ['POST']),
+        # API to add soundtouch audio effects to a call
+        '/' + PLIVO_VERSION + '/SoundTouch/': (PlivoRestApi.sound_touch, ['POST']),
+        # API to remove soundtouch audio effects on a call
+        '/' + PLIVO_VERSION + '/SoundTouchStop/': (PlivoRestApi.sound_touch_stop, ['POST']),
         # API to mute a member in a conference
         '/' + PLIVO_VERSION + '/ConferenceMute/': (PlivoRestApi.conference_mute, ['POST']),
         # API to unmute a member in a conference

@@ -795,13 +795,6 @@ class RESTInboundSocket(InboundEventSocket):
         # case no schedule
         if schedule <= 0:
             for cmd in cmds:
-                '''
-                bg_api_response = self.bgapi(cmd)
-                job_uuid = bg_api_response.get_job_uuid()
-                if not job_uuid:
-                    self.log.error("%s Failed '%s' -- JobUUID not received" % (name, cmd))
-                    error_count += 1
-                '''
                 res = self.api(cmd)
                 if not res.is_success():
                     self.log.error("%s Failed '%s' -- %s" % (name, cmd, res.get_response()))
@@ -875,5 +868,30 @@ class RESTInboundSocket(InboundEventSocket):
         except Exception, e:
             self.log.warn("cannot get displace_media_list: %s" % str(e))
             return result
+
+    def sound_touch(self, call_uuid="", direction='out', s=None, o=None,
+                    p=None, r=None, t=None):
+        stop_cmd = "soundtouch %s stop" % call_uuid
+        cmd = "soundtouch %s start " % call_uuid
+        if direction == "in":
+            cmd += "send_leg "
+        if s:
+            cmd += "%ss " % str(s)
+        if o:
+            cmd += "%so " % str(o)
+        if p:
+            cmd += "%sp " % str(p)
+        if r:
+            cmd += "%sr " % str(r)
+        if t:
+            cmd += "%st " % str(t)
+        self.api(stop_cmd)
+        res = self.api(cmd)
+        if res.is_success():
+            return True
+        self.log.error("SoundTouch Failed '%s' -- %s" % (cmd, res.get_response()))
+        return False
+            
+
 
 
