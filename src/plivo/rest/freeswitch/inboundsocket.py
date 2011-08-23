@@ -696,15 +696,22 @@ class RESTInboundSocket(InboundEventSocket):
                 return False
         return False
 
-    def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", length=3600, schedule=0, mix=True):
+    def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", length=3600, schedule=0, mix=True, loop=False):
         cmds = []
         error_count = 0
-        if mix:
-            aflags = "lm"
-            bflags = "lmr"
-        else:
+
+        # set flags
+        if loop:
             aflags = "l"
-            bflags = "lr"
+            bflags = "l"
+        else:
+            aflags = ""
+            bflags = ""
+        if mix:
+            aflags += "m"
+            bflags += "mr"
+        else:
+            bflags += "r"
 
         if schedule <= 0:
             name = "Call Play"

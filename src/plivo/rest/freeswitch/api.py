@@ -1536,6 +1536,8 @@ class PlivoRestApi(object):
                 'both' means play on the Call and the bridged leg of the Call.
                 Default is 'aleg' .
 
+        [Loop]: 'true'|'false'. Play sound loop indefinitely (default 'false')
+
         [Mix]: 'true'|'false'. Mix with current audio stream (default 'true')
 
         """
@@ -1548,6 +1550,7 @@ class PlivoRestApi(object):
         sounds = get_post_param(request, 'Sounds')
         legs = get_post_param(request, 'Legs')
         length = get_post_param(request, 'Length')
+        loop = get_post_param(request, 'Loop') == 'true'
         mix = get_post_param(request, 'Mix')
         if mix == 'false':
             mix = False
@@ -1581,7 +1584,7 @@ class PlivoRestApi(object):
 
         # now do the job !
         if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
-                                            length=length, schedule=0, mix=mix):
+                                        length=length, schedule=0, mix=mix, loop=loop):
             msg = "Play Request Executed"
             result = True
             return flask.jsonify(Success=result, Message=msg)
@@ -1615,6 +1618,8 @@ class PlivoRestApi(object):
                 'both' means play on the Call and the bridged leg of the Call.
                 Default is 'aleg' .
 
+        [Loop]: 'true'|'false'. Play sound loop indefinitely (default 'false')
+
         [Mix]: 'true'|'false'. Mix with current audio stream (default 'true')
 
         Returns a scheduled task with id SchedPlayId that you can use to cancel play.
@@ -1629,6 +1634,7 @@ class PlivoRestApi(object):
         legs = get_post_param(request, 'Legs')
         time = get_post_param(request, 'Time')
         length = get_post_param(request, 'Length')
+        loop = get_post_param(request, 'Loop') == 'true'
         mix = get_post_param(request, 'Mix')
         if mix == 'false':
             mix = False
@@ -1673,7 +1679,7 @@ class PlivoRestApi(object):
 
         # now do the job !
         sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
-                                        length=length, schedule=time, mix=mix)
+                                    length=length, schedule=time, mix=mix, loop=loop)
         if sched_id:
             msg = "SchedulePlay Request Done with SchedPlayId %s" % sched_id
             result = True
