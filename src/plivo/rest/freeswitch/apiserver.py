@@ -14,6 +14,7 @@ import optparse
 from flask import Flask
 import gevent
 from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer as PyWSGIServer
 
 from plivo.core.errors import ConnectError
 from plivo.rest.freeswitch.api import PlivoRestApi
@@ -48,6 +49,9 @@ class PlivoRestServer(PlivoRestApi):
         self._run = False
         self._pidfile = pidfile
         self.configfile = configfile
+        self._wsgi_mode = WSGIServer
+        self._ssl_cert = None
+        self._ssl = False
         # create flask app
         self.app = Flask(self.name)
 
@@ -72,8 +76,18 @@ class PlivoRestServer(PlivoRestApi):
             fn = getattr(self, func.__name__)
             self.app.add_url_rule(path, func.__name__, fn, methods=methods)
         # create WSGI Server
-        self.http_server = WSGIServer((self.http_host, self.http_port),
-                                       self.app, log=self.log)
+        if self._ssl and self._ssl_cert and helpers.file_exists(self._ssl_cert):
+            self._wsgi_mode = PyWSGIServer
+            self.log.info("Listening HTTPS")
+            self.log.info("Force %s mode with HTTPS" % str(self._wsgi_mode))
+            self.http_server = self._wsgi_mode((self.http_host, self.http_port),
+                                               self.app, log=self.log, 
+                                               certfile=self._ssl_cert)
+        else:
+            self.log.info("Listening HTTP")
+            self.log.info("%s mode set" % str(self._wsgi_mode))
+            self.http_server = self._wsgi_mode((self.http_host, self.http_port),
+                                               self.app, log=self.log)
 
     def get_log(self):
         return self.log
@@ -90,7 +104,6 @@ class PlivoRestServer(PlivoRestApi):
         Based on the settings in the configuration file,
         LOG_TYPE will determine if we will log in file, syslog, stdout, http or dummy (no log)
         """
-
         if self._daemon is False:
             logtype = config.get('rest_server', 'LOG_TYPE')
             if logtype == 'dummy':
@@ -174,6 +187,16 @@ class PlivoRestServer(PlivoRestApi):
                 # if outbound host is 0.0.0.0, send to 127.0.0.1
                 if self.fs_out_host == '0.0.0.0':
                     self.fs_out_address = '127.0.0.1:%s' % self.fs_out_port
+                # set wsgi mode
+                _wsgi_mode = config.get('rest_server', 'WSGI_MODE', default='wsgi')
+                if _wsgi_mode in ('pywsgi', 'python', 'py'):
+                    self._wsgi_mode = PyWSGIServer
+                else:
+                    self._wsgi_mode = WSGIServer
+                # set ssl or not
+                self._ssl = config.get('rest_server', 'SSL', default='false') == 'true'
+                self._ssl_cert = config.get('rest_server', 'SSL_CERT', default='')
+
 
             self.default_answer_url = config.get('common', 'DEFAULT_ANSWER_URL')
 
@@ -289,7 +312,10 @@ class PlivoRestServer(PlivoRestApi):
         retries = 1
         # start http server
         self.http_proc = gevent.spawn(self.http_server.serve_forever)
-        self.log.info("RESTServer started at: 'http://%s'" % self.http_address)
+        if self._ssl:
+            self.log.info("RESTServer started at: 'https://%s'" % self.http_address)
+        else:
+            self.log.info("RESTServer started at: 'http://%s'" % self.http_address)
         # Start inbound socket
         try:
             while self._run:
