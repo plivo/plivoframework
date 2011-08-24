@@ -167,13 +167,13 @@ class Element(object):
             result = execute(outbound_socket)
             outbound_socket.current_element = None
         except RESTHangup:
-            outbound_socket.log.info("[%s] Done (Hangup)" % self.name)
+            outbound_socket.log.info("[%s] Done (hangup)" % self.name)
             raise
         except RESTRedirectException:
-            outbound_socket.log.info("[%s] Done (Redirect)" % self.name)
+            outbound_socket.log.info("[%s] Done (redirect)" % self.name)
             raise
         except RESTSIPTransferException:
-            outbound_socket.log.info("[%s] Done (SIPTransfer)" % self.name)
+            outbound_socket.log.info("[%s] Done (sip transfer)" % self.name)
             raise
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
