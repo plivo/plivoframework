@@ -80,10 +80,10 @@ git clone $FS_GIT_REPO
 cd $FS_BASE_PATH/freeswitch
 sh bootstrap.sh && ./configure
 [ -f modules.conf ] && cp modules.conf modules.conf.bak
-sed -i -e \
-"s/#applications\/mod_curl/applications\/mod_curl/g" \
+sed -i \
+-e "s/#applications\/mod_curl/applications\/mod_curl/g" \
 -e "s/#asr_tts\/mod_flite/asr_tts\/mod_flite/g" \
--e "s/#asr_tts/mod_pocketsphinx/asr_tts/mod_pocketsphinx/g" \
+-e "s/#asr_tts\/mod_pocketsphinx/asr_tts\/mod_pocketsphinx/g" \
 -e "s/#asr_tts\/mod_tts_commandline/asr_tts\/mod_tts_commandline/g" \
 -e "s/#formats\/mod_shout/formats\/mod_shout/g" \
 -e "s/#endpoints\/mod_dingaling/endpoints\/mod_dingaling/g" \
