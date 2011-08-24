@@ -144,9 +144,14 @@ class Element(object):
         self.text = ''
         self.children = []
         self.uri = None
+        self._element = None
+
+    def get_element(self):
+        return self._element
 
     def parse_element(self, element, uri=None):
         self.uri = uri 
+        self._element = element
         self.prepare_attributes(element)
         self.prepare_text(element)
 
@@ -163,6 +168,12 @@ class Element(object):
             outbound_socket.current_element = None
         except RESTHangup:
             outbound_socket.log.info("[%s] Done (Hangup)" % self.name)
+            raise
+        except RESTRedirectException:
+            outbound_socket.log.info("[%s] Done (Redirect)" % self.name)
+            raise
+        except RESTSIPTransferException:
+            outbound_socket.log.info("[%s] Done (SIPTransfer)" % self.name)
             raise
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
@@ -1251,6 +1262,8 @@ class PreAnswer(Element):
     def prepare(self, outbound_socket):
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
+                outbound_socket.validate_element(child_instance.get_element(), 
+                                                 child_instance)
                 child_instance.prepare(outbound_socket)
 
     def execute(self, outbound_socket):
