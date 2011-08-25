@@ -755,6 +755,9 @@ class Dial(Element):
             outbound_socket.unset("effective_caller_id_number")
         # Set continue on fail
         outbound_socket.set("continue_on_fail=true")
+        # Don't hangup after bridge !
+        outbound_socket.set("hangup_after_bridge=false")
+
         # Set ring flag if dial will ring.
         # But first set plivo_dial_rang to false
         # to be sure we don't get it from an old Dial
@@ -774,9 +777,6 @@ class Dial(Element):
             return
         # Create dialstring
         self.dial_str = ':_:'.join(numbers)
-
-        # Don't hangup after bridge !
-        outbound_socket.set("hangup_after_bridge=false")
 
         # Set time limit: when reached, B Leg is hung up
         sched_hangup_id = str(uuid.uuid1())
