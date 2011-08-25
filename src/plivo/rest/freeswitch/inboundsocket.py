@@ -699,6 +699,7 @@ class RESTInboundSocket(InboundEventSocket):
     def play_on_call(self, call_uuid="", sounds_list=[], legs="aleg", length=3600, schedule=0, mix=True, loop=False):
         cmds = []
         error_count = 0
+        bleg = None
 
         # set flags
         if loop:
@@ -737,7 +738,7 @@ class RESTInboundSocket(InboundEventSocket):
                     self.log.warn("%s -- File %s not found" % (name, sound)) 
             else:
                 url = normalize_url_space(sound)
-                sound_file_path = get_resource(self, url)
+                sound_file_path = get_resource(self, url) # potential write/read conflict with outbound server
                 if sound_file_path:
                     sounds_to_play.append(sound_file_path)
                 else:
@@ -751,19 +752,18 @@ class RESTInboundSocket(InboundEventSocket):
         play_aleg = 'file_string://%s' % play_str
         play_bleg = 'file_string://silence_stream://1!%s' % play_str
         
-        # get bleg
-        bleg = self.get_var("bridge_uuid", uuid=call_uuid)
-
         # aleg case
         if legs == 'aleg':
+            # add displace command
             for displace in self._get_displace_media_list(call_uuid):
                 cmd = "uuid_displace %s stop %s" % (call_uuid, displace)
                 cmds.append(cmd)
-            # add displace command
             cmd = "uuid_displace %s start %s %d %s" % (call_uuid, play_aleg, length, aflags)
             cmds.append(cmd)
         # bleg case
         elif legs  == 'bleg':
+            # get bleg
+            bleg = self.get_var("bridge_uuid", uuid=call_uuid)
             # add displace command
             if bleg:
                 for displace in self._get_displace_media_list(call_uuid):
@@ -776,10 +776,12 @@ class RESTInboundSocket(InboundEventSocket):
                 return False
         # both legs case
         elif legs == 'both':
+            # get bleg
+            bleg = self.get_var("bridge_uuid", uuid=call_uuid)
+            # add displace commands
             for displace in self._get_displace_media_list(call_uuid):
                 cmd = "uuid_displace %s stop %s" % (call_uuid, displace)
                 cmds.append(cmd)
-            # add displace commands
             cmd = "uuid_displace %s start %s %d %s" % (call_uuid, play_aleg, length, aflags)
             cmds.append(cmd)
             # get the bleg

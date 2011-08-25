@@ -759,7 +759,9 @@ class Dial(Element):
         # But first set plivo_dial_rang to false
         # to be sure we don't get it from an old Dial
         outbound_socket.set("plivo_dial_rang=false")
-        outbound_socket.set("execute_on_ring=set::plivo_dial_rang=true")
+        ring_flag = "api_on_ring='uuid_setvar %s plivo_dial_rang true',api_on_pre_answer='uuid_setvar %s plivo_dial_rang true'" \
+                    % (outbound_socket.get_channel_unique_id(), outbound_socket.get_channel_unique_id())
+
         # Set numbers to dial from Number nouns
         for child in self.children:
             if isinstance(child, Number):
@@ -800,7 +802,7 @@ class Dial(Element):
                 dial_confirm = ",%s,%s,%s,playback_delimiter=!" % (confirm_music_str, confirm_key_str, confirm_cancel)
 
         # Append time limit and group confirm to dial string
-        self.dial_str = '<%s%s>%s' % (dial_time_limit, dial_confirm, self.dial_str)
+        self.dial_str = '<%s,%s%s>%s' % (ring_flag, dial_time_limit, dial_confirm, self.dial_str)
         # Ugly hack to force use of enterprise originate because simple originate lacks speak support in ringback
         if len(numbers) < 2:
             self.dial_str += ':_:'
