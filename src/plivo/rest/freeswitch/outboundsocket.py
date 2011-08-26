@@ -131,7 +131,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def _protocol_send(self, command, args=''):
         """Access parent method _protocol_send
         """
-        self.log.debug("Execute: %s args='%s'" % (command, args))
+        self.log.debug("Execute: %s args='%s'" % (command, safe_str(args)))
         response = super(PlivoOutboundEventSocket, self)._protocol_send(
                                                                 command, args)
         self.log.debug("Response: %s" % str(response))
@@ -143,7 +143,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """Access parent method _protocol_sendmsg
         """
         self.log.debug("Execute: %s args=%s, uuid='%s', lock=%s, loops=%d" \
-                      % (name, str(args), uuid, str(lock), loops))
+                      % (name, safe_str(args), uuid, str(lock), loops))
         response = super(PlivoOutboundEventSocket, self)._protocol_sendmsg(
                                                 name, args, uuid, lock, loops)
         self.log.debug("Response: %s" % str(response))
