@@ -31,6 +31,7 @@ LOG_NOTSET = logging.NOTSET
 __default_servicename__ = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
 
+
 class StdoutLogger(object):
     def __init__(self, loglevel=LOG_DEBUG, servicename=__default_servicename__):
         self.loglevel = loglevel
