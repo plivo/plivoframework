@@ -29,6 +29,16 @@ LOG_NOTSET = logging.NOTSET
 __default_servicename__ = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
 
+def safe_str(o):
+    try:
+        return str(o)
+    except:
+        if isinstance(o, unicode):
+            encoding = sys.getdefaultencoding()
+            return o.encode(encoding, 'backslashreplace')
+        return o
+
+
 class StdoutLogger(object):
     def __init__(self, loglevel=LOG_DEBUG, servicename=__default_servicename__):
         self.loglevel = loglevel
@@ -56,16 +66,16 @@ class StdoutLogger(object):
         self._logger.setLevel(self.loglevel)
 
     def info(self, msg):
-        self._logger.info(str(msg))
+        self._logger.info(safe_str(msg))
 
     def debug(self, msg):
-        self._logger.debug(str(msg))
+        self._logger.debug(safe_str(msg))
 
     def warn(self, msg):
-        self._logger.warn(str(msg))
+        self._logger.warn(safe_str(msg))
 
     def error(self, msg):
-        self._logger.error(str(msg))
+        self._logger.error(safe_str(msg))
 
     def write(self, msg):
         self.info(msg)
@@ -292,31 +302,31 @@ class HTTPLogger(object):
 
     def info(self, msg):
         try:
-            self._logger.info(str(msg))
+            self._logger.info(safe_str(msg))
         except:
-            self._fallback.info(str(msg))
+            self._fallback.info(safe_str(msg))
 
     def debug(self, msg):
         try:
-            self._logger.debug(str(msg))
+            self._logger.debug(safe_str(msg))
         except:
-            self._fallback.debug(str(msg))
+            self._fallback.debug(safe_str(msg))
 
     def warn(self, msg):
         try:
-            self._logger.warn(str(msg))
+            self._logger.warn(safe_str(msg))
         except:
-            self._fallback.warn(str(msg))
+            self._fallback.warn(safe_str(msg))
 
     def error(self, msg):
         try:
-            self._logger.error(str(msg))
+            self._logger.error(safe_str(msg))
         except:
-            self._fallback.error(str(msg))
+            self._fallback.error(safe_str(msg))
 
     def write(self, msg):
         try:
             self.info(msg)
         except:
-            self._fallback.info(str(msg))
+            self._fallback.info(safe_str(msg))
 

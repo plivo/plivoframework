@@ -16,6 +16,7 @@ import gevent.queue
 from gevent import spawn_raw
 from gevent.event import AsyncResult
 
+from plivo.utils.logger import safe_str
 from plivo.core.freeswitch.eventtypes import Event
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring
 from plivo.core.freeswitch.outboundsocket import OutboundEventSocket
@@ -43,19 +44,19 @@ class RequestLogger(object):
 
     def info(self, msg):
         """Log info level"""
-        self.logger.info('(%s) %s' % (self.request_id, str(msg)))
+        self.logger.info('(%s) %s' % (self.request_id, safe_str(msg)))
 
     def warn(self, msg):
         """Log warn level"""
-        self.logger.warn('(%s) %s' % (self.request_id, str(msg)))
+        self.logger.warn('(%s) %s' % (self.request_id, safe_str(msg)))
 
     def error(self, msg):
         """Log error level"""
-        self.logger.error('(%s) %s' % (self.request_id, str(msg)))
+        self.logger.error('(%s) %s' % (self.request_id, safe_str(msg)))
 
     def debug(self, msg):
         """Log debug level"""
-        self.logger.debug('(%s) %s' % (self.request_id, str(msg)))
+        self.logger.debug('(%s) %s' % (self.request_id, safe_str(msg)))
 
 
 
