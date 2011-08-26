@@ -11,7 +11,7 @@ class Transport(object):
         self.closed = True
 
     def write(self, data):
-        self.sockfd.write(data)
+        self.sockfd.write(bytearray(data, "utf-8"))
         self.sockfd.flush()
 
     def read_line(self):
