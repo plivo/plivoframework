@@ -174,7 +174,8 @@ class PlivoRestApi(object):
 
         # set send_digits
         if send_digits:
-            args_list.append("execute_on_answer='send_dtmf %s'" % send_digits)
+            args_list.append("execute_on_answer_1='playback silence_stream://1'")
+            args_list.append("execute_on_answer_2='send_dtmf %s'" % send_digits)
 
         # set time_limit
         try:
@@ -184,8 +185,8 @@ class PlivoRestApi(object):
         if time_limit > 0:
             # create sched_hangup_id
             sched_hangup_id = str(uuid.uuid1())
-            args_list.append("api_on_answer='sched_api +%d %s 'hupall ALLOTTED_TIMEOUT plivo_request_uuid %s''" \
-                                                % (time_limit, sched_hangup_id, request_uuid))
+            args_list.append("api_on_answer_%d='sched_api +%d %s 'hupall ALLOTTED_TIMEOUT plivo_request_uuid %s''" \
+                                                % (api_answer_count, time_limit, sched_hangup_id, request_uuid))
             args_list.append("plivo_sched_hangup_id=%s" % sched_hangup_id)
 
         # build originate string
