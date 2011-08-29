@@ -45,8 +45,8 @@ class Commands(object):
         "Please refer to http://wiki.freeswitch.org/wiki/Event_Socket#event"
         return self._protocol_send("event", args)
 
-    def execute(self, command, args=''):
-        return self._protocol_sendmsg(command, args, uuid='', lock=True)
+    def execute(self, command, args='', uuid='', lock=True):
+        return self._protocol_sendmsg(command, args, uuid, lock)
 
     def get_var(self, var, uuid=""):
         """
