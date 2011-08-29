@@ -174,8 +174,7 @@ class PlivoRestApi(object):
 
         # set send_digits
         if send_digits:
-            args_list.append("execute_on_answer_1='playback silence_stream://1'")
-            args_list.append("execute_on_answer_2='send_dtmf %s'" % send_digits)
+            args_list.append("execute_on_answer='send_dtmf %s'" % send_digits)
 
         # set time_limit
         try:
