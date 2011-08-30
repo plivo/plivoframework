@@ -15,6 +15,7 @@ import urllib
 import urllib2
 import urlparse
 import uuid
+import traceback
 
 import redis
 import redis.exceptions
@@ -309,6 +310,7 @@ class ResourceCache(object):
 
     def _connect(self):
         self._cx = redis.Redis(host=self.host, port=self.port, db=self.db)
+        return True
 
     def get_resource_params(self, url):
         resource_key = self.get_resource_key(url)
@@ -320,8 +322,9 @@ class ResourceCache(object):
                 return resource_key, resource_type, etag, last_modified
             else:
                 return None, None, None, None
-        except redis.exceptions.ConnectionError:
-            self._connect()
+        except redis.exceptions.ConnectionError, e:
+            if not self._connect():
+                raise e
 
     def update_resource_params(self, resource_key, resource_type, etag, last_modified):
         if etag is None:
@@ -333,16 +336,18 @@ class ResourceCache(object):
             self._cx.hset("resource_key:%s" % resource_key, "resource_type", resource_type)
             self._cx.hset("resource_key:%s" % resource_key, "etag", etag)
             self._cx.hset("resource_key:%s" % resource_key, "last_modified", last_modified)
-        except redis.exceptions.ConnectionError:
-            self._connect()
+        except redis.exceptions.ConnectionError, e:
+            if not self._connect():
+                raise e
 
     def delete_resource(self, resource_key):
         try:
             if self._cx.sismembers("resource_key", resource_key):
                 self._cx.srem("resource_key", resource_key)
                 self._cx.delete("resource_key:%s" % resource_key)
-        except redis.exceptions.ConnectionError:
-            self._connect()
+        except redis.exceptions.ConnectionError, e:
+            if not self._connect():
+                raise e
 
     def cache_resource(self, url):
         request = urllib2.Request(url)
@@ -395,32 +400,38 @@ def get_resource(socket, url):
         rk = socket.cache.get_resource_key(url)
         socket.log.debug("Resource key %s" %rk)
         #~socket.cache.delete_resource(rk)
-        resource_key, resource_type, etag, last_modified = socket.cache.get_resource_params(url)
-        if resource_key is None:
-            socket.log.info("Resource not found in cache. Download and Cache")
-            try:
-                full_file_name = socket.cache.cache_resource(url)
-            except UnsupportedResourceFormat:
-                socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
-        else:
-            socket.log.debug("Resource found in Cache. Check if source is newer")
-            updated, new_etag, new_last_modified = socket.cache.is_resource_updated(url, etag, last_modified)
-            if not updated:
-                socket.log.debug("Source file same. Use Cached Version")
-                file_name = "%s.%s" % (resource_key, resource_type)
-                full_file_name = os.path.join(socket.cache.cache_path, file_name)
-            else:
-                socket.log.debug("Source file updated. Download and Cache")
+        try:
+            resource_key, resource_type, etag, last_modified = socket.cache.get_resource_params(url)
+            if resource_key is None:
+                socket.log.info("Resource not found in cache. Download and Cache")
                 try:
                     full_file_name = socket.cache.cache_resource(url)
                 except UnsupportedResourceFormat:
                     socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
-    else:
-        if full_file_name[:7].lower() == "http://":
-            audio_path = full_file_name[7:]
-            full_file_name = "shout://%s" % audio_path
-        elif full_file_name[:8].lower() == "https://":
-            audio_path = full_file_name[8:]
-            full_file_name = "shout://%s" % audio_path
+            else:
+                socket.log.debug("Resource found in Cache. Check if source is newer")
+                updated, new_etag, new_last_modified = socket.cache.is_resource_updated(url, etag, last_modified)
+                if not updated:
+                    socket.log.debug("Source file same. Use Cached Version")
+                    file_name = "%s.%s" % (resource_key, resource_type)
+                    full_file_name = os.path.join(socket.cache.cache_path, file_name)
+                else:
+                    socket.log.debug("Source file updated. Download and Cache")
+                    try:
+                        full_file_name = socket.cache.cache_resource(url)
+                    except UnsupportedResourceFormat:
+                        socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
+        except Exception, e:
+            socket.log.error("Cache Error !")
+            [ socket.log.error(line) for line in \
+                            traceback.format_exc().splitlines() ]
+
+
+    if full_file_name[:7].lower() == "http://":
+        audio_path = full_file_name[7:]
+        full_file_name = "shout://%s" % audio_path
+    elif full_file_name[:8].lower() == "https://":
+        audio_path = full_file_name[8:]
+        full_file_name = "shout://%s" % audio_path
     return full_file_name
 
