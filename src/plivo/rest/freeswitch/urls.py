@@ -54,6 +54,8 @@ URLS = {
         '/' + PLIVO_VERSION + '/SoundTouch/': (PlivoRestApi.sound_touch, ['POST']),
         # API to remove soundtouch audio effects on a call
         '/' + PLIVO_VERSION + '/SoundTouchStop/': (PlivoRestApi.sound_touch_stop, ['POST']),
+        # API to send digits to a call
+        '/' + PLIVO_VERSION + '/SendDigits/': (PlivoRestApi.send_digits, ['POST']),
         # API to mute a member in a conference
         '/' + PLIVO_VERSION + '/ConferenceMute/': (PlivoRestApi.conference_mute, ['POST']),
         # API to unmute a member in a conference

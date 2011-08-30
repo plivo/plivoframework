@@ -109,22 +109,12 @@ class PlivoRestApi(object):
             pass
         raise Unauthorized("HTTP Auth Failed")
 
-    @auth_protect
-    def index(self):
-        message = """
-        Welcome to Plivo - http://www.plivo.org/<br>
-        <br>
-        Plivo is a Communication Framework to rapidly build Voice based apps,
-        to make and receive calls, using your existing web development skills
-        and infrastructure.<br>
-        <br>
-        <br>
-        For further information please visit our website :
-        http://www.plivo.org/ <br>
-        <br>
-        <br>
-        """
-        return message
+    def send_response(self, Success, Message, **kwargs):
+        if Success is True:
+            self._rest_inbound_socket.log.info(Message)
+            return flask.jsonify(Success=True, Message=Message, **kwargs)
+        self._rest_inbound_socket.log.error(Message)
+        return flask.jsonify(Success=False, Message=Message, **kwargs)
 
     def _prepare_call_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
                                 gw_timeouts, gw_retries, send_digits, time_limit,
@@ -270,6 +260,23 @@ class PlivoRestApi(object):
         return res
 
     @auth_protect
+    def index(self):
+        message = """
+        Welcome to Plivo - http://www.plivo.org/<br>
+        <br>
+        Plivo is a Communication Framework to rapidly build Voice based apps,
+        to make and receive calls, using your existing web development skills
+        and infrastructure.<br>
+        <br>
+        <br>
+        For further information please visit our website :
+        http://www.plivo.org/ <br>
+        <br>
+        <br>
+        """
+        return message
+
+    @auth_protect
     def reload_config(self):
         """Reload plivo config for rest server
         """
@@ -298,7 +305,7 @@ class PlivoRestApi(object):
                 msg += ' : %s' % str(e)
                 result = False
 
-        return flask.jsonify(Success=result, Message=msg)
+        return send_response(Success=result, Message=msg)
 
     @auth_protect
     def call(self):
@@ -353,8 +360,11 @@ class PlivoRestApi(object):
         Remember to URL-encode this string, since the '#' character has
         special meaning in a URL.
         To wait before sending DTMF to the extension, you can add leading 'w'
-        or 'W' characters. Each 'w' character waits 0.5 seconds and each 'W'
-        character waits for 1.0 seconds instead of sending a digit.
+        characters. 
+        Each 'w' character waits 0.5 seconds instead of sending a digit.
+        Each 'W' character waits 1.0 seconds instead of sending a digit.
+        You can also add the tone duration in ms by appending @[duration] after string.
+        Eg. 1w2w3@1000
         """
         self._rest_inbound_socket.log.debug("RESTAPI Call with %s" \
                                         % str(request.form.items()))
@@ -399,7 +409,7 @@ class PlivoRestApi(object):
                 msg = "Call Request Executed"
                 result = True
 
-        return flask.jsonify(Success=result,
+        return self.send_response(Success=result,
                              Message=msg,
                              RequestUUID=request_uuid)
 
@@ -457,9 +467,11 @@ class PlivoRestApi(object):
         use SendDigits=1234#.
         Remember to URL-encode this string, since the '#' character has
         special meaning in a URL.
-        To wait before sending DTMF to the extension, you can add leading 'w'
-        characters. Each 'w' character waits 0.5 seconds instead of sending a
-        digit.
+        To wait before sending DTMF to the extension, you can add leading 'w' or 'W' characters.
+        Each 'w' character waits 0.5 seconds instead of sending a digit.
+        Each 'W' character waits 1.0 seconds instead of sending a digit.
+        You can also add the tone duration in ms by appending @[duration] after string.
+        Eg. 1w2w3@1000
         """
         self._rest_inbound_socket.log.debug("RESTAPI BulkCall with %s" \
                                         % str(request.form.items()))
@@ -559,7 +571,7 @@ class PlivoRestApi(object):
                         msg = "BulkCalls Requests Failed"
                         request_uuid_list = []
 
-        return flask.jsonify(Success=result, Message=msg,
+        return self.send_response(Success=result, Message=msg,
                              RequestUUID=request_uuid_list)
 
     @auth_protect
@@ -590,17 +602,17 @@ class PlivoRestApi(object):
 
         if not call_uuid and not request_uuid:
             msg = "CallUUID or RequestUUID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif call_uuid and request_uuid:
             msg = "Both CallUUID and RequestUUID Parameters cannot be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.hangup_call(call_uuid, request_uuid)
         if res:
             msg = "Hangup Call Executed"
             result = True
         else:
             msg = "Hangup Call Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def transfer_call(self):
@@ -626,13 +638,13 @@ class PlivoRestApi(object):
 
         if not call_uuid:
             msg = "CallUUID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif not new_xml_url:
             msg = "Url Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif not is_valid_url(new_xml_url):
             msg = "Url is not Valid"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         res = self._rest_inbound_socket.transfer_call(new_xml_url,
                                                       call_uuid)
@@ -641,7 +653,7 @@ class PlivoRestApi(object):
             result = True
         else:
             msg = "Transfer Call Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def hangup_all_calls(self):
@@ -651,7 +663,7 @@ class PlivoRestApi(object):
         """
         msg = "All Calls Hungup"
         self._rest_inbound_socket.hangup_all_calls()
-        return flask.jsonify(Success=True, Message=msg)
+        return self.send_response(Success=True, Message=msg)
 
     @auth_protect
     def schedule_hangup(self):
@@ -698,7 +710,7 @@ class PlivoRestApi(object):
                         msg = "ScheduleHangup Failed: %s" % res.get_response()
             except ValueError:
                 msg = "Invalid Time Parameter !"
-        return flask.jsonify(Success=result, Message=msg, SchedHangupId=sched_id)
+        return self.send_response(Success=result, Message=msg, SchedHangupId=sched_id)
 
     @auth_protect
     def cancel_scheduled_hangup(self):
@@ -727,7 +739,7 @@ class PlivoRestApi(object):
                 result = True
             else:
                 msg = "Scheduled Hangup Cancelation Failed: %s" % res.get_response()
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def record_start(self):
@@ -754,12 +766,12 @@ class PlivoRestApi(object):
         timelimit = get_post_param(request, 'TimeLimit')
         if not calluuid:
             msg = "CallUUID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not fileformat:
             fileformat = "mp3"
         if not fileformat in ("mp3", "wav"):
             msg = "FileFormat Parameter must be 'mp3' or 'wav'"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not timelimit:
             timelimit = 60
         else:
@@ -767,7 +779,7 @@ class PlivoRestApi(object):
                 timelimit = int(timelimit)
             except ValueError:
                 msg = "RecordStart Failed: invalid TimeLimit '%s'" % str(timelimit)
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
 
         if filepath:
             filepath = os.path.normpath(filepath) + os.sep
@@ -779,10 +791,10 @@ class PlivoRestApi(object):
         if res.is_success():
             msg = "RecordStart Executed with RecordFile %s" % recordfile
             result = True
-            return flask.jsonify(Success=result, Message=msg, RecordFile=recordfile)
+            return self.send_response(Success=result, Message=msg, RecordFile=recordfile)
 
         msg = "RecordStart Failed: %s" % res.get_response()
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def record_stop(self):
@@ -804,19 +816,19 @@ class PlivoRestApi(object):
         recordfile = get_post_param(request, 'RecordFile')
         if not calluuid:
             msg = "CallUUID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not recordfile:
             msg = "RecordFile Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.api("uuid_record %s stop %s" \
                 % (calluuid, recordfile))
         if res.is_success():
             msg = "RecordStop Executed"
             result = True
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         msg = "RecordStop Failed: %s" % res.get_response()
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_mute(self):
@@ -838,22 +850,22 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.conference_api(room, "mute %s" % member_id, async=False)
         if not res:
             msg = "Conference Mute Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Mute %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Mute Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_unmute(self):
@@ -875,22 +887,22 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.conference_api(room, "unmute %s" % member_id, async=False)
         if not res:
             msg = "Conference Unmute Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Unmute %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Unmute Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_kick(self):
@@ -912,22 +924,22 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.conference_api(room, "kick %s" % member_id, async=False)
         if not res:
             msg = "Conference Kick Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Kick %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Kick Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_hangup(self):
@@ -949,22 +961,22 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.conference_api(room, "hup %s" % member_id, async=False)
         if not res:
             msg = "Conference Hangup Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Hangup %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Hangup Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_deaf(self):
@@ -986,22 +998,22 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.conference_api(room, "deaf %s" % member_id, async=False)
         if not res:
             msg = "Conference Deaf Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Deaf %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Deaf Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_undeaf(self):
@@ -1023,22 +1035,22 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         res = self._rest_inbound_socket.conference_api(room, "undeaf %s" % member_id)
         if not res:
             msg = "Conference Undeaf Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Undeaf %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Undeaf Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_record_start(self):
@@ -1064,12 +1076,12 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not fileformat:
             fileformat = "mp3"
         if not fileformat in ("mp3", "wav"):
             msg = "FileFormat Parameter must be 'mp3' or 'wav'"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         if filepath:
             filepath = os.path.normpath(filepath) + os.sep
@@ -1081,14 +1093,14 @@ class PlivoRestApi(object):
         if not res:
             msg = "Conference RecordStart Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)):
             msg = "Conference RecordStart %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference RecordStart Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg, RecordFile=recordfile)
+        return self.send_response(Success=result, Message=msg, RecordFile=recordfile)
 
     @auth_protect
     def conference_record_stop(self):
@@ -1111,10 +1123,10 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not recordfile:
             msg = "RecordFile Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         res = self._rest_inbound_socket.conference_api(room,
                                         "norecord %s" % recordfile,
@@ -1122,14 +1134,14 @@ class PlivoRestApi(object):
         if not res:
             msg = "Conference RecordStop Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)):
             msg = "Conference RecordStop %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference RecordStop Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_play(self):
@@ -1153,13 +1165,13 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not filepath:
             msg = "FilePath Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if member_id == 'all':
             arg = "async"
         else:
@@ -1168,14 +1180,14 @@ class PlivoRestApi(object):
         if not res:
             msg = "Conference Play Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Play %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Play Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_speak(self):
@@ -1199,13 +1211,13 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not text:
             msg = "Text Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not member_id:
             msg = "MemberID Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if member_id == 'all':
             res = self._rest_inbound_socket.conference_api(room, "say %s" % text, async=False)
         else:
@@ -1213,14 +1225,14 @@ class PlivoRestApi(object):
         if not res:
             msg = "Conference Speak Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
             msg = "Conference Speak %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Conference Speak Executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_list_members(self):
@@ -1254,29 +1266,29 @@ class PlivoRestApi(object):
 
         if not room:
             msg = "ConferenceName Parameter must be present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not members:
             members = None
         res = self._rest_inbound_socket.conference_api(room, "xml_list", async=False)
         if not res:
             msg = "Conference ListMembers Failed"
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif res.startswith('Conference %s not found' % str(room)):
             msg = "Conference ListMembers %s" % str(res)
             result = False
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         try:
             member_list = self._parse_conference_xml_list(res, member_filter=members,
                                 uuid_filter=calluuids, mute_filter=onlymuted, deaf_filter=onlydeaf)
             msg = "Conference ListMembers Executed"
             result = True
-            return flask.jsonify(Success=result, Message=msg, List=member_list)
+            return self.send_response(Success=result, Message=msg, List=member_list)
         except Exception, e:
             msg = "Conference ListMembers Failed to parse result"
             result = False
             self._rest_inbound_socket.log.error("Conference ListMembers Failed -- %s" % str(e))
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def conference_list(self):
@@ -1313,14 +1325,14 @@ class PlivoRestApi(object):
                                 uuid_filter=calluuids, mute_filter=onlymuted, deaf_filter=onlydeaf)
                 msg = "Conference List Executed"
                 result = True
-                return flask.jsonify(Success=result, Message=msg, List=confs)
+                return self.send_response(Success=result, Message=msg, List=confs)
             except Exception, e:
                 msg = "Conference List Failed to parse result"
                 result = False
                 self._rest_inbound_socket.log.error("Conference List Failed -- %s" % str(e))
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
         msg = "Conference List Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def group_call(self):
@@ -1380,9 +1392,11 @@ class PlivoRestApi(object):
         use SendDigits=1234#.
         Remember to URL-encode this string, since the '#' character has
         special meaning in a URL.
-        To wait before sending DTMF to the extension, you can add leading 'w'
-        characters. Each 'w' character waits 0.5 seconds instead of sending a
-        digit.
+        To wait before sending DTMF to the extension, you can add leading 'w' or 'W' characters.
+        Each 'w' character waits 0.5 seconds instead of sending a digit.
+        Each 'W' character waits 1.0 seconds instead of sending a digit.
+        You can also add the tone duration in ms by appending @[duration] after string.
+        Eg. 1w2w3@1000
 
         [ConfirmSound]: Sound to play to called party before bridging call.
 
@@ -1403,22 +1417,22 @@ class PlivoRestApi(object):
 
         if delimiter in (',', '/'):
             msg = "This Delimiter is not allowed"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif not caller_id or not to_str or not gw_str or not answer_url or not delimiter:
             msg = "Mandatory Parameters Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif not is_valid_url(answer_url):
             msg = "AnswerUrl is not Valid"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         hangup_url = get_post_param(request, 'HangupUrl')
         ring_url = get_post_param(request, 'RingUrl')
         if hangup_url and not is_valid_url(hangup_url):
             msg = "HangupUrl is not Valid"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif ring_url and not is_valid_url(ring_url):
             msg = "RingUrl is not Valid"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
 
         extra_dial_string = get_post_param(request, 'ExtraDialString')
@@ -1445,10 +1459,10 @@ class PlivoRestApi(object):
 
         if len(to_str_list) < 2:
             msg = "GroupCall should be used for at least 2 numbers"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         elif len(to_str_list) != len(gw_str_list):
             msg = "'To' parameter length does not match 'Gateways' Length"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
 
         # set group
@@ -1506,10 +1520,10 @@ class PlivoRestApi(object):
         if self._rest_inbound_socket.group_originate(request_uuid, group_list, group_options, reject_causes):
             msg = "GroupCall Request Executed"
             result = True
-            return flask.jsonify(Success=result, Message=msg, RequestUUID=request_uuid)
+            return self.send_response(Success=result, Message=msg, RequestUUID=request_uuid)
 
         msg = "GroupCall Request Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def play(self):
@@ -1559,10 +1573,10 @@ class PlivoRestApi(object):
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not sounds:
             msg = "Sounds Parameter Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not legs:
             legs = 'aleg'
         if not length:
@@ -1572,24 +1586,24 @@ class PlivoRestApi(object):
                 length = int(length)
             except (ValueError, TypeError):
                 msg = "Length Parameter must be a positive integer"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
             if length < 1:
                 msg = "Length Parameter must be a positive integer"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
 
         sounds_list = sounds.split(',')
         if not sounds_list:
             msg = "Sounds Parameter is Invalid"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         # now do the job !
         if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
                                         length=length, schedule=0, mix=mix, loop=loop):
             msg = "Play Request Executed"
             result = True
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "Play Request Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def schedule_play(self):
@@ -1643,23 +1657,23 @@ class PlivoRestApi(object):
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not sounds:
             msg = "Sounds Parameter Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not legs:
             legs = 'aleg'
         if not time:
             msg = "Time Parameter Must be Present"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         try:
             time = int(time)
         except (ValueError, TypeError):
             msg = "Time Parameter is Invalid"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if time < 1:
             msg = "Time Parameter must be > 0"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not length:
             length = 3600
         else:
@@ -1667,15 +1681,15 @@ class PlivoRestApi(object):
                 length = int(length)
             except (ValueError, TypeError):
                 msg = "Length Parameter must be a positive integer"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
             if length < 1:
                 msg = "Length Parameter must be a positive integer"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
 
         sounds_list = sounds.split(',')
         if not sounds_list:
             msg = "Sounds Parameter is Invalid"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         # now do the job !
         sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
@@ -1683,9 +1697,9 @@ class PlivoRestApi(object):
         if sched_id:
             msg = "SchedulePlay Request Done with SchedPlayId %s" % sched_id
             result = True
-            return flask.jsonify(Success=result, Message=msg, SchedPlayId=sched_id)
+            return self.send_response(Success=result, Message=msg, SchedPlayId=sched_id)
         msg = "SchedulePlay Request Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def cancel_scheduled_play(self):
@@ -1714,7 +1728,7 @@ class PlivoRestApi(object):
                 result = True
             else:
                 msg = "Scheduled Play Cancelation Failed: %s" % res.get_response()
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def play_stop(self):
@@ -1745,12 +1759,12 @@ class PlivoRestApi(object):
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         self._rest_inbound_socket.play_stop_on_call(calluuid)
         msg = "PlayStop executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def sound_touch(self):
@@ -1791,12 +1805,12 @@ class PlivoRestApi(object):
 
         if not calluuid:
             msg = "CallUUID Parameter Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         if not audiodirection:
             audiodirection = 'out'
         if not audiodirection in ('in', 'out'):
             msg = "AudioDirection Parameter Must be 'in' or 'out'"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
 
         pitch_s = get_post_param(request, 'PitchSemiTones')
         if pitch_s:
@@ -1804,10 +1818,10 @@ class PlivoRestApi(object):
                 pitch_s = float(pitch_s)
                 if not -14 <= pitch_s <= 14:
                     msg = "PitchSemiTones Parameter must be between -14 and 14"
-                    return flask.jsonify(Success=result, Message=msg)
+                    return self.send_response(Success=result, Message=msg)
             except (ValueError, TypeError):
                 msg = "PitchSemiTones Parameter must be float"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
 
         pitch_o = get_post_param(request, 'PitchOctaves')
         if pitch_o:
@@ -1815,10 +1829,10 @@ class PlivoRestApi(object):
                 pitch_o = float(pitch_o)
                 if not -1 <= pitch_o <= 1:
                     msg = "PitchOctaves Parameter must be between -1 and 1"
-                    return flask.jsonify(Success=result, Message=msg)
+                    return self.send_response(Success=result, Message=msg)
             except (ValueError, TypeError):
                 msg = "PitchOctaves Parameter must be float"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
                 
         pitch_p = get_post_param(request, 'Pitch')
         if pitch_p:
@@ -1826,10 +1840,10 @@ class PlivoRestApi(object):
                 pitch_p = float(pitch_p)
                 if pitch_o <= 0:
                     msg = "Pitch Parameter must be > 0"
-                    return flask.jsonify(Success=result, Message=msg)
+                    return self.send_response(Success=result, Message=msg)
             except (ValueError, TypeError):
                 msg = "Pitch Parameter must be float"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
                 
         pitch_r = get_post_param(request, 'Rate')
         if pitch_r:
@@ -1837,10 +1851,10 @@ class PlivoRestApi(object):
                 pitch_r = float(pitch_r)
                 if pitch_r <= 0:
                     msg = "Rate Parameter must be > 0"
-                    return flask.jsonify(Success=result, Message=msg)
+                    return self.send_response(Success=result, Message=msg)
             except (ValueError, TypeError):
                 msg = "Rate Parameter must be float"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
                 
         pitch_t = get_post_param(request, 'Tempo')
         if pitch_t:
@@ -1848,10 +1862,10 @@ class PlivoRestApi(object):
                 pitch_t = float(pitch_t)
                 if pitch_t <= 0:
                     msg = "Tempo Parameter must be > 0"
-                    return flask.jsonify(Success=result, Message=msg)
+                    return self.send_response(Success=result, Message=msg)
             except (ValueError, TypeError):
                 msg = "Tempo Parameter must be float"
-                return flask.jsonify(Success=result, Message=msg)
+                return self.send_response(Success=result, Message=msg)
 
         if self._rest_inbound_socket.sound_touch(calluuid,
                         direction=audiodirection, s=pitch_s,
@@ -1860,7 +1874,7 @@ class PlivoRestApi(object):
             result = True
         else:
             msg = "SoundTouch Failed"
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
 
     @auth_protect
     def sound_touch_stop(self):
@@ -1884,15 +1898,81 @@ class PlivoRestApi(object):
         calluuid = get_post_param(request, 'CallUUID')
         if not calluuid:
             msg = "CallUUID Parameter Missing"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         cmd = "soundtouch %s stop" % calluuid
         bg_api_response = self._rest_inbound_socket.bgapi(cmd)
         job_uuid = bg_api_response.get_job_uuid()
         if not job_uuid:
             self._rest_inbound_socket.log.error("SoundTouchStop Failed '%s' -- JobUUID not received" % cmd)
             msg = "SoundTouchStop Failed"
-            return flask.jsonify(Success=result, Message=msg)
+            return self.send_response(Success=result, Message=msg)
         msg = "SoundTouchStop executed"
         result = True
-        return flask.jsonify(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
+
+    @auth_protect
+    def send_digits(self):
+        """Send DTMFs to a Call.
+
+        To send DTMFs to a Call, you make an HTTP POST request to a
+        resource URI.
+
+        POST Parameters
+        ---------------
+
+        Required Parameters - You must POST the following parameters:
+
+        CallUUID: Unique Call ID to which the action should occur to.
+
+        Digits: A string of keys to send.
+        Valid digits in the string include: any digit (0-9), '#' and '*'.
+        Remember to URL-encode this string, since the '#' character has special meaning in a URL.
+        To wait before sending DTMF to the extension, you can add leading 'w' or 'W' characters.
+        Each 'w' character waits 0.5 seconds instead of sending a digit.
+        Each 'W' character waits 1.0 seconds instead of sending a digit.
+        You can also add the tone duration in ms by appending @[duration] after string.
+        Eg. 1w2W3@1000
+
+        Optional Parameters:
+
+        [Leg]: 'aleg'|'bleg'. On which leg(s) to send DTMFs.
+                'aleg' means only send to the Call.
+                'bleg' means only send to the bridged leg of the Call.
+                Default is 'aleg' .
+        """
+        self._rest_inbound_socket.log.debug("RESTAPI SendDigits with %s" \
+                                        % str(request.form.items()))
+        msg = ""
+        result = False
+
+        calluuid = get_post_param(request, 'CallUUID')
+        if not calluuid:
+            msg = "CallUUID Parameter Missing"
+            return self.send_response(Success=result, Message=msg)
+        digits = get_post_param(request, 'Digits')
+        if not digits:
+            msg = "Digits Parameter Missing"
+            return self.send_response(Success=result, Message=msg)
+
+        leg = get_post_param(request, 'Leg')
+        if not leg:
+            leg = 'aleg'
+        if leg == 'aleg':
+            cmd = "uuid_send_dtmf %s %s" % (calluuid, digits)
+        elif leg == 'bleg':
+            cmd = "uuid_recv_dtmf %s %s" % (calluuid, digits)
+        else:
+            msg = "Invalid Leg Parameter"
+            return self.send_response(Success=result, Message=msg)
+            
+        res = self._rest_inbound_socket.bgapi(cmd)
+        job_uuid = res.get_job_uuid()
+        if not job_uuid:
+            self._rest_inbound_socket.log.error("SendDigits Failed -- JobUUID not received" % job_uuid)
+            msg = "SendDigits Failed"
+            return self.send_response(Success=result, Message=msg)
+        
+        msg = "SendDigits executed"
+        result = True
+        return self.send_response(Success=result, Message=msg)
 
