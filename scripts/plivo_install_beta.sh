@@ -5,7 +5,11 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 
-PLIVO_CONF_PATH=https://github.com/plivo/plivo/raw/master/src/config/default.conf
+BRANCH=$2
+if [ ! $BRANCH ]; then
+    BRANCH=master
+fi
+PLIVO_CONF_PATH=https://github.com/plivo/plivo/raw/${BRANCH}/src/config/default.conf
 PLIVO_GIT_REPO=git://github.com/plivo/plivo.git
 
 #####################################################
@@ -150,7 +154,7 @@ esac
 virtualenv --no-site-packages $REAL_PATH
 source $REAL_PATH/bin/activate
 
-pip install -e git+${PLIVO_GIT_REPO}#egg=plivo
+pip install -e git+${PLIVO_GIT_REPO}@${BRANCH}#egg=plivo
 
 
 if [ $ACTION = 'INSTALL' ]; then

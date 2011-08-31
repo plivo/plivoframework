@@ -23,6 +23,22 @@ def postinstall():
     f = open(etc_prefix + '/plivo/default.conf', 'w')
     f.write(new_buff)
     f.close()
+    # set wavstream script
+    f = open(prefix + '/bin/wavstream.sh', 'r')
+    buff = f.read()
+    f.close()
+    new_buff = buff.replace('@PREFIX@', prefix)
+    f = open(prefix + '/bin/wavstream.sh', 'w')
+    f.write(new_buff)
+    f.close()
+    # set wavdump script
+    f = open(prefix + '/bin/wavdump.py', 'r')
+    buff = f.read()
+    f.close()
+    new_buff = buff.replace('@PREFIX@', prefix)
+    f = open(prefix + '/bin/wavdump.py', 'w')
+    f.write(new_buff)
+    f.close()
     
 
 if __name__ == '__main__':
