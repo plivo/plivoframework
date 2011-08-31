@@ -73,6 +73,12 @@ def get_post_param(request, key):
     except MultiDict.KeyError:
         return ""
 
+def get_http_param(request, key):
+    try:
+        return request.args[key]
+    except MultiDict.KeyError:
+        return ""
+
 def is_valid_url(value):
     if not value:
         return False
@@ -286,152 +292,46 @@ class PlivoConfig(object):
         self.read()
 
 
-class CacheErrorHandler(urllib2.HTTPDefaultErrorHandler):
-    def http_error_default(self, req, fp, code, msg, headers):
-        result = urllib2.HTTPError(req.get_full_url(), code, msg, headers, fp)
-        result.status = code
-        return result
-
-
-class ResourceCache(object):
-    """Uses redis cache as a backend for storing info on cached files.
-    """
-    def __init__(self, cache_path='plivocache/', redis_host='localhost', redis_port=6379, redis_db=0):
-        self.cache_path = os.path.normpath(cache_path) + os.sep
-        self.host = redis_host
-        self.port = redis_port
-        self.db = redis_db
-        root_path = os.path.abspath(os.path.dirname(__file__))
-        self.cache_path = os.path.join(root_path, cache_path)
-        if not os.path.exists(cache_path):
-            os.makedirs(self.cache_path)
-        self.opener = urllib2.build_opener(CacheErrorHandler())
-        self._connect()
-
-    def _connect(self):
-        self._cx = redis.Redis(host=self.host, port=self.port, db=self.db)
-        return True
-
-    def get_resource_params(self, url):
-        resource_key = self.get_resource_key(url)
-        try:
-            if self._cx.sismember("resource_key", resource_key):
-                resource_type = self._cx.hget("resource_key:%s" % resource_key, "resource_type")
-                etag = self._cx.hget("resource_key:%s" % resource_key, "etag")
-                last_modified = self._cx.hget("resource_key:%s" % resource_key, "last_modified")
-                return resource_key, resource_type, etag, last_modified
-            else:
-                return None, None, None, None
-        except redis.exceptions.ConnectionError, e:
-            if not self._connect():
-                raise e
-
-    def update_resource_params(self, resource_key, resource_type, etag, last_modified):
-        if etag is None:
-            etag = ""
-        if last_modified is None:
-            last_modified = ""
-        try:
-            self._cx.sadd("resource_key", resource_key)
-            self._cx.hset("resource_key:%s" % resource_key, "resource_type", resource_type)
-            self._cx.hset("resource_key:%s" % resource_key, "etag", etag)
-            self._cx.hset("resource_key:%s" % resource_key, "last_modified", last_modified)
-        except redis.exceptions.ConnectionError, e:
-            if not self._connect():
-                raise e
-
-    def delete_resource(self, resource_key):
-        try:
-            if self._cx.sismembers("resource_key", resource_key):
-                self._cx.srem("resource_key", resource_key)
-                self._cx.delete("resource_key:%s" % resource_key)
-        except redis.exceptions.ConnectionError, e:
-            if not self._connect():
-                raise e
-
-    def cache_resource(self, url):
-        request = urllib2.Request(url)
-        user_agent = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.35 Safari/535.1'
-        request.add_header('User-Agent', user_agent)
-        first_time = self.opener.open(request)
-        try:
-            resource_type = MIME_TYPES[first_time.headers.get('Content-Type')]
-        except KeyError:
-            raise UnsupportedResourceFormat("Resource format not supported")
-        etag = first_time.headers.get('ETag')
-        last_modified = first_time.headers.get('Last-Modified')
-        response = urllib2.urlopen(request)
-        resource_key = self.get_resource_key(url)
-        local_name = "%s.%s" % (resource_key, resource_type)
-        cache_full_path = os.path.join(self.cache_path, local_name)
-        f = open(cache_full_path, 'wb')
-        f.write(response.read())
-        f.close()
-        self.update_resource_params(resource_key, resource_type, etag, last_modified)
-        return cache_full_path
-
-    def get_resource_key(self, url):
-        return base64.urlsafe_b64encode(_md5(url).digest())
-
-    def is_resource_updated(self, url, etag, last_modified):
-        no_change = (False, None, None)
-        # if no ETag, then check for 'Last-Modified' header
-        if etag is not None and etag != "":
-            request = urllib2.Request(url)
-            request.add_header('If-None-Match', etag)
-        elif last_modified is not None and last_modified != "":
-            request = urllib2.Request(url)
-            request.add_header('If-Modified-Since', last_modified)
-        else:
-            return no_change
-        second_try = self.opener.open(request)
-        if second_try.status == 304:
-            return no_change
-        return True, etag, last_modified
-
-
 def get_resource(socket, url):
-    full_file_name = url
-    if socket.cache is not None:
-        # don't do cache if not a remote file
-        if not full_file_name[:7].lower() == "http://" \
-            and not full_file_name[:8].lower() == "https://":
-            return full_file_name
-        rk = socket.cache.get_resource_key(url)
-        socket.log.debug("Resource key %s" %rk)
-        #~socket.cache.delete_resource(rk)
-        try:
-            resource_key, resource_type, etag, last_modified = socket.cache.get_resource_params(url)
-            if resource_key is None:
-                socket.log.info("Resource not found in cache. Download and Cache")
-                try:
-                    full_file_name = socket.cache.cache_resource(url)
-                except UnsupportedResourceFormat:
-                    socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
+    try:
+        if socket.cache:
+            # don't do cache if not a remote file
+            if not url[:7].lower() == "http://" \
+                and not url[:8].lower() == "https://":
+                return url
+
+            media_url = socket.cache['url'].strip('/')
+            data = {}
+            data['url'] = url
+            url_values = urllib.urlencode(data)
+            full_url = '%s/MediaType/?%s' % (media_url, url_values)
+            req = urllib2.Request(full_url)
+            handler = urllib2.urlopen(req)
+            response = handler.read()
+            result = json.loads(response)
+            media_type = result['MediaType']
+            if media_type == 'wav':
+                wav_stream = 'shell_stream://%s %s/Media/?%s' % (socket.cache['script'], media_url, url_values)
+                return wav_stream
+            elif media_type == 'mp3':
+                _url = socket.cache['url'][7:].strip('/')
+                mp3_stream = "shout://%s/Media/?%s" % (_url, url_values)
+                return mp3_stream
             else:
-                socket.log.debug("Resource found in Cache. Check if source is newer")
-                updated, new_etag, new_last_modified = socket.cache.is_resource_updated(url, etag, last_modified)
-                if not updated:
-                    socket.log.debug("Source file same. Use Cached Version")
-                    file_name = "%s.%s" % (resource_key, resource_type)
-                    full_file_name = os.path.join(socket.cache.cache_path, file_name)
-                else:
-                    socket.log.debug("Source file updated. Download and Cache")
-                    try:
-                        full_file_name = socket.cache.cache_resource(url)
-                    except UnsupportedResourceFormat:
-                        socket.log.error("Ignoring Unsupported Audio File at - %s" % url)
-        except Exception, e:
-            socket.log.error("Cache Error !")
-            [ socket.log.error(line) for line in \
-                            traceback.format_exc().splitlines() ]
+                socket.log.warn("Unsupported format %s" % str(media_type))
+
+        if url[:7].lower() == "http://":
+            audio_path = url[7:]
+            url = "shout://%s" % audio_path
+        elif url[:8].lower() == "https://":
+            audio_path = url[8:]
+            url = "shout://%s" % audio_path
+    except Exception, e:
+        socket.log.error("Cache Error !")
+        socket.log.error("Cache Error: %s" % str(e))
+    return url
 
 
-    if full_file_name[:7].lower() == "http://":
-        audio_path = full_file_name[7:]
-        full_file_name = "shout://%s" % audio_path
-    elif full_file_name[:8].lower() == "https://":
-        audio_path = full_file_name[8:]
-        full_file_name = "shout://%s" % audio_path
-    return full_file_name
+
+ 
 

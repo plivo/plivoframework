@@ -39,15 +39,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self.configfile = configfile
         # load config
         self._config = None
+        self.cache = {}
         self.load_config()
-        # create a cache instance if enabled
-        self.cache = None
-        if self.cache_path:
-            if self.redis_host and self.redis_port and self.redis_db:
-                self.cache = helpers.ResourceCache(self.cache_path,
-                                            self.redis_host,
-                                            int(self.redis_port),
-                                            int(self.redis_db))
 
         # This is where we define the connection with the
         # Plivo XML element Processor
@@ -92,10 +85,10 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
             self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
 
             # load cache params
-            self.cache_path = config.get('common', 'CACHE_PATH', default='')
-            self.redis_host = config.get('common', 'REDIS_HOST', default='')
-            self.redis_port = config.get('common', 'REDIS_PORT', default='')
-            self.redis_db = config.get('common', 'REDIS_DB', default='')
+            self.cache['url'] = config.get('common', 'CACHE_URL', default='')
+            self.cache['script'] = config.get('common', 'CACHE_SCRIPT', default='')
+            if not self.cache['url'] or not self.cache['script']:
+                self.cache = {}
 
             # create new logger if reloading
             if reload:
