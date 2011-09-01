@@ -17,7 +17,7 @@ from flask import request
 from werkzeug.exceptions import Unauthorized
 
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
-                                                            get_post_param
+                                            get_post_param, get_resource
 
 def auth_protect(decorated_func):
     def wrapper(obj):
@@ -1169,6 +1169,7 @@ class PlivoRestApi(object):
         if not filepath:
             msg = "FilePath Parameter must be present"
             return self.send_response(Success=result, Message=msg)
+        filepath = get_resource(self._rest_inbound_socket, filepath)
         if not member_id:
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
