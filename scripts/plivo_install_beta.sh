@@ -161,6 +161,7 @@ pip install -e git+${PLIVO_GIT_REPO}@${BRANCH}#egg=plivo
 if [ $ACTION = 'INSTALL' ]; then
     mkdir -p $REAL_PATH/etc/plivo &>/dev/null
     mkdir -p $REAL_PATH/tmp &>/dev/null
+    mkdir -p $REAL_PATH/tmp/plivocache &>/dev/null
     cd $REAL_PATH/src/plivo
     git checkout $BRANCH 
     cp -f $REAL_PATH/src/plivo/src/config/default.conf $REAL_PATH/etc/plivo/default.conf
