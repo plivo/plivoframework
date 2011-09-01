@@ -16,9 +16,9 @@ import gevent
 from gevent.wsgi import WSGIServer
 from gevent.pywsgi import WSGIServer as PyWSGIServer
 
-from plivo.rest.freeswitch.cache import PlivoCacheApi
+from plivo.rest.freeswitch.cacheapi import PlivoCacheApi
 import plivo.utils.daemonize
-from plivo.rest.freeswitch import cacheurls, helpers, cache
+from plivo.rest.freeswitch import cacheurls, helpers, cacheapi
 from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger, HTTPLogger
 
 
@@ -43,7 +43,7 @@ class PlivoCacheServer(PlivoCacheApi):
 
         # create a cache instance if enabled
         if self.redis_host and self.redis_port and self.redis_db:
-            self.cache = cache.ResourceCache(self.redis_host,
+            self.cache = cacheapi.ResourceCache(self.redis_host,
                                         int(self.redis_port),
                                         int(self.redis_db))
         else:

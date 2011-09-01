@@ -74,11 +74,12 @@ echo "Setting up Prerequisites and Dependencies"
 case $DIST in
     'DEBIAN')
         DEBIAN_VERSION=$(cat /etc/debian_version |cut -d'.' -f1)
+        apt-get -y update
+        apt-get -y install autoconf automake autotools-dev binutils bison build-essential cpp curl flex g++ gcc git-core libaudiofile-dev libc6-dev libdb-dev libexpat1 libgdbm-dev libgnutls-dev libmcrypt-dev libncurses5-dev libnewt-dev libpcre3 libpopt-dev libsctp-dev libsqlite3-dev libtiff4 libtiff4-dev libtool libx11-dev libxml2 libxml2-dev lksctp-tools lynx m4 make mcrypt ncftp nmap openssl sox sqlite3 ssl-cert ssl-cert unixodbc-dev unzip zip zlib1g-dev zlib1g-dev
         if [ "$DEBIAN_VERSION" = "5" ]; then
             echo "deb http://backports.debian.org/debian-backports lenny-backports main" >> /etc/apt/sources.list
             apt-get -y update
-            apt-get -y install autoconf automake autotools-dev binutils bison build-essential cpp curl flex g++ gcc git-core libaudiofile-dev libc6-dev libdb-dev libexpat1 libgdbm-dev libgnutls-dev libmcrypt-dev libncurses5-dev libnewt-dev libpcre3 libpopt-dev libsctp-dev libsqlite3-dev libtiff4 libtiff4-dev libtool libx11-dev libxml2 libxml2-dev lksctp-tools lynx m4 make mcrypt ncftp nmap openssl sox sqlite3 ssl-cert ssl-cert unixodbc-dev unzip zip zlib1g-dev zlib1g-dev
-            apt-get -y install git-core python-setuptools python-dev build-essential
+            apt-get -y install git-core python-setuptools python-dev build-essential libreadline5-dev
             apt-get -y install -t lenny-backports libevent-1.4-2 libevent-dev
         else
             apt-get -y update
@@ -90,7 +91,7 @@ case $DIST in
     'CENTOS')
         yum -y update
         yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
-        yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel which
+        yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel which sox bison
         if [ $PY_MAJOR_VERSION -eq 2 ]; then
 
             if [ $PY_MINOR_VERSION -eq 4 ]; then
@@ -159,13 +160,16 @@ pip install -e git+${PLIVO_GIT_REPO}@${BRANCH}#egg=plivo
 
 if [ $ACTION = 'INSTALL' ]; then
     mkdir -p $REAL_PATH/etc/plivo &>/dev/null
-    wget --no-check-certificate $PLIVO_CONF_PATH -O $REAL_PATH/etc/plivo/default.conf
+    mkdir -p $REAL_PATH/tmp &>/dev/null
+    cd $REAL_PATH/src/plivo
+    git checkout $BRANCH 
+    cp -f $REAL_PATH/src/plivo/src/config/default.conf $REAL_PATH/etc/plivo/default.conf
 fi
 
 $REAL_PATH/bin/plivo-postinstall &>/dev/null
 
 # Install Complete
-#clear
+echo ""
 echo ""
 echo ""
 echo ""
