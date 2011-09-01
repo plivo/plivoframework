@@ -39,6 +39,22 @@ def postinstall():
     f = open(prefix + '/bin/wavdump.py', 'w')
     f.write(new_buff)
     f.close()
+    # set plivo cache conf
+    f = open(etc_prefix + '/plivo/cache/cache.conf', 'r')
+    buff = f.read()
+    f.close()
+    new_buff = buff.replace('@PREFIX@', prefix)
+    f = open(etc_prefix + '/plivo/cache/cache.conf', 'w')
+    f.write(new_buff)
+    f.close()
+    # set plivo cache script
+    f = open(prefix + '/bin/cacheserver', 'r')
+    buff = f.read()
+    f.close()
+    new_buff = buff.replace('@PREFIX@', prefix)
+    f = open(prefix + '/bin/cacheserver', 'w')
+    f.write(new_buff)
+    f.close()
     
 
 if __name__ == '__main__':

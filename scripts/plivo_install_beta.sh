@@ -160,11 +160,13 @@ pip install -e git+${PLIVO_GIT_REPO}@${BRANCH}#egg=plivo
 
 if [ $ACTION = 'INSTALL' ]; then
     mkdir -p $REAL_PATH/etc/plivo &>/dev/null
+    mkdir -p $REAL_PATH/etc/plivo/cache &>/dev/null
     mkdir -p $REAL_PATH/tmp &>/dev/null
     mkdir -p $REAL_PATH/tmp/plivocache &>/dev/null
     cd $REAL_PATH/src/plivo
     git checkout $BRANCH 
     cp -f $REAL_PATH/src/plivo/src/config/default.conf $REAL_PATH/etc/plivo/default.conf
+    cp -f $REAL_PATH/src/plivo/src/config/cache.conf $REAL_PATH/etc/plivo/cache/cache.conf
 fi
 
 $REAL_PATH/bin/plivo-postinstall &>/dev/null
@@ -184,6 +186,14 @@ echo "    Here you can add/remove/modify config files to run mutiple plivo insta
 echo
 echo "* To Start Plivo :"
 echo "    $REAL_PATH/bin/plivo start"
+echo
+echo "* Configure plivo cache:"
+echo "    The config is $REAL_PATH/etc/plivo/cache/cache.conf"
+echo
+echo "  IMPORTANT: you need to install a redis server ! Check with your sysadmin !"
+echo
+echo "* To Start Plivo cache server:"
+echo "    $REAL_PATH/bin/cacheserver start"
 echo
 echo "**************************************************************"
 echo ""

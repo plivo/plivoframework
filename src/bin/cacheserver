@@ -1,0 +1,134 @@
+#!/bin/bash
+
+#####################################################
+PREFIX=@PREFIX@
+
+if [ "$PREFIX" = "@PREFIX@" ]; then
+	echo "ERROR: run bin/plivo-postinstall to setup Plivo !"
+    exit 1
+fi
+
+if [ "$PREFIX" = "/usr" ]; then
+	CONFIG_FILE=/etc/plivo/cache/cache.conf
+	PID_PREFIX=/tmp
+else
+	CONFIG_FILE=$PREFIX/etc/plivo/cache/cache.conf
+	PID_PREFIX=$PREFIX/tmp
+fi
+
+EXEC_PREFIX=$PREFIX/bin
+VENV_ON=$PREFIX/bin/activate
+VENV_OFF=deactivate
+CACHE_SERVER=$EXEC_PREFIX/plivo-cache
+CACHE_NAME="PlivoCacheServer"
+PRE_SCRIPT=$EXEC_PREFIX/etc/plivo/cache_env.sh
+#####################################################
+
+
+do_help()
+{
+	echo
+	echo "$(basename $0) (start|stop|restart|status|reload)"
+	echo
+	exit 1;
+}
+
+
+do_start()
+{
+	NICE=$(which nice)
+	[ -f $PRE_SCRIPT ] && source $PRE_SCRIPT
+	cache_already_running="false"
+	$VENV_OFF &>/dev/null
+	source $VENV_ON
+	cache_pidfile=$PID_PREFIX/cacheserver.pid
+	kill -0 $(cat $cache_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$CACHE_NAME already running"
+		cache_already_running="true"
+	else
+		$NICE --adjustment=-10 $CACHE_SERVER -d -c $CONFIG_FILE -p $cache_pidfile
+	fi
+	if [ "$cache_already_running" = "false" ]; then
+		kill -0 $(cat $cache_pidfile 2>/dev/null) 2>/dev/null \
+			&& echo "$CACHE_NAME started" || echo "$CACHE_NAME start failed"
+	fi
+	$VENV_OFF &>/dev/null
+}
+
+
+do_stop()
+{
+	cache_pidfile=$PID_PREFIX/cacheserver.pid
+	kill -TERM $(cat $cache_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$CACHE_NAME stopped"
+		rm -f $cache_pidfile
+	else
+		echo "$CACHE_NAME stopping failed"
+	fi
+}
+
+do_reload()
+{
+	cache_pidfile=$PID_PREFIX/cacheserver.pid
+	kill -HUP $(cat $cache_pidfile 2>/dev/null) 2>/dev/null
+	if [ $? -eq 0 ]; then
+		echo "$CACHE_NAME reloaded"
+	else
+		echo "$CACHE_NAME reload failed"
+	fi
+}
+
+
+do_status()
+{
+	cache_pidfile=$PID_PREFIX/cacheserver.pid
+	kill -0 $(cat $cache_pidfile 2>/dev/null) 2>/dev/null \
+		&& echo "$CACHE_NAME running" || echo "$CACHE_NAME not running"
+}
+
+
+
+# main #
+
+[ -x $CACHE_SERVER ] || do_help
+
+mkdir -p $PID_PREFIX 2>/dev/null
+
+
+
+case $1 in
+start)
+	if [ ! -f $CONFIG_FILE ]; then
+		echo "ERROR: cache config $CONFIG_FILE not found !"
+		exit 1
+	fi
+	do_start
+;;
+
+stop)
+	do_stop
+;;
+
+restart)
+	if [ ! -f $CONFIG_FILE ]; then
+		echo "ERROR: cache config $CONFIG_FILE not found !"
+		exit 1
+	fi
+	do_stop
+	sleep 0.5s
+	do_start
+;;
+
+status)
+	do_status
+;;
+reload)
+	do_reload
+;;
+*)
+	do_help
+;;
+esac
+
