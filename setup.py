@@ -34,7 +34,7 @@ setup_args = {
       'include_package_data':True,
       'scripts':['src/bin/plivo-rest',
                  'src/bin/plivo-outbound',
-                 'src/bin/plivo-media',
+                 'src/bin/plivo-cache',
                  'src/bin/plivo-postinstall',
                  'src/bin/wavdump.py',
                  'src/bin/wavstream.sh',

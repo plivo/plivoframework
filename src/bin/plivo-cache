@@ -5,7 +5,7 @@
 import sys
 import os.path
 import optparse
-from plivo.rest.freeswitch.mediaserver import PlivoMediaServer
+from plivo.rest.freeswitch.cacheserver import PlivoCacheServer
 
 
 def opt():
@@ -24,7 +24,7 @@ def opt():
 
     parser.add_option("-p", "--pidfile", action="store", type="string",
                       dest="pidfile", help="set pid file PIDFILE", metavar="PIDFILE",
-                      default="/tmp/plivo_media.pid")
+                      default="/tmp/plivo_cache.pid")
 
     (options, args) = parser.parse_args()
     return (parser, options, args)
@@ -44,6 +44,6 @@ if __name__ == '__main__':
     if not os.path.isfile(configfile):
         print "Config file %s not found !" % configfile
         sys.exit(1)
-    media_server = PlivoMediaServer(configfile, daemon=daemon, pidfile=pidfile)
-    media_server.start()
+    cache_server = PlivoCacheServer(configfile, daemon=daemon, pidfile=pidfile)
+    cache_server.start()
     sys.exit(0)

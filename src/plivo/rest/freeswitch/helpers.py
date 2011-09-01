@@ -300,25 +300,25 @@ def get_resource(socket, url):
                 and not url[:8].lower() == "https://":
                 return url
 
-            media_url = socket.cache['url'].strip('/')
+            cache_url = socket.cache['url'].strip('/')
             data = {}
             data['url'] = url
             url_values = urllib.urlencode(data)
-            full_url = '%s/MediaType/?%s' % (media_url, url_values)
+            full_url = '%s/CacheType/?%s' % (cache_url, url_values)
             req = urllib2.Request(full_url)
             handler = urllib2.urlopen(req)
             response = handler.read()
             result = json.loads(response)
-            media_type = result['MediaType']
-            if media_type == 'wav':
-                wav_stream = 'shell_stream://%s %s/Media/?%s' % (socket.cache['script'], media_url, url_values)
+            cache_type = result['CacheType']
+            if cache_type == 'wav':
+                wav_stream = 'shell_stream://%s %s/Cache/?%s' % (socket.cache['script'], cache_url, url_values)
                 return wav_stream
-            elif media_type == 'mp3':
+            elif cache_type == 'mp3':
                 _url = socket.cache['url'][7:].strip('/')
-                mp3_stream = "shout://%s/Media/?%s" % (_url, url_values)
+                mp3_stream = "shout://%s/Cache/?%s" % (_url, url_values)
                 return mp3_stream
             else:
-                socket.log.warn("Unsupported format %s" % str(media_type))
+                socket.log.warn("Unsupported format %s" % str(cache_type))
 
         if url[:7].lower() == "http://":
             audio_path = url[7:]

@@ -16,18 +16,18 @@ import gevent
 from gevent.wsgi import WSGIServer
 from gevent.pywsgi import WSGIServer as PyWSGIServer
 
-from plivo.rest.freeswitch.media import PlivoMediaApi
+from plivo.rest.freeswitch.cache import PlivoCacheApi
 import plivo.utils.daemonize
-from plivo.rest.freeswitch import mediaurls, helpers, media
+from plivo.rest.freeswitch import cacheurls, helpers, cache
 from plivo.utils.logger import StdoutLogger, FileLogger, SysLogger, DummyLogger, HTTPLogger
 
 
-class PlivoMediaServer(PlivoMediaApi):
-    """Class PlivoMediaServer"""
-    name = 'PlivoMediaServer'
+class PlivoCacheServer(PlivoCacheApi):
+    """Class PlivoCacheServer"""
+    name = 'PlivoCacheServer'
 
     def __init__(self, configfile, daemon=False,
-                        pidfile='/tmp/plivo_media.pid'):
+                        pidfile='/tmp/plivo_cache.pid'):
         self._daemon = daemon
         self._run = False
         self._pidfile = pidfile
@@ -43,15 +43,15 @@ class PlivoMediaServer(PlivoMediaApi):
 
         # create a cache instance if enabled
         if self.redis_host and self.redis_port and self.redis_db:
-            self.cache = media.ResourceCache(self.redis_host,
+            self.cache = cache.ResourceCache(self.redis_host,
                                         int(self.redis_port),
                                         int(self.redis_db))
         else:
-            self.log.error("Cannot run media server, cache not set !")
-            raise Exception("Cannot run media server, cache not set !")
+            self.log.error("Cannot run cache server, cache not set !")
+            raise Exception("Cannot run cache server, cache not set !")
 
         # expose API functions to flask app
-        for path, func_desc in mediaurls.URLS.iteritems():
+        for path, func_desc in cacheurls.URLS.iteritems():
             func, methods = func_desc
             fn = getattr(self, func.__name__)
             self.app.add_url_rule(path, func.__name__, fn, methods=methods)
@@ -77,7 +77,7 @@ class PlivoMediaServer(PlivoMediaApi):
         LOG_TYPE will determine if we will log in file, syslog, stdout, http or dummy (no log)
         """
         if self._daemon is False:
-            logtype = config.get('media_server', 'LOG_TYPE')
+            logtype = config.get('cache_server', 'LOG_TYPE')
             if logtype == 'dummy':
                 new_log = DummyLogger()
             else:
@@ -86,24 +86,24 @@ class PlivoMediaServer(PlivoMediaApi):
             self.app.debug = True
             self.log = new_log
         else:
-            logtype = config.get('media_server', 'LOG_TYPE')
+            logtype = config.get('cache_server', 'LOG_TYPE')
             if logtype == 'file':
-                logfile = config.get('media_server', 'LOG_FILE')
+                logfile = config.get('cache_server', 'LOG_FILE')
                 new_log = FileLogger(logfile)
             elif logtype == 'syslog':
-                syslogaddress = config.get('media_server', 'SYSLOG_ADDRESS')
-                syslogfacility = config.get('media_server', 'SYSLOG_FACILITY')
+                syslogaddress = config.get('cache_server', 'SYSLOG_ADDRESS')
+                syslogfacility = config.get('cache_server', 'SYSLOG_FACILITY')
                 new_log = SysLogger(syslogaddress, syslogfacility)
             elif logtype == 'dummy':
                 new_log = DummyLogger()
             elif logtype == 'http':
-                url = config.get('media_server', 'HTTP_LOG_URL')
-                method = config.get('media_server', 'HTTP_LOG_METHOD')
-                fallback_file = config.get('media_server', 'HTTP_LOG_FILE_FAILURE')
+                url = config.get('cache_server', 'HTTP_LOG_URL')
+                method = config.get('cache_server', 'HTTP_LOG_METHOD')
+                fallback_file = config.get('cache_server', 'HTTP_LOG_FILE_FAILURE')
                 new_log = HTTPLogger(url=url, method=method, fallback_file=fallback_file)
             else:
                 new_log = StdoutLogger()
-            log_level = config.get('media_server', 'LOG_LEVEL', default='INFO')
+            log_level = config.get('cache_server', 'LOG_LEVEL', default='INFO')
             if log_level == 'DEBUG' or self._trace is True:
                 new_log.set_debug()
                 self.app.debug = True
@@ -137,14 +137,14 @@ class PlivoMediaServer(PlivoMediaApi):
                 self.log.info("Starting ...")
                 self.log.warn("Logger %s" % str(self.log))
 
-                self.app.secret_key = config.get('media_server', 'SECRET_KEY')
+                self.app.secret_key = config.get('cache_server', 'SECRET_KEY')
                 self.app.config['MAX_CONTENT_LENGTH'] = 1024 * 10240
-                self.http_address = config.get('media_server', 'HTTP_ADDRESS')
+                self.http_address = config.get('cache_server', 'HTTP_ADDRESS')
                 self.http_host, http_port = self.http_address.split(':', 1)
                 self.http_port = int(http_port)
 
                 # set wsgi mode
-                _wsgi_mode = config.get('media_server', 'WSGI_MODE', default='wsgi')
+                _wsgi_mode = config.get('cache_server', 'WSGI_MODE', default='wsgi')
                 if _wsgi_mode in ('pywsgi', 'python', 'py'):
                     self._wsgi_mode = PyWSGIServer
                 else:
@@ -153,9 +153,9 @@ class PlivoMediaServer(PlivoMediaApi):
             self.default_http_method = 'GET'
 
             # load cache params
-            self.redis_host = config.get('media_server', 'REDIS_HOST', default='')
-            self.redis_port = config.get('media_server', 'REDIS_PORT', default='')
-            self.redis_db = config.get('media_server', 'REDIS_DB', default='')
+            self.redis_host = config.get('cache_server', 'REDIS_HOST', default='')
+            self.redis_port = config.get('cache_server', 'REDIS_PORT', default='')
+            self.redis_db = config.get('cache_server', 'REDIS_DB', default='')
 
             # create new logger if reloading
             if reload:
@@ -193,8 +193,8 @@ class PlivoMediaServer(PlivoMediaApi):
         GROUP : determine the group running the daemon
         """
         # get user/group from config
-        user = self._config.get('media_server', 'USER', default=None)
-        group = self._config.get('media_server', 'GROUP', default=None)
+        user = self._config.get('cache_server', 'USER', default=None)
+        group = self._config.get('cache_server', 'GROUP', default=None)
         if not user or not group:
             uid = os.getuid()
             user = pwd.getpwuid(uid)[0]
@@ -227,7 +227,7 @@ class PlivoMediaServer(PlivoMediaApi):
             * run as daemon
             * start the http server
         """
-        self.log.info("MediaServer starting ...")
+        self.log.info("CacheServer starting ...")
         # catch SIG_TERM
         gevent.signal(signal.SIGTERM, self.sig_term)
         gevent.signal(signal.SIGHUP, self.sig_hup)
@@ -236,14 +236,14 @@ class PlivoMediaServer(PlivoMediaApi):
         if self._daemon:
             self.do_daemon()
         # start http server
-        self.log.info("MediaServer started at: 'http://%s'" % self.http_address)
-        # Start media server
+        self.log.info("CacheServer started at: 'http://%s'" % self.http_address)
+        # Start cache server
         try:
             self.http_server.serve_forever()
         except (SystemExit, KeyboardInterrupt):
             pass
         # finish here
-        self.log.info("MediaServer Exited")
+        self.log.info("CacheServer Exited")
 
 
 def main():
@@ -266,9 +266,9 @@ def main():
         if not os.path.isfile(configfile):
             raise SystemExit("Error : Default config file mising at '%s'. Please specify -c <configfilepath>" %configfile)
     if not pidfile:
-        pidfile='/tmp/plivo_media.pid'
+        pidfile='/tmp/plivo_cache.pid'
 
-    server = PlivoMediaServer(configfile=configfile, pidfile=pidfile,
+    server = PlivoCacheServer(configfile=configfile, pidfile=pidfile,
                                                     daemon=False)
     server.start()
 

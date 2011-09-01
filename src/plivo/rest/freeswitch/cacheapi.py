@@ -196,14 +196,14 @@ def get_resource(server, url):
 
 
 
-class PlivoMediaApi(object):
+class PlivoCacheApi(object):
     _config = None
     log = None
 
     def _validate_ip_auth(self):
         """Verify request is from allowed ips
         """
-        allowed_ips = self._config.get('media_server', 'ALLOWED_IPS', default='')
+        allowed_ips = self._config.get('cache_server', 'ALLOWED_IPS', default='')
         if not allowed_ips:
             return True
         for ip in allowed_ips.split(','):
@@ -229,7 +229,7 @@ class PlivoMediaApi(object):
         return message
 
     @auth_protect
-    def do_media(self):
+    def do_cache(self):
         url = get_http_param(request, "url")
         if not url:
             self.log.debug("No Url")
@@ -253,13 +253,13 @@ class PlivoMediaApi(object):
                                   content_type=_type, 
                                   direct_passthrough=False)
         except Exception, e:
-            self.log.error("/Media/ Error: %s" % str(e))
-            [ self.log.debug('/Media/ Error: %s' % line) for line in \
+            self.log.error("/Cache/ Error: %s" % str(e))
+            [ self.log.debug('/Cache/ Error: %s' % line) for line in \
                             traceback.format_exc().splitlines() ]
             raise e
 
     @auth_protect
-    def do_media_type(self):
+    def do_cache_type(self):
         url = get_http_param(request, "url")
         if not url:
             self.log.debug("No Url")
@@ -271,10 +271,10 @@ class PlivoMediaApi(object):
                 self.log.debug("Url %s: no type" % str(url))
                 return "NO TYPE", 404
             self.log.debug("Url %s: type is %s" % (str(url), str(resource_type)))
-            return flask.jsonify(MediaType=resource_type)
+            return flask.jsonify(CacheType=resource_type)
         except Exception, e:
-            self.log.error("/MediaType/ Error: %s" % str(e))
-            [ self.log.debug('/MediaType/ Error: %s' % line) for line in \
+            self.log.error("/CacheType/ Error: %s" % str(e))
+            [ self.log.debug('/CacheType/ Error: %s' % line) for line in \
                             traceback.format_exc().splitlines() ]
             raise e
 
