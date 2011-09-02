@@ -718,13 +718,13 @@ class Dial(Element):
             except IndexError:
                 pass
             try:
-                gw_timeout = int(number_instance.gateway_timeouts[count], 0)
+                gw_timeout = int(number_instance.gateway_timeouts[count])
                 if gw_timeout > 0:
                     num_options.append('leg_timeout=%d' % gw_timeout)
             except (IndexError, ValueError):
                 pass
             try:
-                gw_retries = int(number_instance.gateway_retries[count], 1)
+                gw_retries = int(number_instance.gateway_retries[count])
                 if gw_retries <= 0:
                     gw_retries = 1
             except (IndexError, ValueError):
