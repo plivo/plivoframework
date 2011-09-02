@@ -306,12 +306,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.set('hangup_after_bridge=false')
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
-        called_no = channel.get_header('Caller-Destination-Number')
-        from_no = channel.get_header('Caller-Caller-ID-Number')
+        called_no = channel.get_header('Caller-Destination-Number') or ''
+        from_no = channel.get_header('Caller-Caller-ID-Number') or ''
+        from_caller_name = channel.get_header('Caller-Caller-ID-Name') or ''
         # Set To to Session Params
         self.session_params['To'] = called_no.lstrip('+')
         # Set From to Session Params
         self.session_params['From'] = from_no.lstrip('+')
+        # Set CallerName to Session Params
+        self.session_params['CallerName'] = from_caller_name
         # Set CallUUID to Session Params
         self.session_params['CallUUID'] = self.call_uuid
         # Set Direction to Session Params
