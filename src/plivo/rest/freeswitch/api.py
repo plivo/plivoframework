@@ -116,7 +116,7 @@ class PlivoRestApi(object):
         self._rest_inbound_socket.log.error(Message)
         return flask.jsonify(Success=False, Message=Message, **kwargs)
 
-    def _prepare_call_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
+    def _prepare_call_request(self, caller_id, caller_name, to, extra_dial_string, gw, gw_codecs,
                                 gw_timeouts, gw_retries, send_digits, send_preanswer, time_limit,
                                 hangup_on_ring, answer_url, ring_url, hangup_url):
         gateways = []
@@ -146,6 +146,8 @@ class PlivoRestApi(object):
         args_list.append("plivo_ring_url=%s" % ring_url)
         args_list.append("plivo_hangup_url=%s" % hangup_url)
         args_list.append("origination_caller_id_number=%s" % caller_id)
+        if caller_name:
+            args_list.append("origination_caller_id_name=%s" % caller_name)
 
         # set extra_dial_string
         if extra_dial_string:
@@ -340,6 +342,8 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
+        [CallerName]: the caller name to use for call
+
         [TimeLimit]: Define the max time of the call
 
         [HangupUrl]: URL that Plivo will notify to, with POST params when
@@ -402,9 +406,10 @@ class PlivoRestApi(object):
                 send_preanswer = get_post_param(request, 'SendOnPreanswer') == 'true'
                 time_limit = get_post_param(request, 'TimeLimit')
                 hangup_on_ring = get_post_param(request, 'HangupOnRing')
+                caller_name = get_post_param(request, 'CallerName') or ''
 
                 call_req = self._prepare_call_request(
-                                    caller_id, to, extra_dial_string,
+                                    caller_id, caller_name, to, extra_dial_string,
                                     gw, gw_codecs, gw_timeouts, gw_retries,
                                     send_digits, send_preanswer, time_limit, hangup_on_ring,
                                     answer_url, ring_url, hangup_url)
@@ -450,6 +455,8 @@ class PlivoRestApi(object):
         connects. Similar to the URL for your inbound calls
 
         Optional Parameters - You may POST the following parameters:
+
+        [CallerName]: the caller name to use for call
 
         [TimeLimit]: Define the max time of the call
 
@@ -521,6 +528,7 @@ class PlivoRestApi(object):
                 send_preanswer_str = get_post_param(request, 'SendOnPreanswer')
                 time_limit_str = get_post_param(request, 'TimeLimit')
                 hangup_on_ring_str = get_post_param(request, 'HangupOnRing')
+                caller_name_str = get_post_param(request, 'CallerName')
 
                 to_str_list = to_str.split(delimiter)
                 gw_str_list = gw_str.split(delimiter)
@@ -531,6 +539,7 @@ class PlivoRestApi(object):
                 send_preanswer_list = send_preanswer_str.split(delimiter)
                 time_limit_list = time_limit_str.split(delimiter)
                 hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
+                caller_name_list = caller_name_str.split(delimiter)
 
                 if len(to_str_list) < 2:
                     msg = "BulkCalls should be used for at least 2 numbers"
@@ -566,10 +575,14 @@ class PlivoRestApi(object):
                             hangup_on_ring = hangup_on_ring_list[i]
                         except IndexError:
                             hangup_on_ring = ""
+                        try:
+                            caller_name = caller_name_list[i]
+                        except IndexError:
+                            caller_name = ""
 
 
                         call_req = self._prepare_call_request(
-                                    caller_id, to, extra_dial_string,
+                                    caller_id, caller_name, to, extra_dial_string,
                                     gw_str_list[i], gw_codecs, gw_timeouts, gw_retries,
                                     send_digits, send_preanswer, time_limit, hangup_on_ring,
                                     answer_url, ring_url, hangup_url)
@@ -1384,6 +1397,8 @@ class PlivoRestApi(object):
 
         Optional Parameters - You may POST the following parameters:
 
+        [CallerName]: the caller name to use for call
+
         [HangupUrl]: URL that Plivo will notify to, with POST params when
         calls ends
 
@@ -1464,6 +1479,7 @@ class PlivoRestApi(object):
         confirm_sound = get_post_param(request, 'ConfirmSound')
         confirm_key = get_post_param(request, 'ConfirmKey')
         reject_causes = get_post_param(request, 'RejectCauses')
+        caller_name_str = get_post_param(request, 'CallerName')
         if reject_causes:
             reject_causes = " ".join([ r.strip() for r in reject_causes.split(',') ])
 
@@ -1476,6 +1492,7 @@ class PlivoRestApi(object):
         send_preanswer_list = send_preanswer_str.split(delimiter)
         time_limit_list = time_limit_str.split(delimiter)
         hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
+        caller_name_list = caller_name_str.split(delimiter)
 
         if len(to_str_list) < 2:
             msg = "GroupCall should be used for at least 2 numbers"
@@ -1532,9 +1549,13 @@ class PlivoRestApi(object):
                 hangup_on_ring = hangup_on_ring_list.pop(0)
             except IndexError:
                 hangup_on_ring = ""
+            try:
+                caller_name = caller_name_list.pop(0)
+            except IndexError:
+                caller_name = ""
 
             call_req = self._prepare_call_request(
-                        caller_id, to, extra_dial_string,
+                        caller_id, caller_name, to, extra_dial_string,
                         gw, gw_codecs, gw_timeouts, gw_retries,
                         send_digits, send_preanswer, time_limit, hangup_on_ring,
                         answer_url, ring_url, hangup_url)
