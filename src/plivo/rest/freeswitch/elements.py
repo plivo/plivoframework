@@ -699,8 +699,12 @@ class Dial(Element):
             outbound_socket.log.error("Number not defined on Number object  !")
             return ''
         if number_instance.send_digits:
-            option_send_digits = "api_on_answer_2='uuid_recv_dtmf ${uuid} %s'" \
-                                                % number_instance.send_digits
+            if number_instance.send_on_preanswer is True:
+                option_send_digits = "api_on_media='uuid_recv_dtmf ${uuid} %s'" \
+                                                    % number_instance.send_digits
+            else:
+                option_send_digits = "api_on_answer_2='uuid_recv_dtmf ${uuid} %s'" \
+                                                    % number_instance.send_digits
         else:
             option_send_digits = ''
         count = 0
@@ -1111,6 +1115,7 @@ class Number(Element):
 
     number: number to dial
     sendDigits: key to press after connecting to the number
+    sendOnPreanswer: true or false, if true SendDigits is executed on early media (default false)
     gateways: gateway string separated by comma to dialout the number
     gatewayCodecs: codecs for each gateway separated by comma
     gatewayTimeouts: timeouts for each gateway separated by comma
@@ -1126,6 +1131,7 @@ class Number(Element):
         self.gateway_retries = []
         self.extra_dial_string = ''
         self.send_digits = ''
+        self.send_on_preanswer = False
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1135,6 +1141,7 @@ class Number(Element):
         self.extra_dial_string = \
                                 self.extract_attribute_value('extraDialString')
         self.send_digits = self.extract_attribute_value('sendDigits')
+        self.send_on_preanswer = self.extract_attribute_value('sendOnPreanswer') == 'true'
 
         gateways = self.extract_attribute_value('gateways')
         gateway_codecs = self.extract_attribute_value('gatewayCodecs')

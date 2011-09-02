@@ -117,7 +117,7 @@ class PlivoRestApi(object):
         return flask.jsonify(Success=False, Message=Message, **kwargs)
 
     def _prepare_call_request(self, caller_id, to, extra_dial_string, gw, gw_codecs,
-                                gw_timeouts, gw_retries, send_digits, time_limit,
+                                gw_timeouts, gw_retries, send_digits, send_preanswer, time_limit,
                                 hangup_on_ring, answer_url, ring_url, hangup_url):
         gateways = []
         gw_retry_list = []
@@ -164,7 +164,10 @@ class PlivoRestApi(object):
 
         # set send_digits
         if send_digits:
-            args_list.append("execute_on_answer='send_dtmf %s'" % send_digits)
+            if send_preanswer:
+                args_list.append("execute_on_media='send_dtmf %s'" % send_digits)
+            else:
+                args_list.append("execute_on_answer='send_dtmf %s'" % send_digits)
 
         # set time_limit
         try:
@@ -365,6 +368,8 @@ class PlivoRestApi(object):
         Each 'W' character waits 1.0 seconds instead of sending a digit.
         You can also add the tone duration in ms by appending @[duration] after string.
         Eg. 1w2w3@1000
+
+        [SendOnPreanswer]: SendDigits on early media instead of answer.
         """
         self._rest_inbound_socket.log.debug("RESTAPI Call with %s" \
                                         % str(request.form.items()))
@@ -394,13 +399,14 @@ class PlivoRestApi(object):
                 gw_timeouts = get_post_param(request, 'GatewayTimeouts')
                 gw_retries = get_post_param(request, 'GatewayRetries')
                 send_digits = get_post_param(request, 'SendDigits')
+                send_preanswer = get_post_param(request, 'SendOnPreanswer') == 'true'
                 time_limit = get_post_param(request, 'TimeLimit')
                 hangup_on_ring = get_post_param(request, 'HangupOnRing')
 
                 call_req = self._prepare_call_request(
                                     caller_id, to, extra_dial_string,
                                     gw, gw_codecs, gw_timeouts, gw_retries,
-                                    send_digits, time_limit, hangup_on_ring,
+                                    send_digits, send_preanswer, time_limit, hangup_on_ring,
                                     answer_url, ring_url, hangup_url)
 
                 request_uuid = call_req.request_uuid
@@ -472,6 +478,8 @@ class PlivoRestApi(object):
         Each 'W' character waits 1.0 seconds instead of sending a digit.
         You can also add the tone duration in ms by appending @[duration] after string.
         Eg. 1w2w3@1000
+
+        [SendOnPreanswer]: SendDigits on early media instead of answer.
         """
         self._rest_inbound_socket.log.debug("RESTAPI BulkCall with %s" \
                                         % str(request.form.items()))
@@ -510,6 +518,7 @@ class PlivoRestApi(object):
                 gw_timeouts_str = get_post_param(request, 'GatewayTimeouts')
                 gw_retries_str = get_post_param(request, 'GatewayRetries')
                 send_digits_str = get_post_param(request, 'SendDigits')
+                send_preanswer_str = get_post_param(request, 'SendOnPreanswer')
                 time_limit_str = get_post_param(request, 'TimeLimit')
                 hangup_on_ring_str = get_post_param(request, 'HangupOnRing')
 
@@ -519,6 +528,7 @@ class PlivoRestApi(object):
                 gw_timeouts_str_list = gw_timeouts_str.split(delimiter)
                 gw_retries_str_list = gw_retries_str.split(delimiter)
                 send_digits_list = send_digits_str.split(delimiter)
+                send_preanswer_list = send_preanswer_str.split(delimiter)
                 time_limit_list = time_limit_str.split(delimiter)
                 hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
 
@@ -545,6 +555,10 @@ class PlivoRestApi(object):
                         except IndexError:
                             send_digits = ""
                         try:
+                            send_preanswer = send_preanswer_list[i] == 'true'
+                        except IndexError:
+                            send_preanswer = False
+                        try:
                             time_limit = time_limit_list[i]
                         except IndexError:
                             time_limit = ""
@@ -553,10 +567,11 @@ class PlivoRestApi(object):
                         except IndexError:
                             hangup_on_ring = ""
 
+
                         call_req = self._prepare_call_request(
                                     caller_id, to, extra_dial_string,
                                     gw_str_list[i], gw_codecs, gw_timeouts, gw_retries,
-                                    send_digits, time_limit, hangup_on_ring,
+                                    send_digits, send_preanswer, time_limit, hangup_on_ring,
                                     answer_url, ring_url, hangup_url)
                         request_uuid = call_req.request_uuid
                         request_uuid_list.append(request_uuid)
@@ -1399,6 +1414,8 @@ class PlivoRestApi(object):
         You can also add the tone duration in ms by appending @[duration] after string.
         Eg. 1w2w3@1000
 
+        [SendOnPreanswer]: SendDigits on early media instead of answer.
+
         [ConfirmSound]: Sound to play to called party before bridging call.
 
         [ConfirmKey]: A one key digits the called party must press to accept the call.
@@ -1441,6 +1458,7 @@ class PlivoRestApi(object):
         gw_timeouts_str = get_post_param(request, 'GatewayTimeouts')
         gw_retries_str = get_post_param(request, 'GatewayRetries')
         send_digits_str = get_post_param(request, 'SendDigits')
+        send_preanswer_str = get_post_param(request, 'SendOnPreanswer')
         time_limit_str = get_post_param(request, 'TimeLimit')
         hangup_on_ring_str = get_post_param(request, 'HangupOnRing')
         confirm_sound = get_post_param(request, 'ConfirmSound')
@@ -1455,6 +1473,7 @@ class PlivoRestApi(object):
         gw_timeouts_str_list = gw_timeouts_str.split(delimiter)
         gw_retries_str_list = gw_retries_str.split(delimiter)
         send_digits_list = send_digits_str.split(delimiter)
+        send_preanswer_list = send_preanswer_str.split(delimiter)
         time_limit_list = time_limit_str.split(delimiter)
         hangup_on_ring_list = hangup_on_ring_str.split(delimiter)
 
@@ -1502,6 +1521,10 @@ class PlivoRestApi(object):
             except IndexError:
                 send_digits = ""
             try:
+                send_preanswer = send_preanswer_list.pop(0) == 'true'
+            except IndexError:
+                send_preanswer = ""
+            try:
                 time_limit = time_limit_list.pop(0)
             except IndexError:
                 time_limit = ""
@@ -1513,7 +1536,7 @@ class PlivoRestApi(object):
             call_req = self._prepare_call_request(
                         caller_id, to, extra_dial_string,
                         gw, gw_codecs, gw_timeouts, gw_retries,
-                        send_digits, time_limit, hangup_on_ring,
+                        send_digits, send_preanswer, time_limit, hangup_on_ring,
                         answer_url, ring_url, hangup_url)
             group_list.append(call_req)
 
