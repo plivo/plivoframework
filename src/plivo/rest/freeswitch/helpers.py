@@ -320,15 +320,17 @@ def get_resource(socket, url):
             else:
                 socket.log.warn("Unsupported format %s" % str(cache_type))
 
-        if url[:7].lower() == "http://":
-            audio_path = url[7:]
-            url = "shout://%s" % audio_path
-        elif url[:8].lower() == "https://":
-            audio_path = url[8:]
-            url = "shout://%s" % audio_path
     except Exception, e:
         socket.log.error("Cache Error !")
         socket.log.error("Cache Error: %s" % str(e))
+
+    if url[:7].lower() == "http://":
+        audio_path = url[7:]
+        url = "shout://%s" % audio_path
+    elif url[:8].lower() == "https://":
+        audio_path = url[8:]
+        url = "shout://%s" % audio_path
+
     return url
 
 

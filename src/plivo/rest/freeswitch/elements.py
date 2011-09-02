@@ -356,6 +356,7 @@ class Conference(Element):
                     child_instance.prepare(outbound_socket)
                     sound_file = child_instance.sound_file_path
                     if sound_file:
+                        sound_file = get_resource(outbound_socket, sound_file)
                         loop = child_instance.loop_times
                         if loop == 0:
                             loop = MAX_LOOPS  # Add a high number to Play infinitely
@@ -641,6 +642,7 @@ class Dial(Element):
                     child_instance.prepare(outbound_socket)
                     sound_file = child_instance.sound_file_path
                     if sound_file:
+                        sound_file = get_resource(outbound_socket, sound_file)
                         loop = child_instance.loop_times
                         if loop == 0:
                             loop = MAX_LOOPS  # Add a high number to Play infinitely
