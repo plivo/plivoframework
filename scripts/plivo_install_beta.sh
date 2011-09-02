@@ -94,7 +94,7 @@ case $DIST in
         yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel which sox bison
         if [ $PY_MAJOR_VERSION -eq 2 ]; then
 
-            if [ $PY_MINOR_VERSION -eq 4 ]; then
+            if [ $PY_MINOR_VERSION -lt 6 ]; then
 
                 which git &>/dev/null
                 if [ $? -ne 0 ]; then
