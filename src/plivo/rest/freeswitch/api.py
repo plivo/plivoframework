@@ -866,7 +866,8 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' to mute all members
+        MemberID: conference member id or list of comma separated member ids to mute
+                or 'all' to mute all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceMute with %s" \
                                         % str(request.form.items()))
@@ -875,6 +876,7 @@ class PlivoRestApi(object):
 
         room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
+        members = []
 
         if not room:
             msg = "ConferenceName Parameter must be present"
@@ -882,18 +884,19 @@ class PlivoRestApi(object):
         if not member_id:
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "mute %s" % member_id, async=False)
-        if not res:
-            msg = "Conference Mute Failed"
-            result = False
-            return self.send_response(Success=result, Message=msg)
-        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
-            msg = "Conference Mute %s" % str(res)
-            result = False
-            return self.send_response(Success=result, Message=msg)
+        # mute members
+        for member in member_id.split(','):
+            res = self._rest_inbound_socket.conference_api(room, "mute %s" % member, async=False)
+            if not res:
+                self._rest_inbound_socket.log.warn("Conference Mute Failed for %s" % str(member))
+            elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+                self._rest_inbound_socket.log.warn("Conference Mute %s for %s" % (str(res), str(member)))
+            else:
+                self._rest_inbound_socket.log.debug("Conference Mute done for %s" % str(member))
+                members.append(member)
         msg = "Conference Mute Executed"
         result = True
-        return self.send_response(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg, MemberID=members)
 
     @auth_protect
     def conference_unmute(self):
@@ -903,7 +906,8 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' to unmute all members
+        MemberID: conference member id or list of comma separated member ids to mute
+                or 'all' to mute all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceUnmute with %s" \
                                         % str(request.form.items()))
@@ -912,6 +916,7 @@ class PlivoRestApi(object):
 
         room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
+        members = []
 
         if not room:
             msg = "ConferenceName Parameter must be present"
@@ -919,18 +924,19 @@ class PlivoRestApi(object):
         if not member_id:
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "unmute %s" % member_id, async=False)
-        if not res:
-            msg = "Conference Unmute Failed"
-            result = False
-            return self.send_response(Success=result, Message=msg)
-        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
-            msg = "Conference Unmute %s" % str(res)
-            result = False
-            return self.send_response(Success=result, Message=msg)
+        # unmute members
+        for member in member_id.split(','):
+            res = self._rest_inbound_socket.conference_api(room, "unmute %s" % member, async=False)
+            if not res:
+                self._rest_inbound_socket.log.warn("Conference Unmute Failed for %s" % str(member))
+            elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+                self._rest_inbound_socket.log.warn("Conference Unmute %s for %s" % (str(res), str(member)))
+            else:
+                self._rest_inbound_socket.log.debug("Conference Unmute done for %s" % str(member))
+                members.append(member)
         msg = "Conference Unmute Executed"
         result = True
-        return self.send_response(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg, MemberID=members)
 
     @auth_protect
     def conference_kick(self):
@@ -940,7 +946,8 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' for kicking all members
+        MemberID: conference member id or list of comma separated member ids to mute
+                or 'all' to mute all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceKick with %s" \
                                         % str(request.form.items()))
@@ -949,6 +956,7 @@ class PlivoRestApi(object):
 
         room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
+        members = []
 
         if not room:
             msg = "ConferenceName Parameter must be present"
@@ -956,18 +964,19 @@ class PlivoRestApi(object):
         if not member_id:
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "kick %s" % member_id, async=False)
-        if not res:
-            msg = "Conference Kick Failed"
-            result = False
-            return self.send_response(Success=result, Message=msg)
-        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
-            msg = "Conference Kick %s" % str(res)
-            result = False
-            return self.send_response(Success=result, Message=msg)
+        # kick members
+        for member in member_id.split(','):
+            res = self._rest_inbound_socket.conference_api(room, "kick %s" % member, async=False)
+            if not res:
+                self._rest_inbound_socket.log.warn("Conference Kick Failed for %s" % str(member))
+            elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+                self._rest_inbound_socket.log.warn("Conference Kick %s for %s" % (str(res), str(member)))
+            else:
+                self._rest_inbound_socket.log.debug("Conference Kick done for %s" % str(member))
+                members.append(member)
         msg = "Conference Kick Executed"
         result = True
-        return self.send_response(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg, MemberID=members)
 
     @auth_protect
     def conference_hangup(self):
@@ -977,7 +986,8 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' for hanging up all members
+        MemberID: conference member id or list of comma separated member ids to mute
+                or 'all' to mute all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceHangup with %s" \
                                         % str(request.form.items()))
@@ -986,6 +996,7 @@ class PlivoRestApi(object):
 
         room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
+        members = []
 
         if not room:
             msg = "ConferenceName Parameter must be present"
@@ -993,18 +1004,19 @@ class PlivoRestApi(object):
         if not member_id:
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "hup %s" % member_id, async=False)
-        if not res:
-            msg = "Conference Hangup Failed"
-            result = False
-            return self.send_response(Success=result, Message=msg)
-        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
-            msg = "Conference Hangup %s" % str(res)
-            result = False
-            return self.send_response(Success=result, Message=msg)
+        # hangup members
+        for member in member_id.split(','):
+            res = self._rest_inbound_socket.conference_api(room, "hup %s" % member, async=False)
+            if not res:
+                self._rest_inbound_socket.log.warn("Conference Hangup Failed for %s" % str(member))
+            elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+                self._rest_inbound_socket.log.warn("Conference Hangup %s for %s" % (str(res), str(member)))
+            else:
+                self._rest_inbound_socket.log.debug("Conference Hangup done for %s" % str(member))
+                members.append(member)
         msg = "Conference Hangup Executed"
         result = True
-        return self.send_response(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg, MemberID=members)
 
     @auth_protect
     def conference_deaf(self):
@@ -1014,7 +1026,8 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' to make all members deaf
+        MemberID: conference member id or list of comma separated member ids to mute
+                or 'all' to mute all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceDeaf with %s" \
                                         % str(request.form.items()))
@@ -1023,6 +1036,7 @@ class PlivoRestApi(object):
 
         room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
+        members = []
 
         if not room:
             msg = "ConferenceName Parameter must be present"
@@ -1030,18 +1044,19 @@ class PlivoRestApi(object):
         if not member_id:
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "deaf %s" % member_id, async=False)
-        if not res:
-            msg = "Conference Deaf Failed"
-            result = False
-            return self.send_response(Success=result, Message=msg)
-        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
-            msg = "Conference Deaf %s" % str(res)
-            result = False
-            return self.send_response(Success=result, Message=msg)
+        # deaf members
+        for member in member_id.split(','):
+            res = self._rest_inbound_socket.conference_api(room, "deaf %s" % member, async=False)
+            if not res:
+                self._rest_inbound_socket.log.warn("Conference Deaf Failed for %s" % str(member))
+            elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+                self._rest_inbound_socket.log.warn("Conference Deaf %s for %s" % (str(res), str(member)))
+            else:
+                self._rest_inbound_socket.log.debug("Conference Deaf done for %s" % str(member))
+                members.append(member)
         msg = "Conference Deaf Executed"
         result = True
-        return self.send_response(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg, MemberID=members)
 
     @auth_protect
     def conference_undeaf(self):
@@ -1051,7 +1066,8 @@ class PlivoRestApi(object):
         POST Parameters
         ---------------
         ConferenceName: conference room name
-        MemberID: conference member id or 'all' to make all members undeaf
+        MemberID: conference member id or list of comma separated member ids to mute
+                or 'all' to mute all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceUndeaf with %s" \
                                         % str(request.form.items()))
@@ -1060,6 +1076,7 @@ class PlivoRestApi(object):
 
         room = get_post_param(request, 'ConferenceName')
         member_id = get_post_param(request, 'MemberID')
+        members = []
 
         if not room:
             msg = "ConferenceName Parameter must be present"
@@ -1067,18 +1084,19 @@ class PlivoRestApi(object):
         elif not member_id:
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
-        res = self._rest_inbound_socket.conference_api(room, "undeaf %s" % member_id)
-        if not res:
-            msg = "Conference Undeaf Failed"
-            result = False
-            return self.send_response(Success=result, Message=msg)
-        elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
-            msg = "Conference Undeaf %s" % str(res)
-            result = False
-            return self.send_response(Success=result, Message=msg)
+        # deaf members
+        for member in member_id.split(','):
+            res = self._rest_inbound_socket.conference_api(room, "undeaf %s" % member, async=False)
+            if not res:
+                self._rest_inbound_socket.log.warn("Conference Undeaf Failed for %s" % str(member))
+            elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
+                self._rest_inbound_socket.log.warn("Conference Undeaf %s for %s" % (str(res), str(member)))
+            else:
+                self._rest_inbound_socket.log.debug("Conference Undeaf done for %s" % str(member))
+                members.append(member)
         msg = "Conference Undeaf Executed"
         result = True
-        return self.send_response(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg, MemberID=members)
 
     @auth_protect
     def conference_record_start(self):
