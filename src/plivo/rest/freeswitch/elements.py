@@ -46,7 +46,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'callbackUrl': '',
                 'callbackMethod': 'POST',
                 'digitsMatch': '',
-                'speakEvent': 'false'
+                'floorEvent': 'false'
         },
         'Dial': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -338,7 +338,7 @@ class Conference(Element):
         if not self.callback_method in ('GET', 'POST'):
             raise RESTAttributeException("callbackMethod must be 'GET' or 'POST'")
         self.digits_match = self.extract_attribute_value("digitsMatch")
-        self.speaker = self.extract_attribute_value("speakEvent") == 'true'
+        self.floor = self.extract_attribute_value("floorEvent") == 'true'
 
     def _prepare_moh(self, outbound_socket):
         sound_files = []
@@ -404,15 +404,15 @@ class Conference(Element):
         params['ConferenceAction'] = 'exit'
         spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
 
-    def _notify_speaking(self, outboundsocket):
-        if not self.speaker or not self.callback_url or not self.conf_id or not self.member_id:
+    def _notify_floor_holder(self, outboundsocket):
+        if not self.floor or not self.callback_url or not self.conf_id or not self.member_id:
             return
-        outboundsocket.log.debug("Speaking into Conference")
+        outboundsocket.log.debug("Floor holder into Conference")
         params = {}
         params['ConferenceName'] = self.room
         params['ConferenceUUID'] = self.conf_id or ''
         params['ConferenceMemberID'] = self.member_id or ''
-        params['ConferenceAction'] = 'speaking'
+        params['ConferenceAction'] = 'floor'
         spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
 
     def execute(self, outbound_socket):
@@ -499,8 +499,12 @@ class Conference(Element):
                 self.conf_id = event['Conference-Unique-ID']
                 outbound_socket.log.debug("Entered Conference: Room %s with Member-ID %s" \
                                 % (self.room, self.member_id))
+                has_floor = event['Floor'] == 'true'
                 # notify channel has entered room
                 self._notify_enter_conf(outbound_socket)
+                # notify floor holder
+                if has_floor:
+                    self._notify_floor_holder(outbound_socket)
 
                 # set bind digit actions
                 if self.digits_match and self.callback_url:
@@ -544,8 +548,8 @@ class Conference(Element):
                 outbound_socket.log.debug("Conference: Room %s, waiting end ..." % self.room)
                 while outbound_socket.ready():
                     event = outbound_socket.wait_for_action()
-                    if event['Action'] == 'start-talking':
-                        self._notify_speaking(outbound_socket)
+                    if event['Action'] == 'floor-change':
+                        self._notify_floor_holder(outbound_socket)
                         continue
                     break
 

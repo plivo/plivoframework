@@ -230,7 +230,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     spawn_raw(self.send_to_url, digits_action, params, digits_method)
             # special case to send callback when Member is speaking in Conference
             elif event['Event-Subclass'] == 'conference::maintenance' \
-                and event['Action'] == 'start-talking' \
+                and event['Action'] == 'floor-change' \
                 and event['Unique-ID'] == self.get_channel_unique_id():
                 self._action_queue.put(event)
                  
