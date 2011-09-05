@@ -407,6 +407,7 @@ class Conference(Element):
     def _notify_speaking(self, outboundsocket):
         if not self.speaker or not self.callback_url or not self.conf_id or not self.member_id:
             return
+        outboundsocket.log.debug("Speaking into Conference")
         params = {}
         params['ConferenceName'] = self.room
         params['ConferenceUUID'] = self.conf_id or ''
