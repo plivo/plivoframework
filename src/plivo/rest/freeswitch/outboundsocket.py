@@ -228,6 +228,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     params['ConferenceDigitsMatch'] = event['Digits-Match'] or ''
                     params['ConferenceAction'] = 'digits'
                     spawn_raw(self.send_to_url, digits_action, params, digits_method)
+            # special case to send callback when Member is speaking in Conference
+            elif event['Event-Subclass'] == 'conference::maintenance' \
+                and event['Action'] == 'start-talking' \
+                and event['Unique-ID'] == self.get_channel_unique_id():
+                self.log.debug("Speaking into Conference")
+                self._action_queue.put(event)
+                 
         # case dial event
         elif self.current_element == 'Dial':
             if event['Event-Subclass'] == 'plivo::dial' \
@@ -248,6 +255,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if self._hangup_cause:
             return True
         return False
+
+    def ready(self):
+        if self.has_hangup():
+            return False
+        return True
 
     def has_answered(self):
         return self.answered

@@ -45,7 +45,8 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'method': 'POST',
                 'callbackUrl': '',
                 'callbackMethod': 'POST',
-                'digitsMatch': ''
+                'digitsMatch': '',
+                'speakEvent': 'false'
         },
         'Dial': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -245,10 +246,12 @@ class Conference(Element):
     action: redirect to this URL after leaving conference
     method: submit to 'action' url using GET or POST
     callbackUrl: url to request when call enters/leaves conference
-            or has pressed digits matching (digitsMatch)
+            or has pressed digits matching (digitsMatch) or member is speaking (speakEvent)
     callbackMethod: submit to 'callbackUrl' url using GET or POST
     digitsMatch: a list of matching digits to send with callbackUrl
             Can be a list of digits patterns separated by comma.
+    speakEvent: 'true' or 'false'. When this member speaks, 
+            send notification to callbackUrl. (default 'false')
     """
     DEFAULT_TIMELIMIT = 0
     DEFAULT_MAXMEMBERS = 200
@@ -274,6 +277,7 @@ class Conference(Element):
         self.method = ''
         self.callback_url = ''
         self.callback_method = ''
+        self.speaker = False
         self.conf_id = ''
         self.member_id = ''
 
@@ -329,11 +333,12 @@ class Conference(Element):
             raise RESTAttributeException("method must be 'GET' or 'POST'")
         self.action = self.extract_attribute_value("action")
 
+        self.callback_url = self.extract_attribute_value("callbackUrl")
         self.callback_method = self.extract_attribute_value("callbackMethod")
         if not self.callback_method in ('GET', 'POST'):
             raise RESTAttributeException("callbackMethod must be 'GET' or 'POST'")
-        self.callback_url = self.extract_attribute_value("callbackUrl")
         self.digits_match = self.extract_attribute_value("digitsMatch")
+        self.speaker = self.extract_attribute_value("speakEvent") == 'true'
 
     def _prepare_moh(self, outbound_socket):
         sound_files = []
@@ -397,6 +402,16 @@ class Conference(Element):
         params['ConferenceUUID'] = self.conf_id or ''
         params['ConferenceMemberID'] = self.member_id or ''
         params['ConferenceAction'] = 'exit'
+        spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
+
+    def _notify_speaking(self, outboundsocket):
+        if not self.speaker or not self.callback_url or not self.conf_id or not self.member_id:
+            return
+        params = {}
+        params['ConferenceName'] = self.room
+        params['ConferenceUUID'] = self.conf_id or ''
+        params['ConferenceMemberID'] = self.member_id or ''
+        params['ConferenceAction'] = 'speaking'
         spawn_raw(outboundsocket.send_to_url, self.callback_url, params, self.callback_method)
 
     def execute(self, outbound_socket):
@@ -526,7 +541,12 @@ class Conference(Element):
 
                 # wait conference ending for this member
                 outbound_socket.log.debug("Conference: Room %s, waiting end ..." % self.room)
-                event = outbound_socket.wait_for_action()
+                while outbound_socket.ready():
+                    event = outbound_socket.wait_for_action()
+                    if event['Action'] == 'start-talking':
+                        self._notify_speaking(outbound_socket)
+                        continue
+                    break
 
             # unset digit realm
             if digit_realm:
