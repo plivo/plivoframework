@@ -229,9 +229,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     params['ConferenceAction'] = 'digits'
                     spawn_raw(self.send_to_url, digits_action, params, digits_method)
             # special case to send callback when Member take the floor in Conference
+            # but only if member can speak (not muted)
             elif event['Event-Subclass'] == 'conference::maintenance' \
                 and event['Action'] == 'floor-change' \
-                and event['Unique-ID'] == self.get_channel_unique_id():
+                and event['Unique-ID'] == self.get_channel_unique_id() \
+                and event['Speak'] == 'true':
                 self._action_queue.put(event)
                  
         # case dial event

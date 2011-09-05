@@ -500,10 +500,13 @@ class Conference(Element):
                 outbound_socket.log.debug("Entered Conference: Room %s with Member-ID %s" \
                                 % (self.room, self.member_id))
                 has_floor = event['Floor'] == 'true'
+                can_speak = event['Speak'] == 'true'
+                is_first = event['Conference-Size'] == '1'
                 # notify channel has entered room
                 self._notify_enter_conf(outbound_socket)
-                # notify floor holder
-                if has_floor:
+                # notify floor holder only if :
+                # floor is true and member is not muted and member is the first one
+                if has_floor and can_speak and is_first:
                     self._notify_floor_holder(outbound_socket)
 
                 # set bind digit actions
