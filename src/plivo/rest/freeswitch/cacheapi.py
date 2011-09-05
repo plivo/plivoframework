@@ -48,7 +48,7 @@ class UnsupportedResourceFormat(Exception):
 
 
 class ResourceCache(object):
-    """Uses redis cache as a backend for storing info on cached files.
+    """Uses redis cache as a backend for storing cached files infos and datas.
     """
     def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0):
         self.host = redis_host
@@ -145,6 +145,8 @@ def get_resource_type(server, url):
     return resource_type
 
 def get_resource(server, url):
+    if not url:
+        return url
     full_file_name = url
     stream = ''
     resource_type = None
@@ -156,30 +158,30 @@ def get_resource(server, url):
             return (full_file_name, stream, resource_type)
 
         rk = server.cache.get_resource_key(url)
-        server.log.debug("Resource key %s" % rk)
+        server.log.debug("Cache -- Resource key %s for %s" % (rk, url))
         try:
             resource_key, resource_type, etag, last_modified = server.cache.get_resource_params(url)
             if resource_key is None:
-                server.log.info("Resource not found in cache. Download and Cache")
+                server.log.info("Cache -- %s not found. Downloading" % url)
                 try:
                     stream, resource_type = server.cache.cache_resource(url)
                 except UnsupportedResourceFormat:
-                    server.log.error("Ignoring Unsupported Audio File at - %s" % url)
+                    server.log.error("Cache -- Ignoring Unsupported Audio File at - %s" % url)
             else:
-                server.log.debug("Resource found in Cache. Check if source is newer")
+                server.log.debug("Cache -- Checking if %s source is newer" % url)
                 updated, new_etag, new_last_modified = server.cache.is_resource_updated(url, etag, last_modified)
                 if not updated:
-                    server.log.debug("Source file same. Use Cached Version")
+                    server.log.debug("Cache -- Using Cached %s" % url)
                     stream, resource_type = server.cache.get_stream(resource_key)
                 else:
-                    server.log.debug("Source file updated. Download and Cache")
+                    server.log.debug("Cache -- Updating Cached %s" % url)
                     try:
                         stream, resource_type = server.cache.cache_resource(url)
                     except UnsupportedResourceFormat:
-                        server.log.error("Ignoring Unsupported Audio File at - %s" % url)
+                        server.log.error("Cache -- Ignoring Unsupported Audio File at - %s" % url)
         except Exception, e:
-            server.log.error("Cache Error !")
-            [ server.log.debug('Cache Error: %s' % line) for line in \
+            server.log.error("Cache -- Failure !")
+            [ server.log.debug('Cache -- Error: %s' % line) for line in \
                             traceback.format_exc().splitlines() ]
 
     if stream:
