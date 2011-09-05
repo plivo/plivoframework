@@ -228,7 +228,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     params['ConferenceDigitsMatch'] = event['Digits-Match'] or ''
                     params['ConferenceAction'] = 'digits'
                     spawn_raw(self.send_to_url, digits_action, params, digits_method)
-            # special case to send callback when Member is speaking in Conference
+            # special case to send callback when Member take the floor in Conference
             elif event['Event-Subclass'] == 'conference::maintenance' \
                 and event['Action'] == 'floor-change' \
                 and event['Unique-ID'] == self.get_channel_unique_id():
