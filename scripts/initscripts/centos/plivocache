@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# plivocache        Starts plivo cache server
+#
+#
+# chkconfig: 2345 99 10
+# description: Plivo cache server
+### BEGIN INIT INFO
+# Provides: $plivo
+# Required-Start: $local_fs
+# Required-Stop: $local_fs
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Plivo cache server
+# Description: Plivo Cache Server
+
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+prog=plivocache
+name="PlivoCache"
+exec=/usr/local/plivo/bin/cacheserver
+lockfile=/var/lock/subsys/$prog
+
+
+check_state() {
+	declare -i count
+	count=2
+	count=$($exec status |grep -c "not running")
+	return $count
+}
+
+
+start() {
+	[ -x $exec ] || exit 5
+
+	# Source config
+        if [ -f /etc/sysconfig/plivocache ] ; then
+                . /etc/sysconfig/plivocache
+	fi
+	umask 077
+
+        echo -n $"Starting $name: "
+        $exec start &>/dev/null 
+	check_state
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && touch $lockfile
+        return $RETVAL
+}
+stop() {
+        echo -n $"Shutting down $name: "
+        $exec stop &>/dev/null
+	check_state
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 1 ] && RETVAL=0 && rm -f $lockfile
+        return $RETVAL
+}
+reload()  {
+	echo -n "Reloading $name ..."
+	check_state
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		$exec reload &>/dev/null && success || failure
+	else
+		echo -n " not started ! "
+		failure
+	fi
+	echo
+	return $RETVAL
+}
+rhstatus() {
+	$exec status
+}
+restart() {
+        stop
+        start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  reload)
+	reload
+	;;
+  status)
+        rhstatus
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|reload|status}"
+        exit 2
+esac
+
+exit $?
