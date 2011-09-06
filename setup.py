@@ -41,7 +41,7 @@ setup_args = {
                  'src/bin/cacheserver',
                  'src/bin/plivo'],
       'data_files':[(etc_prefix+'/plivo/', ['src/config/default.conf', 'src/config/cache.conf', 
-                    'src/initscripts/plivo', 'src/initscripts/plivocache']),
+                    'src/initscripts/*']),
                    ],
       'keywords':"telecom voip telephony freeswitch ivr rest",
       'license':license,
