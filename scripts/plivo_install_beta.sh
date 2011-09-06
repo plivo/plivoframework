@@ -161,18 +161,40 @@ pip install -e git+${PLIVO_GIT_REPO}@${BRANCH}#egg=plivo
 
 
 
+# Check install
+if [ ! -f $REAL_PATH/bin/plivo ]; then
+    echo
+    echo
+    echo
+    echo "Installation failed !"
+    echo
+    echo
+    echo
+    exit 1
+fi
+
+
+clear
+
 # Install configs
 CONFIG_OVERWRITE=no
 case $ACTION in
 "UPDATE")
-    echo "Do you want to overwrite the following config files"
-    echo " - $REAL_PATH/etc/plivo/default.conf"
-    echo " - $REAL_PATH/etc/plivo/cache/cache.conf"
-    echo "yes/no ?"
-    read INPUT
-    if [ "$INPUT" = "yes" ]; then
-        CONFIG_OVERWRITE=yes
-    fi
+    while [ 1 ]; do
+        clear
+	echo "Do you want to overwrite the following config files"
+	echo " - $REAL_PATH/etc/plivo/default.conf"
+	echo " - $REAL_PATH/etc/plivo/cache/cache.conf"
+	echo "yes/no ?"
+	read INPUT
+	if [ "$INPUT" = "yes" ]; then
+	    CONFIG_OVERWRITE=yes
+            break
+        elif [ "$INPUT" = "no" ]; then
+	    CONFIG_OVERWRITE=no
+            break
+        fi
+    done
 ;;
 "INSTALL")
         CONFIG_OVERWRITE=yes
@@ -199,6 +221,11 @@ case $DIST in
 "DEBIAN")
    cp -f $REAL_PATH/bin/plivo /etc/init.d/plivo
    cp -f $REAL_PATH/bin/cacheserver /etc/init.d/plivocache
+   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivo
+   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivocache
+   cd /etc/rc2.d
+   ln -s /etc/init.d/plivocache S99plivocache
+   ln -s /etc/init.d/plivo S99plivo
 ;;
 
 "CENTOS")
@@ -206,14 +233,14 @@ case $DIST in
    cp -f $REAL_PATH/src/plivo/src/initscripts/centos/plivocache /etc/init.d/plivocache
    sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivo
    sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivocache
-   chkconfig plivo
-   chkconfig plivocache
+   chkconfig --add plivo
+   chkconfig --add plivocache
 ;;
 esac
 
 
 
-
+clear
 # Install Complete
 echo ""
 echo ""
@@ -228,7 +255,7 @@ echo "    The default config is $REAL_PATH/etc/plivo/default.conf"
 echo "    Here you can add/remove/modify config files to run mutiple plivo instances"
 echo
 echo "* To Start Plivo :"
-echo "    $REAL_PATH/bin/plivo start"
+echo "    /etc/init.d/plivo start"
 echo
 echo "* Configure plivo cache:"
 echo "    The config is $REAL_PATH/etc/plivo/cache/cache.conf"
@@ -236,7 +263,7 @@ echo "    IMPORTANT: you need to install a redis server for plivo cache server!"
 echo "               Check with your sysadmin !"
 echo
 echo "* To Start Plivo cache server:"
-echo "    $REAL_PATH/bin/cacheserver start"
+echo "    /etc/init.d/plivocache start"
 echo
 echo "**************************************************************"
 echo ""
