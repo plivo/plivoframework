@@ -9,7 +9,6 @@ BRANCH=$2
 if [ ! $BRANCH ]; then
     BRANCH=master
 fi
-PLIVO_CONF_PATH=https://github.com/plivo/plivo/raw/${BRANCH}/src/config/default.conf
 PLIVO_GIT_REPO=git://github.com/plivo/plivo.git
 
 #####################################################
@@ -56,6 +55,7 @@ else
     ACTION='INSTALL'
 fi
 read INPUT
+
 
 declare -i PY_MAJOR_VERSION
 declare -i PY_MINOR_VERSION
@@ -123,13 +123,15 @@ gpgcheck = 1
                 cd $REAL_PATH/deploy
 
                 # Install Isolated copy of python
-                mkdir source
-                cd source
-                wget http://www.python.org/ftp/python/$CENTOS_PYTHON_VERSION/Python-$CENTOS_PYTHON_VERSION.tgz
-                tar -xvf Python-$CENTOS_PYTHON_VERSION.tgz
-                cd Python-$CENTOS_PYTHON_VERSION
-                ./configure --prefix=$DEPLOY
-                make && make install
+		if [ ! -f $REAL_PATH/bin/python ]; then
+			mkdir source
+			cd source
+			wget http://www.python.org/ftp/python/$CENTOS_PYTHON_VERSION/Python-$CENTOS_PYTHON_VERSION.tgz
+			tar -xvf Python-$CENTOS_PYTHON_VERSION.tgz
+			cd Python-$CENTOS_PYTHON_VERSION
+			./configure --prefix=$DEPLOY
+			make && make install
+		fi
                 # This is what does all the magic by setting upgraded python
                 export PATH=$DEPLOY/bin:$PATH
 
@@ -158,18 +160,59 @@ source $REAL_PATH/bin/activate
 pip install -e git+${PLIVO_GIT_REPO}@${BRANCH}#egg=plivo
 
 
-if [ $ACTION = 'INSTALL' ]; then
+
+# Install configs
+CONFIG_OVERWRITE=no
+case $ACTION in
+"UPDATE")
+    echo "Do you want to overwrite the following config files"
+    echo " - $REAL_PATH/etc/plivo/default.conf"
+    echo " - $REAL_PATH/etc/plivo/cache/cache.conf"
+    echo "yes/no ?"
+    read INPUT
+    if [ "$INPUT" = "yes" ]; then
+        CONFIG_OVERWRITE=yes
+    fi
+;;
+"INSTALL")
+        CONFIG_OVERWRITE=yes
+;;
+esac
+if [ "$CONFIG_OVERWRITE" = "yes" ]; then
     mkdir -p $REAL_PATH/etc/plivo &>/dev/null
     mkdir -p $REAL_PATH/etc/plivo/cache &>/dev/null
-    mkdir -p $REAL_PATH/tmp &>/dev/null
-    mkdir -p $REAL_PATH/tmp/plivocache &>/dev/null
     cd $REAL_PATH/src/plivo
     git checkout $BRANCH 
     cp -f $REAL_PATH/src/plivo/src/config/default.conf $REAL_PATH/etc/plivo/default.conf
     cp -f $REAL_PATH/src/plivo/src/config/cache.conf $REAL_PATH/etc/plivo/cache/cache.conf
 fi
 
+# Create tmp and plivocache directories
+mkdir -p $REAL_PATH/tmp &>/dev/null
+mkdir -p $REAL_PATH/tmp/plivocache &>/dev/null
+
+# Post install script
 $REAL_PATH/bin/plivo-postinstall &>/dev/null
+
+# Install init scripts
+case $DIST in
+"DEBIAN")
+   cp -f $REAL_PATH/bin/plivo /etc/init.d/plivo
+   cp -f $REAL_PATH/bin/cacheserver /etc/init.d/plivocache
+;;
+
+"CENTOS")
+   cp -f $REAL_PATH/src/plivo/src/initscripts/centos/plivo /etc/init.d/plivo
+   cp -f $REAL_PATH/src/plivo/src/initscripts/centos/plivocache /etc/init.d/plivocache
+   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivo
+   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivocache
+   chkconfig plivo
+   chkconfig plivocache
+;;
+esac
+
+
+
 
 # Install Complete
 echo ""
@@ -189,8 +232,8 @@ echo "    $REAL_PATH/bin/plivo start"
 echo
 echo "* Configure plivo cache:"
 echo "    The config is $REAL_PATH/etc/plivo/cache/cache.conf"
-echo
-echo "  IMPORTANT: you need to install a redis server ! Check with your sysadmin !"
+echo "    IMPORTANT: you need to install a redis server for plivo cache server!"
+echo "               Check with your sysadmin !"
 echo
 echo "* To Start Plivo cache server:"
 echo "    $REAL_PATH/bin/cacheserver start"
