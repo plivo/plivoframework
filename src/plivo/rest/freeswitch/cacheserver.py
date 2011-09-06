@@ -41,15 +41,6 @@ class PlivoCacheServer(PlivoCacheApi):
         self._config = None
         self.load_config()
 
-        # create a cache instance if enabled
-        if self.redis_host and self.redis_port and self.redis_db:
-            self.cache = cacheapi.ResourceCache(self.redis_host,
-                                        int(self.redis_port),
-                                        int(self.redis_db))
-        else:
-            self.log.error("Cannot run cache server, cache not set !")
-            raise Exception("Cannot run cache server, cache not set !")
-
         # expose API functions to flask app
         for path, func_desc in cacheurls.URLS.iteritems():
             func, methods = func_desc
@@ -60,6 +51,21 @@ class PlivoCacheServer(PlivoCacheApi):
         self.log.info("%s mode set" % str(self._wsgi_mode))
         self.http_server = self._wsgi_mode((self.http_host, self.http_port),
                                             self.app, log=self.log)
+
+    def create_cache(self, config):
+        # load cache params
+        self.redis_host = config.get('cache_server', 'REDIS_HOST', default='')
+        self.redis_port = config.get('cache_server', 'REDIS_PORT', default='')
+        self.redis_db = config.get('cache_server', 'REDIS_DB', default='')
+        if self.redis_host and self.redis_port and self.redis_db:
+            self.cache = cacheapi.ResourceCache(self.redis_host,
+                                        int(self.redis_port),
+                                        int(self.redis_db))
+            return True
+
+        self.log.error("Cannot run cache server, cache not set !")
+        raise Exception("Cannot run cache server, cache not set !")
+
 
     def get_log(self):
         return self.log
@@ -143,6 +149,14 @@ class PlivoCacheServer(PlivoCacheApi):
                 self.http_host, http_port = self.http_address.split(':', 1)
                 self.http_port = int(http_port)
 
+                # load cache params
+                self.redis_host = config.get('cache_server', 'REDIS_HOST', default='')
+                self.redis_port = config.get('cache_server', 'REDIS_PORT', default='')
+                self.redis_db = config.get('cache_server', 'REDIS_DB', default='')
+                # create new cache
+                self.create_cache(config=config)
+                self.log.warn("Cache %s" % str(self.cache))
+
                 # set wsgi mode
                 _wsgi_mode = config.get('cache_server', 'WSGI_MODE', default='wsgi')
                 if _wsgi_mode in ('pywsgi', 'python', 'py'):
@@ -150,17 +164,14 @@ class PlivoCacheServer(PlivoCacheApi):
                 else:
                     self._wsgi_mode = WSGIServer
 
-            self.default_http_method = 'GET'
-
-            # load cache params
-            self.redis_host = config.get('cache_server', 'REDIS_HOST', default='')
-            self.redis_port = config.get('cache_server', 'REDIS_PORT', default='')
-            self.redis_db = config.get('cache_server', 'REDIS_DB', default='')
-
-            # create new logger if reloading
             if reload:
+                # create new logger if reloading
                 self.create_logger(config=config)
                 self.log.warn("New logger %s" % str(self.log))
+                # create new cache
+                self.create_cache(config=config)
+                self.log.warn("New cache %s" % str(self.cache))
+
 
             # set new config
             self._config = config

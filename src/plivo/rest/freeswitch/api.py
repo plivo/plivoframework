@@ -907,7 +907,7 @@ class PlivoRestApi(object):
         ---------------
         ConferenceName: conference room name
         MemberID: conference member id or list of comma separated member ids to mute
-                or 'all' to mute all members
+                or 'all' to unmute all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceUnmute with %s" \
                                         % str(request.form.items()))
@@ -947,7 +947,7 @@ class PlivoRestApi(object):
         ---------------
         ConferenceName: conference room name
         MemberID: conference member id or list of comma separated member ids to mute
-                or 'all' to mute all members
+                or 'all' to kick all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceKick with %s" \
                                         % str(request.form.items()))
@@ -987,7 +987,7 @@ class PlivoRestApi(object):
         ---------------
         ConferenceName: conference room name
         MemberID: conference member id or list of comma separated member ids to mute
-                or 'all' to mute all members
+                or 'all' to hangup all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceHangup with %s" \
                                         % str(request.form.items()))
@@ -1027,7 +1027,7 @@ class PlivoRestApi(object):
         ---------------
         ConferenceName: conference room name
         MemberID: conference member id or list of comma separated member ids to mute
-                or 'all' to mute all members
+                or 'all' to deaf all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceDeaf with %s" \
                                         % str(request.form.items()))
@@ -1067,7 +1067,7 @@ class PlivoRestApi(object):
         ---------------
         ConferenceName: conference room name
         MemberID: conference member id or list of comma separated member ids to mute
-                or 'all' to mute all members
+                or 'all' to undeaf all members
         """
         self._rest_inbound_socket.log.debug("RESTAPI ConferenceUndeaf with %s" \
                                         % str(request.form.items()))

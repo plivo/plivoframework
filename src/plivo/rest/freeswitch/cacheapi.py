@@ -280,4 +280,14 @@ class PlivoCacheApi(object):
                             traceback.format_exc().splitlines() ]
             raise e
 
-        
+    @auth_protect
+    def do_reload(self):
+        try:
+            self.reload()
+            return flask.jsonify(Success=True, Message="Reload done")
+        except Exception, e:
+            self.log.error("/Reload/ Error: %s" % str(e))
+            [ self.log.debug('/Reload/ Error: %s' % line) for line in \
+                            traceback.format_exc().splitlines() ]
+            raise e
+
