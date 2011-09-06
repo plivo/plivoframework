@@ -12,12 +12,14 @@ try:
 except ImportError:
     from xml.etree.elementtree import ElementTree as etree
 
+import ujson as json
 import flask
 from flask import request
 from werkzeug.exceptions import Unauthorized
 
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
-                                            get_post_param, get_resource
+                                            get_post_param, get_resource, \
+                                            HTTPRequest
 
 def auth_protect(decorated_func):
     def wrapper(obj):
@@ -310,7 +312,48 @@ class PlivoRestApi(object):
                 msg += ' : %s' % str(e)
                 result = False
 
-        return send_response(Success=result, Message=msg)
+        return self.send_response(Success=result, Message=msg)
+
+    @auth_protect
+    def reload_cache_config(self):
+        """Reload plivo cache server config
+        """
+        self._rest_inbound_socket.log.debug("RESTAPI ReloadCacheConfig with %s" \
+                                        % str(request.form.items()))
+        msg = "ReloadCacheConfig Failed"
+        result = False
+
+        try:
+            cache_api_url = self.cache['url']
+        except KeyError:
+            msg = "ReloadCacheConfig Failed -- CACHE_URL not found"
+            result = False
+            return self.send_response(Success=result, Message=msg)
+
+        try:
+            req = HTTPRequest()
+            data = req.fetch_response(cache_api_url + '/Reload/', params={}, method='POST')
+            res = json.loads(data)
+            try:
+                success = res['Success']
+                msg = res['Message']
+            except:
+                success = False
+                msg = "unknown"
+            if success:
+                msg = "Plivo Cache Server config reloaded"
+                result = True
+                self._rest_inbound_socket.log.info("ReloadCacheConfig Done")
+            else:
+                raise Exception(msg)
+
+        except Exception, e:
+            msg = "Plivo Cache Server config reload failed"
+            self._rest_inbound_socket.log.error("ReloadCacheConfig Failed -- %s" % str(e))
+            result = False
+
+        return self.send_response(Success=result, Message=msg)
+
 
     @auth_protect
     def call(self):

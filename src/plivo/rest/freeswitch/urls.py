@@ -20,8 +20,10 @@ PLIVO_VERSION = 'v0.1';
 URLS = {
         # API Index
         '/': (PlivoRestApi.index, ['GET']),
-        # API to reload Plivo config for rest server
+        # API to reload Plivo config
         '/' + PLIVO_VERSION + '/ReloadConfig/': (PlivoRestApi.reload_config, ['POST']),
+        # API to reload Plivo Cache config
+        '/' + PLIVO_VERSION + '/ReloadCacheConfig/': (PlivoRestApi.reload_cache_config, ['POST']),
         # API to originate several calls simultaneously
         '/' + PLIVO_VERSION + '/BulkCall/': (PlivoRestApi.bulk_call, ['POST']),
         # API to originate a single call
