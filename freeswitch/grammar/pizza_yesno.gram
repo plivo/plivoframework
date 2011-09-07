@@ -1,0 +1,13 @@
+#JSGF V1.0;
+
+/**
+  * JSGF Grammar for pizza_size
+  */
+
+grammar pizza_yesno;
+
+<yes> = [ yes | yep | correct ];
+<no> =  [ no | nope ];
+
+public <yesno> = <yes> <no>;
+
