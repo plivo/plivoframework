@@ -60,20 +60,25 @@ class CallRequest(object):
                  'ring_url',
                  'hangup_url',
                  'state_flag',
+                 'to',
+                 '_from',
                 )
 
     def __init__(self, request_uuid, gateways,
-                 answer_url, ring_url, hangup_url):
+                 answer_url, ring_url, hangup_url, to='', _from=''):
         self.request_uuid = request_uuid
         self.gateways = gateways
         self.answer_url = answer_url
         self.ring_url = ring_url
         self.hangup_url = hangup_url
         self.state_flag = None
+        self.to = to
+        self._from = _from
 
     def __repr__(self):
-        return "<CallRequest RequestUUID=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s>" \
-            % (self.request_uuid, self.gateways, self.answer_url, self.ring_url, self.hangup_url, str(self.state_flag))
+        return "<CallRequest RequestUUID=%s To=%s From=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s>" \
+            % (self.request_uuid, self.gateways, self.to, self._from,
+               self.answer_url, self.ring_url, self.hangup_url, str(self.state_flag))
 
 
 
@@ -205,7 +210,7 @@ class PlivoRestApi(object):
                 gateway = Gateway(request_uuid, to, gw, codecs, timeout, args_str)
                 gateways.append(gateway)
 
-        call_req = CallRequest(request_uuid, gateways, answer_url, ring_url, hangup_url)
+        call_req = CallRequest(request_uuid, gateways, answer_url, ring_url, hangup_url, to=to, _from=caller_id)
         return call_req
 
     @staticmethod

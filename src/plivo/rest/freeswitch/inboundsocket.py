@@ -77,6 +77,7 @@ class RESTInboundSocket(InboundEventSocket):
         """
         job_cmd = event['Job-Command']
         job_uuid = event['Job-UUID']
+        # TEST MIKE
         if job_cmd == 'originate' and job_uuid:
             try:
                 status, reason = event.get_body().split(' ', 1)
@@ -420,19 +421,31 @@ class RESTInboundSocket(InboundEventSocket):
             if not hangup_url:
                 self.log.debug("No HangupUrl for Incoming CallUUID %s" % call_uuid)
                 return
+            called_num = event['Caller-Destination-Number']
+            caller_num = event['Caller-Caller-ID-Number']
+            direction = event['Call-Direction']
         # case outgoing call, add params
         else:
             self.log.info("Hangup for Outgoing CallUUID %s Completed, HangupCause %s, RequestUUID %s"
                                         % (call_uuid, reason, request_uuid))
             try:
+                call_req = self.call_requests[request_uuid]
+                called_num = call_req.to
+                caller_num = call_req._from
+                direction = "outbound"
                 self.call_requests[request_uuid] = None
                 del self.call_requests[request_uuid]
             except (KeyError, AttributeError):
-                pass
+                called_num = ''
+                caller_num = ''
+                direction = "outbound"
+
             self.log.debug("Call Cleaned up for RequestUUID %s" % request_uuid)
+
             if not hangup_url:
                 self.log.debug("No HangupUrl for Outgoing Call %s, RequestUUID %s" % (call_uuid, request_uuid))
                 return
+
             forwarded_from = get_substring(':', '@', event['variable_sip_h_Diversion'])
             aleg_uuid = event['Caller-Unique-ID']
             aleg_request_uuid = event['variable_plivo_request_uuid']
@@ -448,18 +461,16 @@ class RESTInboundSocket(InboundEventSocket):
                 params['ScheduledHangupId'] = sched_hangup_id
         # if hangup url, handle http request
         if hangup_url:
-            called_num = event['Caller-Destination-Number']
-            caller_num = event['Caller-Caller-ID-Number']
             sip_uri = event['variable_plivo_sip_transfer_uri'] or ''
             if sip_uri:
                 params['SIPTransfer'] = 'true'
                 params['SIPTransferURI'] = sip_uri
             params['CallUUID'] = call_uuid or ''
             params['HangupCause'] = reason
-            params['Direction'] = event['Call-Direction']
             params['To'] = called_num or ''
-            params['CallStatus'] = 'completed'
             params['From'] = caller_num or ''
+            params['Direction'] = direction or ''
+            params['CallStatus'] = 'completed'
             spawn_raw(self.send_to_url, hangup_url, params)
 
     def send_to_url(self, url=None, params={}, method=None):
@@ -515,6 +526,8 @@ class RESTInboundSocket(InboundEventSocket):
 
         dial_str = "originate {%s,%s}%s/%s %s" \
             % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
+        self.log.debug("Call try for RequestUUID %s with Gateway %s" \
+                    % (request_uuid, gw.gw))
         # Execute originate on background
         bg_api_response = self.bgapi(dial_str)
         job_uuid = bg_api_response.get_job_uuid()
