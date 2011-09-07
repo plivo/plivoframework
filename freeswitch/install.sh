@@ -5,7 +5,7 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 
-FS_CONF_PATH=https://github.com/plivo/plivo/raw/master/freeswitch/conf
+FS_CONF_PATH=https://github.com/plivo/plivo/raw/master/freeswitch
 FS_GIT_REPO=git://git.freeswitch.org/freeswitch.git
 FS_INSTALLED_PATH=/usr/local/freeswitch
 
@@ -124,16 +124,16 @@ cd $FS_INSTALLED_PATH/conf/dialplan/
 
 # Place Plivo Default Dialplan in FreeSWITCH
 [ -f default.xml ] && mv default.xml default.xml.bak
-wget --no-check-certificate $FS_CONF_PATH/default.xml -O default.xml
+wget --no-check-certificate $FS_CONF_PATH/conf/default.xml -O default.xml
 
 # Place Plivo Public Dialplan in FreeSWITCH
 [ -f public.xml ] && mv public.xml public.xml.bak
-wget --no-check-certificate $FS_CONF_PATH/public.xml -O public.xml
+wget --no-check-certificate $FS_CONF_PATH/conf/public.xml -O public.xml
 
 #Configure Conference @plivo profile
 cd $FS_INSTALLED_PATH/conf/autoload_configs/
 [ -f conference.conf.xml ] && mv conference.conf.xml conference.conf.xml.bak
-wget --no-check-certificate $FS_CONF_PATH/conference.conf.xml -O conference.conf.xml
+wget --no-check-certificate $FS_CONF_PATH/conf/conference.conf.xml -O conference.conf.xml
 
 cd $CURRENT_PATH
 
