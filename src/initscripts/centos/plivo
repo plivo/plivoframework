@@ -18,21 +18,25 @@
 
 ### END INIT INFO
 
+plivo_config=default
+
 # Source function library.
 . /etc/init.d/functions
 
 RETVAL=0
 
 prog=plivo
-name="Plivo"
+name="Plivo [$plivo_config]"
 exec=/usr/local/plivo/bin/plivo
+restpid=/usr/local/plivo/tmp/rest-${plivo_config}.pid
+outboundpid=/usr/local/plivo/tmp/outbound-${plivo_config}.pid
 lockfile=/var/lock/subsys/$prog
 
 
 check_state() {
 	declare -i count
 	count=2
-	count=$($exec status |grep -c "not running")
+	count=$($exec status |grep "\[$plivo_config\]" |grep -c "not running")
 	return $count
 }
 
@@ -50,8 +54,13 @@ start() {
         $exec start &>/dev/null 
 	check_state
         RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+		touch $lockfile
+		success	
+	else
+		failure
+	fi
         echo
-        [ $RETVAL -eq 0 ] && touch $lockfile
         return $RETVAL
 }
 stop() {
@@ -59,8 +68,14 @@ stop() {
         $exec stop &>/dev/null
 	check_state
         RETVAL=$?
+        if [ $RETVAL -eq 2 ]; then
+		RETVAL=0
+		rm -f $lockfile
+		success	
+	else
+		failure
+	fi
         echo
-        [ $RETVAL -eq 2 ] && RETVAL=0 && rm -f $lockfile
         return $RETVAL
 }
 reload()  {
@@ -77,7 +92,8 @@ reload()  {
 	return $RETVAL
 }
 rhstatus() {
-	$exec status
+	status -p "$restpid" plivo-rest
+	status -p "$outboundpid" plivo-outbound
 }
 restart() {
         stop
@@ -105,4 +121,4 @@ case "$1" in
         exit 2
 esac
 
-exit $?
+exit $RETVAL

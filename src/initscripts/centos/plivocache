@@ -24,6 +24,7 @@ RETVAL=0
 prog=plivocache
 name="PlivoCache"
 exec=/usr/local/plivo/bin/cacheserver
+piddir=/usr/local/plivo/tmp
 lockfile=/var/lock/subsys/$prog
 
 
@@ -48,8 +49,13 @@ start() {
         $exec start &>/dev/null 
 	check_state
         RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+		touch $lockfile
+		success	
+	else
+		failure
+	fi
         echo
-        [ $RETVAL -eq 0 ] && touch $lockfile
         return $RETVAL
 }
 stop() {
@@ -57,8 +63,14 @@ stop() {
         $exec stop &>/dev/null
 	check_state
         RETVAL=$?
+        if [ $RETVAL -eq 1 ]; then
+		RETVAL=0
+		rm -f $lockfile
+		success	
+	else
+		failure
+	fi
         echo
-        [ $RETVAL -eq 1 ] && RETVAL=0 && rm -f $lockfile
         return $RETVAL
 }
 reload()  {
@@ -73,9 +85,6 @@ reload()  {
 	fi
 	echo
 	return $RETVAL
-}
-rhstatus() {
-	$exec status
 }
 restart() {
         stop
@@ -96,11 +105,12 @@ case "$1" in
 	reload
 	;;
   status)
-        rhstatus
+	pidfile=$(ls $piddir/cache*.pid 2>/dev/null)
+	status -p "$pidfile" plivo-cache
         ;;
   *)
         echo $"Usage: $0 {start|stop|restart|reload|status}"
         exit 2
 esac
 
-exit $?
+exit $RETVAL
