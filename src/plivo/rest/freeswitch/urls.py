@@ -21,9 +21,9 @@ URLS = {
         # API Index
         '/': (PlivoRestApi.index, ['GET']),
         # API to reload Plivo config
-        '/' + PLIVO_VERSION + '/ReloadConfig/': (PlivoRestApi.reload_config, ['POST']),
+        '/' + PLIVO_VERSION + '/ReloadConfig/': (PlivoRestApi.reload_config, ['POST', 'GET']),
         # API to reload Plivo Cache config
-        '/' + PLIVO_VERSION + '/ReloadCacheConfig/': (PlivoRestApi.reload_cache_config, ['POST']),
+        '/' + PLIVO_VERSION + '/ReloadCacheConfig/': (PlivoRestApi.reload_cache_config, ['POST', 'GET']),
         # API to originate several calls simultaneously
         '/' + PLIVO_VERSION + '/BulkCall/': (PlivoRestApi.bulk_call, ['POST']),
         # API to originate a single call
