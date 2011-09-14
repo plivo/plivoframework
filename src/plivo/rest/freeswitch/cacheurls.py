@@ -12,5 +12,5 @@ URLS = {
         # API to get cache url type
         '/CacheType/': (PlivoCacheApi.do_cache_type, ['GET']),
         # API to reload cache server
-        '/Reload/': (PlivoCacheApi.do_reload, ['POST']),
+        '/Reload/': (PlivoCacheApi.do_reload, ['GET', 'POST']),
        }
