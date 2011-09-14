@@ -173,6 +173,10 @@ class PlivoCacheServer(PlivoCacheApi):
                 self.log.warn("New cache %s" % str(self.cache))
 
 
+            # get auth_id and auth_token
+            self.auth_id = config.get('common', 'AUTH_ID', default='')
+            self.auth_token = config.get('common', 'AUTH_TOKEN', default='')
+
             # set new config
             self._config = config
             self.log.info("Config : %s" % str(self._config.dumps()))

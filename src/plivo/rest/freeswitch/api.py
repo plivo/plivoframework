@@ -336,8 +336,8 @@ class PlivoRestApi(object):
             return self.send_response(Success=result, Message=msg)
 
         try:
-            req = HTTPRequest()
-            data = req.fetch_response(cache_api_url + '/Reload/', params={}, method='POST')
+            req = HTTPRequest(auth_id=self.auth_id, auth_token=self.auth_token)
+            data = req.fetch_response(cache_api_url + '/ReloadConfig/', params={}, method='POST')
             res = json.loads(data)
             try:
                 success = res['Success']

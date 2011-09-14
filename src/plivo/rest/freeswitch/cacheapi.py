@@ -36,6 +36,14 @@ MIME_TYPES = {'audio/mpeg': 'mp3',
 
 def auth_protect(decorated_func):
     def wrapper(obj):
+        if obj._validate_http_auth() and obj._validate_ip_auth():
+            return decorated_func(obj)
+    wrapper.__name__ = decorated_func.__name__
+    wrapper.__doc__ = decorated_func.__doc__
+    return wrapper
+
+def ip_protect(decorated_func):
+    def wrapper(obj):
         if obj._validate_ip_auth():
             return decorated_func(obj)
     wrapper.__name__ = decorated_func.__name__
@@ -213,6 +221,25 @@ class PlivoCacheApi(object):
                 return True
         raise Unauthorized("IP Auth Failed")
 
+    def _validate_http_auth(self):
+        """Verify http auth request with values in "Authorization" header
+        """
+        key = self._config.get('common', 'AUTH_ID', default='')
+        secret = self._config.get('common', 'AUTH_TOKEN', default='')
+        if not key or not secret:
+            return True
+        try:
+            auth_type, encoded_auth_str = \
+                request.headers['Authorization'].split(' ', 1)
+            if auth_type == 'Basic':
+                decoded_auth_str = base64.decodestring(encoded_auth_str)
+                auth_id, auth_token = decoded_auth_str.split(':', 1)
+                if auth_id == key and auth_token == secret:
+                    return True
+        except (KeyError, ValueError, TypeError):
+            pass
+        raise Unauthorized("HTTP Auth Failed")
+
     @auth_protect
     def index(self):
         message = """
@@ -230,7 +257,7 @@ class PlivoCacheApi(object):
         """
         return message
 
-    @auth_protect
+    @ip_protect
     def do_cache(self):
         url = get_http_param(request, "url")
         if not url:
@@ -260,7 +287,7 @@ class PlivoCacheApi(object):
                             traceback.format_exc().splitlines() ]
             raise e
 
-    @auth_protect
+    @ip_protect
     def do_cache_type(self):
         url = get_http_param(request, "url")
         if not url:
@@ -281,13 +308,13 @@ class PlivoCacheApi(object):
             raise e
 
     @auth_protect
-    def do_reload(self):
+    def do_reload_config(self):
         try:
             self.reload()
-            return flask.jsonify(Success=True, Message="Reload done")
+            return flask.jsonify(Success=True, Message="ReloadConfig done")
         except Exception, e:
-            self.log.error("/Reload/ Error: %s" % str(e))
-            [ self.log.debug('/Reload/ Error: %s' % line) for line in \
+            self.log.error("/ReloadConfig/ Error: %s" % str(e))
+            [ self.log.debug('/ReloadConfig/ Error: %s' % line) for line in \
                             traceback.format_exc().splitlines() ]
             raise e
 
