@@ -171,7 +171,10 @@ class RESTInboundSocket(InboundEventSocket):
 
             # send ring if ring_url found
             if ring_url:
-                called_num = event['Caller-Destination-Number']
+                called_num = event['variable_plivo_destination_number']
+                if not called_num or called_num == '_undef_':
+                    called_num = event['Caller-Destination-Number'] or ''
+                called_num = called_num.lstrip('+')
                 caller_num = event['Caller-Caller-ID-Number']
                 call_uuid = event['Unique-ID'] or ''
                 self.log.info("Call from %s to %s Ringing for RequestUUID %s" \
@@ -206,7 +209,10 @@ class RESTInboundSocket(InboundEventSocket):
                 call_req.state_flag = 'EarlyMedia'
                 # clear gateways to avoid retry
                 call_req.gateways = []
-                called_num = event['Caller-Destination-Number']
+                called_num = event['variable_plivo_destination_number']
+                if not called_num or called_num == '_undef_':
+                    called_num = event['Caller-Destination-Number'] or ''
+                called_num = called_num.lstrip('+')
                 caller_num = event['Caller-Caller-ID-Number']
                 call_uuid = event['Unique-ID'] or ''
                 self.log.info("Call from %s to %s in EarlyMedia for RequestUUID %s" \
@@ -370,7 +376,11 @@ class RESTInboundSocket(InboundEventSocket):
         # using UTC here .. make sure FS is using UTC also
         params['HeartbeatTime'] = str(heartbeat_seconds_since_epoch)
         params['ElapsedTime'] = str(heartbeat_seconds_since_epoch - answer_seconds_since_epoch)
-        params['To'] = event['Caller-Destination-Number'].lstrip('+')
+        called_num = event['variable_plivo_destination_number']
+        if not called_num or called_num == '_undef_':
+            called_num = event['Caller-Destination-Number'] or ''
+        called_num = called_num.lstrip('+')
+        params['To'] = called_num
         params['From'] = event['Caller-Caller-ID-Number'].lstrip('+')
         params['CallUUID'] = event['Unique-ID']
         params['Direction'] = event['Call-Direction']
@@ -421,8 +431,10 @@ class RESTInboundSocket(InboundEventSocket):
             if not hangup_url:
                 self.log.debug("No HangupUrl for Incoming CallUUID %s" % call_uuid)
                 return
-            called_num = event['Caller-Destination-Number']
-            caller_num = event['Caller-Caller-ID-Number']
+            called_num = event['variable_plivo_destination_number']
+            if not called_num or called_num == '_undef_':
+                called_num = event['Caller-Destination-Number'] or ''
+            called_num = called_num.lstrip('+')
             direction = event['Call-Direction']
         # case outgoing call, add params
         else:
@@ -430,7 +442,7 @@ class RESTInboundSocket(InboundEventSocket):
                                         % (call_uuid, reason, request_uuid))
             try:
                 call_req = self.call_requests[request_uuid]
-                called_num = call_req.to
+                called_num = call_req.to.lstrip('+')
                 caller_num = call_req._from
                 direction = "outbound"
                 self.call_requests[request_uuid] = None
@@ -614,6 +626,11 @@ class RESTInboundSocket(InboundEventSocket):
         # Set transfer progress flag to prevent hangup
         # when the current outbound_socket flow will end
         self.set_var("plivo_transfer_progress", "true", uuid=call_uuid)
+        # set original destination number
+        called_num = self.get_var("plivo_destination_number", uuid=call_uuid)	
+        if not called_num:
+            called_num = self.get_var("destination_number", uuid=call_uuid)
+            self.set_var("plivo_destination_number", called_num, uuid=call_uuid)
         # Set transfer url
         self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
         # Link inline dptools (will be run when ready to start transfer)
