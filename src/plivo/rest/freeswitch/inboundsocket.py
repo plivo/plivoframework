@@ -614,6 +614,11 @@ class RESTInboundSocket(InboundEventSocket):
         # Set transfer progress flag to prevent hangup
         # when the current outbound_socket flow will end
         self.set_var("plivo_transfer_progress", "true", uuid=call_uuid)
+        # set original destination number
+        called_num = self.get_var("plivo_destination_number", uuid=call_uuid)	
+        if not called_num:
+            called_num = self.get_var("destination_number", uuid=call_uuid)
+            self.set_var("plivo_destination_number", called_num, uuid=call_uuid)
         # Set transfer url
         self.set_var("plivo_transfer_url", new_xml_url, uuid=call_uuid)
         # Link inline dptools (will be run when ready to start transfer)

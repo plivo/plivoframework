@@ -319,7 +319,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.set('hangup_after_bridge=false')
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
-        called_no = channel.get_header('Caller-Destination-Number') or ''
+        called_no = channel.get_header("variable_plivo_destination_number")
+        if not called_no or called_no == '_undef_':
+            called_no = channel.get_header('Caller-Destination-Number')
+        called_no = called_no or ''
         from_no = channel.get_header('Caller-Caller-ID-Number') or ''
         from_caller_name = channel.get_header('Caller-Caller-ID-Name') or ''
         # Set To to Session Params
