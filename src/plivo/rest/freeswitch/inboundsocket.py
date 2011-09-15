@@ -435,6 +435,7 @@ class RESTInboundSocket(InboundEventSocket):
             if not called_num or called_num == '_undef_':
                 called_num = event['Caller-Destination-Number'] or ''
             called_num = called_num.lstrip('+')
+            caller_num = event['Caller-Caller-ID-Number']
             direction = event['Call-Direction']
         # case outgoing call, add params
         else:
