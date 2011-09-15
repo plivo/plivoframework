@@ -53,6 +53,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'method': 'POST',
                 'hangupOnStar': 'false',
                 #callerId: DYNAMIC! MUST BE SET IN METHOD,
+                #callerName: DYNAMIC! MUST BE SET IN METHOD,
                 'timeLimit': 0,
                 'confirmSound': '',
                 'confirmKey': '',
@@ -605,6 +606,7 @@ class Dial(Element):
         self.action = ''
         self.hangup_on_star = False
         self.caller_id = ''
+        self.caller_name = ''
         self.time_limit = self.DEFAULT_TIMELIMIT
         self.timeout = self.DEFAULT_TIMEOUT
         self.dial_str = ''
@@ -617,6 +619,7 @@ class Dial(Element):
         Element.parse_element(self, element, uri)
         self.action = self.extract_attribute_value('action')
         self.caller_id = self.extract_attribute_value('callerId')
+        self.caller_name = self.extract_attribute_value('callerName')
         try:
             self.time_limit = int(self.extract_attribute_value('timeLimit',
                                   self.DEFAULT_TIMELIMIT))
@@ -787,6 +790,11 @@ class Dial(Element):
             outbound_socket.set("effective_caller_id_number=%s" % self.caller_id)
         else:
             outbound_socket.unset("effective_caller_id_number")
+        # Set callername or unset if not provided
+        if self.caller_name:
+            outbound_socket.set("effective_caller_id_name=%s" % self.caller_name)
+        else:
+            outbound_socket.unset("effective_caller_id_name")
         # Set continue on fail
         outbound_socket.set("continue_on_fail=true")
         # Don't hangup after bridge !
