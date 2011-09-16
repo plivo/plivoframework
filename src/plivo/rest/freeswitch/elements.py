@@ -868,8 +868,8 @@ class Dial(Element):
                 outbound_socket.set("ringback=%s" % play_str)
         if not ringbacks:
             outbound_socket.set("bridge_early_media=true")
-            outbound_socket.unset("instant_ringback")
-            outbound_socket.unset("ringback")
+            outbound_socket.set("instant_ringback=false")
+            outbound_socket.set("ringback=$${us-ring}}")
 
         # Start dial
         bleg_uuid = ''
