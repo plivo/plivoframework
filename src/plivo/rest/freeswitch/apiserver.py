@@ -73,7 +73,7 @@ class PlivoRestServer(PlivoRestApi):
             self.log.info("Listening HTTPS")
             self.log.info("Force %s mode with HTTPS" % str(self._wsgi_mode))
             self.http_server = self._wsgi_mode((self.http_host, self.http_port),
-                                               self.app, log=self.log, 
+                                               self.app, log=self.log,
                                                certfile=self._ssl_cert)
         else:
             self.log.info("Listening HTTP")
@@ -202,6 +202,8 @@ class PlivoRestServer(PlivoRestApi):
             self.auth_token = config.get('common', 'AUTH_TOKEN')
 
             self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
+
+            self.proxy_url = config.get('common', 'PROXY_URL', default=None)
 
             # get call_heartbeat url
             self.call_heartbeat_url = config.get('rest_server', 'CALL_HEARTBEAT_URL', default='')

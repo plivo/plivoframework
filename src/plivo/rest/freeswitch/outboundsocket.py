@@ -83,7 +83,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                           'Dial',
                          )
 
-    def __init__(self, socket, address, 
+    def __init__(self, socket, address,
                  log, cache,
                  default_answer_url=None,
                  default_hangup_url=None,
@@ -92,7 +92,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  auth_id='',
                  auth_token='',
                  request_id=0,
-                 trace=False):
+                 trace=False,
+                 proxy_url=None):
         # the request id
         self._request_id = request_id
         # set logger
@@ -124,6 +125,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         self.cache = cache
+        self.proxy_url = proxy_url
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter=None,
                                      eventjson=True, pool_size=200, trace=trace)
@@ -235,7 +237,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 and event['Unique-ID'] == self.get_channel_unique_id() \
                 and event['Speak'] == 'true':
                 self._action_queue.put(event)
-                 
+
         # case dial event
         elif self.current_element == 'Dial':
             if event['Event-Subclass'] == 'plivo::dial' \
@@ -300,7 +302,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             [ self.log.error(line) for line in \
                         traceback.format_exc().splitlines() ]
             raise e
-            
+
 
     def _run(self):
         self.connect()
