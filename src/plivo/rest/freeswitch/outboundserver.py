@@ -14,7 +14,6 @@ import optparse
 
 import gevent
 
-
 from plivo.core.freeswitch import outboundsocket
 from plivo.rest.freeswitch.outboundsocket import PlivoOutboundEventSocket
 from plivo.rest.freeswitch import helpers
