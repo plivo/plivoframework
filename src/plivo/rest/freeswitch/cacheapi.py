@@ -58,10 +58,11 @@ class UnsupportedResourceFormat(Exception):
 class ResourceCache(object):
     """Uses redis cache as a backend for storing cached files infos and datas.
     """
-    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0):
+    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0, proxy_url=None):
         self.host = redis_host
         self.port = redis_port
         self.db = redis_db
+        self.proxy_url = proxy_url
 
     def get_cx(self):
         return redis.Redis(host=self.host, port=self.port, db=self.db,
@@ -99,6 +100,10 @@ class ResourceCache(object):
             cx.delete("resource_key:%s" % resource_key)
 
     def cache_resource(self, url):
+        if self.proxy_url is not None:
+            proxy = urllib2.ProxyHandler({'http': self.proxy_url})
+            opener = urllib2.build_opener(proxy)
+            urllib2.install_opener(opener)
         request = urllib2.Request(url)
         user_agent = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.35 Safari/535.1'
         request.add_header('User-Agent', user_agent)
@@ -277,9 +282,9 @@ class PlivoCacheApi(object):
                 self.log.debug("Url %s: not supported format" % str(url))
                 return "NOT SUPPORTED FORMAT", 404
             self.log.debug("Url %s: stream found" % str(url))
-            return flask.Response(response=stream, status=200, 
-                                  headers=None, mimetype=_type, 
-                                  content_type=_type, 
+            return flask.Response(response=stream, status=200,
+                                  headers=None, mimetype=_type,
+                                  content_type=_type,
                                   direct_passthrough=False)
         except Exception, e:
             self.log.error("/Cache/ Error: %s" % str(e))
