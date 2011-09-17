@@ -497,7 +497,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.log.info("Requested RESTXML to %s with %s" \
                                 % (self.target_url, params))
 
-    def send_to_url(self, url=None, params={}, method=None):
+    def send_to_url(self, url=None, params={}, method=None, use_proxy=False):
         """
         This method will do an http POST or GET request to the Url
         """
@@ -510,12 +510,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         params.update(self.session_params)
         http_obj = HTTPRequest(self.auth_id, self.auth_token)
         try:
-            data = http_obj.fetch_response(url, params, method)
-            self.log.info("Sent to %s %s with %s -- Result: %s" \
+            if use_proxy:
+                data = http_obj.fetch_response(url, params, method, self.proxy_url)
+                self.log.info("Sent to %s %s with %s via proxy %s -- Result: %s" \
+                                            % (method, url, params, self.proxy_url, data))
+            else:
+                data = http_obj.fetch_response(url, params, method)
+                self.log.info("Sent to %s %s with %s -- Result: %s" \
                                             % (method, url, params, data))
             return data
         except Exception, e:
-            self.log.error("Sending to %s %s with %s -- Error: %s" \
+            if use_proxy:
+                self.log.error("Sending to %s %s with %s via proxy %s -- Error: %s" \
+                                            % (method, url, params, self.proxy_url, e))
+            else:
+                self.log.error("Sending to %s %s with %s -- Error: %s" \
                                             % (method, url, params, e))
         return None
 

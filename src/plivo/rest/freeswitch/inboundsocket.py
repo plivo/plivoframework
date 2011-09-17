@@ -34,10 +34,10 @@ class RESTInboundSocket(InboundEventSocket):
         self.log = self.server.log
         self.cache = self.server.get_cache()
 
-        InboundEventSocket.__init__(self, self.get_server().fs_host, 
-                                    self.get_server().fs_port, 
+        InboundEventSocket.__init__(self, self.get_server().fs_host,
+                                    self.get_server().fs_port,
                                     self.get_server().fs_password,
-                                    filter=EVENT_FILTER, 
+                                    filter=EVENT_FILTER,
                                     trace=self.get_server()._trace)
         # Mapping of Key: job-uuid - Value: request_uuid
         self.bk_jobs = {}
@@ -486,7 +486,7 @@ class RESTInboundSocket(InboundEventSocket):
             params['CallStatus'] = 'completed'
             spawn_raw(self.send_to_url, hangup_url, params)
 
-    def send_to_url(self, url=None, params={}, method=None):
+    def send_to_url(self, url=None, params={}, method=None, use_proxy=False):
         if method is None:
             method = self.get_server().default_http_method
 
@@ -495,12 +495,23 @@ class RESTInboundSocket(InboundEventSocket):
             return None
         http_obj = HTTPRequest(self.get_server().auth_id, self.get_server().auth_token)
         try:
-            data = http_obj.fetch_response(url, params, method)
-            self.log.info("Sent to %s %s with %s -- Result: %s"
+            if use_proxy:
+                proxy_url = self.get_server().proxy_url
+                data = http_obj.fetch_response(url, params, method, proxy_url)
+                self.log.info("Sent to %s %s with %s via proxy %s -- Result: %s"
+                                            % (method, url, params, proxy_url, data))
+            else:
+                data = http_obj.fetch_response(url, params, method)
+                self.log.info("Sent to %s %s with %s -- Result: %s"
                                             % (method, url, params, data))
             return data
         except Exception, e:
-            self.log.error("Sending to %s %s with %s -- Error: %s"
+            if use_proxy:
+                proxy_url = self.get_server().proxy_url
+                self.log.error("Sending to %s %s with %s via proxy %s -- Error: %s"
+                                            % (method, url, params, proxy_url, e))
+            else:
+                self.log.error("Sending to %s %s with %s -- Error: %s"
                                             % (method, url, params, e))
         return None
 
@@ -628,7 +639,7 @@ class RESTInboundSocket(InboundEventSocket):
         # when the current outbound_socket flow will end
         self.set_var("plivo_transfer_progress", "true", uuid=call_uuid)
         # set original destination number
-        called_num = self.get_var("plivo_destination_number", uuid=call_uuid)	
+        called_num = self.get_var("plivo_destination_number", uuid=call_uuid)
         if not called_num:
             called_num = self.get_var("destination_number", uuid=call_uuid)
             self.set_var("plivo_destination_number", called_num, uuid=call_uuid)
@@ -766,14 +777,14 @@ class RESTInboundSocket(InboundEventSocket):
                 if file_exists(sound):
                     sounds_to_play.append(sound)
                 else:
-                    self.log.warn("%s -- File %s not found" % (name, sound)) 
+                    self.log.warn("%s -- File %s not found" % (name, sound))
             else:
                 url = normalize_url_space(sound)
                 sound_file_path = get_resource(self, url) # potential write/read conflict with outbound server
                 if sound_file_path:
                     sounds_to_play.append(sound_file_path)
                 else:
-                    self.log.warn("%s -- Url %s not found" % (name, url)) 
+                    self.log.warn("%s -- Url %s not found" % (name, url))
         if not sounds_to_play:
             self.log.error("%s Failed -- Sound files not found" % name)
             return False
@@ -782,7 +793,7 @@ class RESTInboundSocket(InboundEventSocket):
         play_str = '!'.join(sounds_to_play)
         play_aleg = 'file_string://%s' % play_str
         play_bleg = 'file_string://silence_stream://1!%s' % play_str
-        
+
         # aleg case
         if legs == 'aleg':
             # add displace command
@@ -924,7 +935,7 @@ class RESTInboundSocket(InboundEventSocket):
             return True
         self.log.error("SoundTouch Failed '%s' -- %s" % (cmd, res.get_response()))
         return False
-            
+
 
 
 
