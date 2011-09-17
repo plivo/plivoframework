@@ -126,11 +126,8 @@ class HTTPRequest:
     def _build_get_uri(self, uri, params):
         if params:
             if uri.find('?') > 0:
-                if uri[-1] != '&':
-                    uri += '&'
-                uri = uri + urllib.urlencode(params)
-            else:
-                uri = uri + '?' + urllib.urlencode(params)
+                uri =  uri.split('?')[0]
+            uri = uri + '?' + urllib.urlencode(params)
         return uri
 
     def _prepare_http_request(self, uri, params, method='POST'):
@@ -335,5 +332,5 @@ def get_resource(socket, url):
 
 
 
- 
+
 
