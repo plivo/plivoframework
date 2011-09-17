@@ -130,11 +130,13 @@ class HTTPRequest:
             uri = uri + '?' + urllib.urlencode(params)
         return uri
 
-    def _prepare_http_request(self, uri, params, method='POST'):
+    def _prepare_http_request(self, uri, params, method='POST', proxy_url=None):
         # install error processor to handle HTTP 201 response correctly
-        if self.opener == None:
+        if proxy_url is not None:
+            proxy = urllib2.ProxyHandler({'http': proxy_url})
+            self.opener = urllib2.build_opener(HTTPErrorProcessor, proxy)
+        else:
             self.opener = urllib2.build_opener(HTTPErrorProcessor)
-            urllib2.install_opener(self.opener)
 
         if method and method == 'GET':
             uri = self._build_get_uri(uri, params)
@@ -168,7 +170,7 @@ class HTTPRequest:
         request.add_header("Expect", "")
         return request
 
-    def fetch_response(self, uri, params={}, method='POST'):
+    def fetch_response(self, uri, params={}, method='POST', proxy_url=None):
         if not method in ('GET', 'POST'):
             raise NotImplementedError('HTTP %s method not implemented' \
                                                             % method)
@@ -182,7 +184,7 @@ class HTTPRequest:
             except ValueError:
                 pass
 
-        request = self._prepare_http_request(uri, params, method)
+        request = self._prepare_http_request(uri, params, method, proxy_url)
         response = urllib2.urlopen(request).read()
         return response
 
