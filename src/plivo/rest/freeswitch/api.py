@@ -85,14 +85,16 @@ class CallRequest(object):
 class PlivoRestApi(object):
     _config = None
     _rest_inbound_socket = None
+    allowed_ips = []
+    key = ''
+    secret = ''
 
     def _validate_ip_auth(self):
         """Verify request is from allowed ips
         """
-        allowed_ips = self._config.get('rest_server', 'ALLOWED_IPS', default='')
-        if not allowed_ips:
+        if not self.allowed_ips:
             return True
-        for ip in allowed_ips.split(','):
+        for ip in self.allowed_ips:
             if ip.strip() == request.remote_addr.strip():
                 return True
         raise Unauthorized("IP Auth Failed")
@@ -100,9 +102,7 @@ class PlivoRestApi(object):
     def _validate_http_auth(self):
         """Verify http auth request with values in "Authorization" header
         """
-        key = self._config.get('common', 'AUTH_ID', default='')
-        secret = self._config.get('common', 'AUTH_TOKEN', default='')
-        if not key or not secret:
+        if not self.key or not self.secret:
             return True
         try:
             auth_type, encoded_auth_str = \
@@ -110,7 +110,7 @@ class PlivoRestApi(object):
             if auth_type == 'Basic':
                 decoded_auth_str = base64.decodestring(encoded_auth_str)
                 auth_id, auth_token = decoded_auth_str.split(':', 1)
-                if auth_id == key and auth_token == secret:
+                if auth_id == self.key and auth_token == self.secret:
                     return True
         except (KeyError, ValueError, TypeError):
             pass
@@ -415,7 +415,7 @@ class PlivoRestApi(object):
         Remember to URL-encode this string, since the '#' character has
         special meaning in a URL.
         To wait before sending DTMF to the extension, you can add leading 'w'
-        characters. 
+        characters.
         Each 'w' character waits 0.5 seconds instead of sending a digit.
         Each 'W' character waits 1.0 seconds instead of sending a digit.
         You can also add the tone duration in ms by appending @[duration] after string.
@@ -1708,7 +1708,7 @@ class PlivoRestApi(object):
             return self.send_response(Success=result, Message=msg)
 
         # now do the job !
-        if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
+        if self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs,
                                         length=length, schedule=0, mix=mix, loop=loop):
             msg = "Play Request Executed"
             result = True
@@ -1732,7 +1732,7 @@ class PlivoRestApi(object):
         Sounds: Comma separated list of sound files to play.
 
         Time: When playing sounds in seconds.
-        
+
         Optional Parameters:
 
         [Length]: number of seconds before terminating sounds.
@@ -1803,7 +1803,7 @@ class PlivoRestApi(object):
             return self.send_response(Success=result, Message=msg)
 
         # now do the job !
-        sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs, 
+        sched_id = self._rest_inbound_socket.play_on_call(calluuid, sounds_list, legs,
                                     length=length, schedule=time, mix=mix, loop=loop)
         if sched_id:
             msg = "SchedulePlay Request Done with SchedPlayId %s" % sched_id
@@ -1944,7 +1944,7 @@ class PlivoRestApi(object):
             except (ValueError, TypeError):
                 msg = "PitchOctaves Parameter must be float"
                 return self.send_response(Success=result, Message=msg)
-                
+
         pitch_p = get_post_param(request, 'Pitch')
         if pitch_p:
             try:
@@ -1955,7 +1955,7 @@ class PlivoRestApi(object):
             except (ValueError, TypeError):
                 msg = "Pitch Parameter must be float"
                 return self.send_response(Success=result, Message=msg)
-                
+
         pitch_r = get_post_param(request, 'Rate')
         if pitch_r:
             try:
@@ -1966,7 +1966,7 @@ class PlivoRestApi(object):
             except (ValueError, TypeError):
                 msg = "Rate Parameter must be float"
                 return self.send_response(Success=result, Message=msg)
-                
+
         pitch_t = get_post_param(request, 'Tempo')
         if pitch_t:
             try:
@@ -2075,14 +2075,14 @@ class PlivoRestApi(object):
         else:
             msg = "Invalid Leg Parameter"
             return self.send_response(Success=result, Message=msg)
-            
+
         res = self._rest_inbound_socket.bgapi(cmd)
         job_uuid = res.get_job_uuid()
         if not job_uuid:
             self._rest_inbound_socket.log.error("SendDigits Failed -- JobUUID not received" % job_uuid)
             msg = "SendDigits Failed"
             return self.send_response(Success=result, Message=msg)
-        
+
         msg = "SendDigits executed"
         result = True
         return self.send_response(Success=result, Message=msg)

@@ -153,6 +153,11 @@ class PlivoRestServer(PlivoRestApi):
 
             # set trace flag
             self._trace = config.get('rest_server', 'TRACE', default='false') == 'true'
+            self.key = config.get('common', 'AUTH_ID', default='')
+            self.secret = config.get('common', 'AUTH_TOKEN', default='')
+            allowed_ips = config.get('rest_server', 'ALLOWED_IPS', default='')
+            if allowed_ips:
+                self.allowed_ips = allowed_ips.split(",")
 
             if not reload:
                 # create first logger if starting
