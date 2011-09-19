@@ -203,9 +203,6 @@ class PlivoRestServer(PlivoRestApi):
             if not self.default_http_method in ('GET', 'POST'):
                 self.default_http_method = 'POST'
 
-            self.auth_id = config.get('common', 'AUTH_ID')
-            self.auth_token = config.get('common', 'AUTH_TOKEN')
-
             self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
 
             self.proxy_url = config.get('common', 'PROXY_URL', default=None)

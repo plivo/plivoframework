@@ -176,8 +176,12 @@ class PlivoCacheServer(PlivoCacheApi):
 
 
             # get auth_id and auth_token
-            self.auth_id = config.get('common', 'AUTH_ID', default='')
-            self.auth_token = config.get('common', 'AUTH_TOKEN', default='')
+            self.key = config.get('common', 'AUTH_ID', default='')
+            self.secret = config.get('common', 'AUTH_TOKEN', default='')
+            # get allowed ips
+            allowed_ips = config.get('cache_server', 'ALLOWED_IPS', default='')
+            if allowed_ips:
+                self.allowed_ips = allowed_ips.split(",")
 
             # set new config
             self._config = config

@@ -78,8 +78,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
             if not self.default_http_method in ('GET', 'POST'):
                 self.default_http_method = 'POST'
 
-            self.auth_id = config.get('common', 'AUTH_ID')
-            self.auth_token = config.get('common', 'AUTH_TOKEN')
+            self.key = config.get('common', 'AUTH_ID', default='')
+            self.secret = config.get('common', 'AUTH_TOKEN', default='')
 
             self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
 
@@ -131,8 +131,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                            default_hangup_url=self.default_hangup_url,
                            default_http_method=self.default_http_method,
                            extra_fs_vars=self.extra_fs_vars,
-                           auth_id=self.auth_id,
-                           auth_token=self.auth_token,
+                           auth_id=self.key,
+                           auth_token=self.secret,
                            request_id=request_id,
                            trace=self._trace,
                            proxy_url=self.proxy_url

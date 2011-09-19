@@ -214,14 +214,16 @@ def get_resource(server, url):
 class PlivoCacheApi(object):
     _config = None
     log = None
+    allowed_ips = []
+    key = ''
+    secret = ''
 
     def _validate_ip_auth(self):
         """Verify request is from allowed ips
         """
-        allowed_ips = self._config.get('cache_server', 'ALLOWED_IPS', default='')
-        if not allowed_ips:
+        if not self.allowed_ips:
             return True
-        for ip in allowed_ips.split(','):
+        for ip in self.allowed_ips:
             if ip.strip() == request.remote_addr.strip():
                 return True
         raise Unauthorized("IP Auth Failed")
@@ -229,9 +231,7 @@ class PlivoCacheApi(object):
     def _validate_http_auth(self):
         """Verify http auth request with values in "Authorization" header
         """
-        key = self._config.get('common', 'AUTH_ID', default='')
-        secret = self._config.get('common', 'AUTH_TOKEN', default='')
-        if not key or not secret:
+        if not self.key or not self.secret:
             return True
         try:
             auth_type, encoded_auth_str = \
@@ -239,7 +239,7 @@ class PlivoCacheApi(object):
             if auth_type == 'Basic':
                 decoded_auth_str = base64.decodestring(encoded_auth_str)
                 auth_id, auth_token = decoded_auth_str.split(':', 1)
-                if auth_id == key and auth_token == secret:
+                if auth_id == self.key and auth_token == self.secret:
                     return True
         except (KeyError, ValueError, TypeError):
             pass

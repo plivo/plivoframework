@@ -100,8 +100,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self._log = log
         self.log = RequestLogger(logger=self._log, request_id=self._request_id)
         # set auth id/token
-        self.auth_id = auth_id
-        self.auth_token = auth_token
+        self.key = auth_id
+        self.secret = auth_token
         # set all settings empty
         self.xml_response = ''
         self.parsed_element = []
@@ -508,7 +508,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.log.warn("Cannot send %s, no url !" % method)
             return None
         params.update(self.session_params)
-        http_obj = HTTPRequest(self.auth_id, self.auth_token)
+        http_obj = HTTPRequest(self.key, self.secret)
         try:
             if use_proxy:
                 data = http_obj.fetch_response(url, params, method, self.proxy_url)
