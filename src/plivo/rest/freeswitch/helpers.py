@@ -130,19 +130,23 @@ class HTTPRequest:
             uri = uri + '?' + urllib.urlencode(params)
         return uri
 
-    def _prepare_http_request(self, uri, params, method='POST', proxy_url=None, headers=None):
+    def _prepare_http_request(self, uri, params, method='POST', proxy_url=None):
         # install error processor to handle HTTP 201 response correctly
-        if proxy_url is not None:
-            proxy = urllib2.ProxyHandler({'http': proxy_url})
-            self.opener = urllib2.build_opener(HTTPErrorProcessor, proxy)
-        else:
+        if self.opener is None:
             self.opener = urllib2.build_opener(HTTPErrorProcessor)
+            urllib2.install_opener(self.opener)
 
         if method and method == 'GET':
             uri = self._build_get_uri(uri, params)
-            request = HTTPUrlRequest(uri)
+            if proxy_url is not None:
+                request = HTTPUrlRequest(proxy_url)
+            else:
+                request = HTTPUrlRequest(uri)
         else:
-            request = HTTPUrlRequest(uri, urllib.urlencode(params))
+            if proxy_url is not None:
+                request = HTTPUrlRequest(proxy_url, urllib.urlencode(params))
+            else:
+                request = HTTPUrlRequest(uri, urllib.urlencode(params))
             if method and (method == 'DELETE' or method == 'PUT'):
                 request.http_method = method
 
@@ -158,7 +162,6 @@ class HTTPRequest:
                         x = ''
                     else:
                         x = str(v)
-                    params[k] = x
                     s += k + x
 
             # compute signature and compare signatures
@@ -166,16 +169,14 @@ class HTTPRequest:
                                                                 digest()).strip()
             request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
 
+        if proxy_url is not None:
+            request.add_header("APP-URL", uri)
+
         # be sure 100 continue is disabled
         request.add_header("Expect", "")
-
-        if headers is not None:
-            for k,v in headers.items():
-                request.add_header(k, v)
-
         return request
 
-    def fetch_response(self, uri, params={}, method='POST', proxy_url=None, headers=None):
+    def fetch_response(self, uri, params={}, method='POST', proxy_url=None):
         if not method in ('GET', 'POST'):
             raise NotImplementedError('HTTP %s method not implemented' \
                                                             % method)
@@ -189,7 +190,7 @@ class HTTPRequest:
             except ValueError:
                 pass
 
-        request = self._prepare_http_request(uri, params, method, proxy_url, headers=headers)
+        request = self._prepare_http_request(uri, params, method, proxy_url)
         response = urllib2.urlopen(request).read()
         return response
 
