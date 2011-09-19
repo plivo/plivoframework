@@ -368,6 +368,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.hangup_url = None
             # Set CallStatus to Session Params
             self.session_params['CallStatus'] = 'in-progress'
+            accountsid = channel.get_header("variable_plivo_accountsid")
+            if accountsid:
+                self.session_params['AccountSID'] = accountsid
+
         else:
             # Look for target url in order below :
             #  get plivo_transfer_url from channel var

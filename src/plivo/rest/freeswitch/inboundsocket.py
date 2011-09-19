@@ -394,6 +394,9 @@ class RESTInboundSocket(InboundEventSocket):
         request_uuid = event['variable_plivo_request_uuid']
         if request_uuid:
             params['RequestUUID'] = request_uuid
+        accountsid = event['variable_plivo_accountsid']
+        if accountsid:
+            params['AccountSID'] = accountsid
 
         self.log.debug("Got Session Heartbeat from Freeswitch: %s" % params)
 
@@ -445,6 +448,8 @@ class RESTInboundSocket(InboundEventSocket):
                 call_req = self.call_requests[request_uuid]
                 called_num = call_req.to.lstrip('+')
                 caller_num = call_req._from
+                if call_req._accountsid:
+                    params['AccountSID'] = call_req._accountsid
                 direction = "outbound"
                 self.call_requests[request_uuid] = None
                 del self.call_requests[request_uuid]

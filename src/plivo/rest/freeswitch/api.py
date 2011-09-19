@@ -62,10 +62,12 @@ class CallRequest(object):
                  'state_flag',
                  'to',
                  '_from',
+                 '_accountsid',
                 )
 
     def __init__(self, request_uuid, gateways,
-                 answer_url, ring_url, hangup_url, to='', _from=''):
+                 answer_url, ring_url, hangup_url, 
+                 to='', _from='', accountsid=''):
         self.request_uuid = request_uuid
         self.gateways = gateways
         self.answer_url = answer_url
@@ -74,10 +76,11 @@ class CallRequest(object):
         self.state_flag = None
         self.to = to
         self._from = _from
+        self._accountsid = accountsid
 
     def __repr__(self):
-        return "<CallRequest RequestUUID=%s To=%s From=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s>" \
-            % (self.request_uuid, self.gateways, self.to, self._from,
+        return "<CallRequest RequestUUID=%s AccountSID=%s To=%s From=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s>" \
+            % (self.request_uuid, self._accountsid, self.gateways, self.to, self._from,
                self.answer_url, self.ring_url, self.hangup_url, str(self.state_flag))
 
 
@@ -125,7 +128,7 @@ class PlivoRestApi(object):
 
     def _prepare_call_request(self, caller_id, caller_name, to, extra_dial_string, gw, gw_codecs,
                                 gw_timeouts, gw_retries, send_digits, send_preanswer, time_limit,
-                                hangup_on_ring, answer_url, ring_url, hangup_url):
+                                hangup_on_ring, answer_url, ring_url, hangup_url, accountsid=''):
         gateways = []
         gw_retry_list = []
         gw_codec_list = []
@@ -159,6 +162,9 @@ class PlivoRestApi(object):
         # set extra_dial_string
         if extra_dial_string:
              args_list.append(extra_dial_string)
+
+        if accountsid:
+            args_list.append("plivo_accountsid=%s" % accountsid)
 
         # set hangup_on_ring
         try:
@@ -210,7 +216,9 @@ class PlivoRestApi(object):
                 gateway = Gateway(request_uuid, to, gw, codecs, timeout, args_str)
                 gateways.append(gateway)
 
-        call_req = CallRequest(request_uuid, gateways, answer_url, ring_url, hangup_url, to=to, _from=caller_id)
+        call_req = CallRequest(request_uuid, gateways, answer_url, ring_url, hangup_url, 
+                               to=to, _from=caller_id,
+                               accountsid=accountsid)
         return call_req
 
     @staticmethod
@@ -429,6 +437,8 @@ class PlivoRestApi(object):
         result = False
         request_uuid = ""
 
+        accountsid = request.headers.get('X-ACCOUNT-SID', '')
+
         caller_id = get_post_param(request, 'From')
         to = get_post_param(request, 'To')
         gw = get_post_param(request, 'Gateways')
@@ -460,7 +470,7 @@ class PlivoRestApi(object):
                                     caller_id, caller_name, to, extra_dial_string,
                                     gw, gw_codecs, gw_timeouts, gw_retries,
                                     send_digits, send_preanswer, time_limit, hangup_on_ring,
-                                    answer_url, ring_url, hangup_url)
+                                    answer_url, ring_url, hangup_url, accountsid)
 
                 request_uuid = call_req.request_uuid
                 self._rest_inbound_socket.call_requests[request_uuid] = call_req
@@ -544,6 +554,8 @@ class PlivoRestApi(object):
 
         request_uuid_list = []
         i = 0
+
+        accountsid = request.headers.get('X-ACCOUNT-SID', '')
 
         caller_id = get_post_param(request, 'From')
         to_str = get_post_param(request, 'To')
@@ -633,7 +645,7 @@ class PlivoRestApi(object):
                                     caller_id, caller_name, to, extra_dial_string,
                                     gw_str_list[i], gw_codecs, gw_timeouts, gw_retries,
                                     send_digits, send_preanswer, time_limit, hangup_on_ring,
-                                    answer_url, ring_url, hangup_url)
+                                    answer_url, ring_url, hangup_url, accountsid)
                         request_uuid = call_req.request_uuid
                         request_uuid_list.append(request_uuid)
                         self._rest_inbound_socket.call_requests[request_uuid] = call_req
@@ -1508,6 +1520,8 @@ class PlivoRestApi(object):
         request_uuid = str(uuid.uuid1())
         default_reject_causes = "NO_ANSWER ORIGINATOR_CANCEL ALLOTTED_TIMEOUT NO_USER_RESPONSE CALL_REJECTED"
 
+        accountsid = request.headers.get('X-ACCOUNT-SID', '')
+
         caller_id = get_post_param(request, 'From')
         to_str = get_post_param(request, 'To')
         gw_str = get_post_param(request, 'Gateways')
@@ -1624,7 +1638,7 @@ class PlivoRestApi(object):
                         caller_id, caller_name, to, extra_dial_string,
                         gw, gw_codecs, gw_timeouts, gw_retries,
                         send_digits, send_preanswer, time_limit, hangup_on_ring,
-                        answer_url, ring_url, hangup_url)
+                        answer_url, ring_url, hangup_url, accountsid)
             group_list.append(call_req)
 
         # now do the calls !
