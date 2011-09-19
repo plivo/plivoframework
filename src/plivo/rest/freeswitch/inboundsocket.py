@@ -148,6 +148,7 @@ class RESTInboundSocket(InboundEventSocket):
         direction = event['Call-Direction']
         # Detect ringing state
         if request_uuid and direction == 'outbound':
+            accountsid = event['variable_plivo_accountsid']
             # case GroupCall
             if event['variable_plivo_group_call'] == 'true':
                 # get ring_url
@@ -191,6 +192,8 @@ class RESTInboundSocket(InboundEventSocket):
                 extra_params = self.get_extra_fs_vars(event)
                 if extra_params:
                     params.update(extra_params)
+                if accountsid:
+                    params['AccountSID'] = accountsid
                 spawn_raw(self.send_to_url, ring_url, params)
 
     def on_channel_progress_media(self, event):
@@ -199,6 +202,7 @@ class RESTInboundSocket(InboundEventSocket):
         # Detect early media state
         # See http://wiki.freeswitch.org/wiki/Early_media#Early_Media_And_Dialing_Out
         if request_uuid and direction == 'outbound':
+            # case BulkCall and Call
             try:
                 call_req = self.call_requests[request_uuid]
             except (KeyError, AttributeError):
@@ -209,6 +213,13 @@ class RESTInboundSocket(InboundEventSocket):
                 call_req.state_flag = 'EarlyMedia'
                 # clear gateways to avoid retry
                 call_req.gateways = []
+                # get ring_url
+                ring_url = call_req.ring_url
+            else:
+                return
+
+            # send ring if ring_url found
+            if ring_url:
                 called_num = event['variable_plivo_destination_number']
                 if not called_num or called_num == '_undef_':
                     called_num = event['Caller-Destination-Number'] or ''
@@ -217,22 +228,21 @@ class RESTInboundSocket(InboundEventSocket):
                 call_uuid = event['Unique-ID'] or ''
                 self.log.info("Call from %s to %s in EarlyMedia for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
-                # send ring if ring_url found
-                ring_url = call_req.ring_url
-                if ring_url:
-                    params = {
-                            'To': called_num,
-                            'RequestUUID': request_uuid,
-                            'Direction': direction,
-                            'CallStatus': 'ringing',
-                            'From': caller_num,
-                            'CallUUID': call_uuid
-                        }
-                    # add extra params
-                    extra_params = self.get_extra_fs_vars(event)
-                    if extra_params:
-                        params.update(extra_params)
-                    spawn_raw(self.send_to_url, ring_url, params)
+                params = {
+                        'To': called_num,
+                        'RequestUUID': request_uuid,
+                        'Direction': direction,
+                        'CallStatus': 'ringing',
+                        'From': caller_num,
+                        'CallUUID': call_uuid
+                    }
+                # add extra params
+                extra_params = self.get_extra_fs_vars(event)
+                if extra_params:
+                    params.update(extra_params)
+                if accountsid:
+                    params['AccountSID'] = accountsid
+                spawn_raw(self.send_to_url, ring_url, params)
 
     def on_call_update(self, event):
         # if plivo_app != 'true', check b leg Dial callback
