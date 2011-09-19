@@ -1074,6 +1074,11 @@ class GetDigits(Element):
                 for i in range(loop):
                     self.sound_files.append(say_str)
 
+        if self.invalid_digits_sound:
+            invalid_sound = get_resource(outbound_socket, self.invalid_digits_sound)
+        else:
+            invalid_sound = ''
+
         outbound_socket.log.info("GetDigits Started %s" % self.sound_files)
         if self.play_beep:
             outbound_socket.log.debug("GetDigits play Beep enabled")
@@ -1081,7 +1086,7 @@ class GetDigits(Element):
                             max_tries=self.retries, timeout=self.timeout,
                             terminators=self.finish_on_key,
                             sound_files=self.sound_files,
-                            invalid_file=self.invalid_digits_sound,
+                            invalid_file=invalid_sound,
                             valid_digits=self.valid_digits,
                             play_beep=self.play_beep)
         event = outbound_socket.wait_for_action()

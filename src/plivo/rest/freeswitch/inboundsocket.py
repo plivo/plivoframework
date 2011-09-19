@@ -780,7 +780,7 @@ class RESTInboundSocket(InboundEventSocket):
                     self.log.warn("%s -- File %s not found" % (name, sound))
             else:
                 url = normalize_url_space(sound)
-                sound_file_path = get_resource(self, url) # potential write/read conflict with outbound server
+                sound_file_path = get_resource(self, url)
                 if sound_file_path:
                     sounds_to_play.append(sound_file_path)
                 else:
