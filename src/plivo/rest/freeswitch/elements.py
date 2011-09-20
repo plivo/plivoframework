@@ -731,10 +731,10 @@ class Dial(Element):
             return ''
         if number_instance.send_digits:
             if number_instance.send_on_preanswer is True:
-                option_send_digits = "api_on_media=uuid_recv_dtmf ${uuid} %s" \
+                option_send_digits = "api_on_media='uuid_recv_dtmf ${uuid} %s'" \
                                                     % number_instance.send_digits
             else:
-                option_send_digits = "api_on_answer_2=uuid_recv_dtmf ${uuid} %s" \
+                option_send_digits = "api_on_answer_2='uuid_recv_dtmf ${uuid} %s'" \
                                                     % number_instance.send_digits
         else:
             option_send_digits = ''
@@ -804,7 +804,7 @@ class Dial(Element):
         # But first set plivo_dial_rang to false
         # to be sure we don't get it from an old Dial
         outbound_socket.set("plivo_dial_rang=false")
-        ring_flag = "api_on_ring=uuid_setvar %s plivo_dial_rang true,api_on_pre_answer=uuid_setvar %s plivo_dial_rang true" \
+        ring_flag = "api_on_ring='uuid_setvar %s plivo_dial_rang true',api_on_pre_answer='uuid_setvar %s plivo_dial_rang true'" \
                     % (outbound_socket.get_channel_unique_id(), outbound_socket.get_channel_unique_id())
 
         # Set numbers to dial from Number nouns
@@ -822,7 +822,7 @@ class Dial(Element):
 
         # Set time limit: when reached, B Leg is hung up
         sched_hangup_id = str(uuid.uuid1())
-        dial_time_limit = "api_on_answer_1=sched_api +%d %s uuid_transfer %s -bleg hangup:ALLOTTED_TIMEOUT inline" \
+        dial_time_limit = "api_on_answer_1='sched_api +%d %s uuid_transfer %s -bleg hangup:ALLOTTED_TIMEOUT inline'" \
                       % (self.time_limit, sched_hangup_id, outbound_socket.get_channel_unique_id())
 
         # Set confirm sound and key or unset if not provided
