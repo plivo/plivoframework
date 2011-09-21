@@ -20,6 +20,8 @@ from werkzeug.exceptions import Unauthorized
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
                                             get_post_param, get_resource, \
                                             HTTPRequest
+import plivo.rest.freeswitch.elements as elements
+
 
 def auth_protect(decorated_func):
     def wrapper(obj):
@@ -125,6 +127,75 @@ class PlivoRestApi(object):
             return flask.jsonify(Success=True, Message=Message, **kwargs)
         self._rest_inbound_socket.log.error(Message)
         return flask.jsonify(Success=False, Message=Message, **kwargs)
+
+    def _prepare_play_string(self, remote_url):
+        sound_files = []
+        if not remote_url:
+            return sound_files
+        self._rest_inbound_socket.log.info('Fetching remote sound from restxml %s' % remote_url)
+        try:
+            response = self._rest_inbound_socket.send_to_url(remote_url, params={}, method='POST')
+            doc = etree.fromstring(response)
+            if doc.tag != 'Response':
+                self._rest_inbound_socket.log.warn('No Response Tag Present')
+                return sound_files
+
+            # build play string from remote restxml
+            for element in doc:
+                # Play element
+                if element.tag == 'Play':
+                    child_instance = elements.Play()
+                    child_instance.parse_element(element)
+                    child_instance.prepare(self._rest_inbound_socket)
+                    sound_file = child_instance.sound_file_path
+                    if sound_file:
+                        sound_file = get_resource(self._rest_inbound_socket, sound_file)
+                        loop = child_instance.loop_times
+                        if loop == 0:
+                            loop = MAX_LOOPS  # Add a high number to Play infinitely
+                        # Play the file loop number of times
+                        for i in range(loop):
+                            sound_files.append(sound_file)
+                        # Infinite Loop, so ignore other children
+                        if loop == MAX_LOOPS:
+                            break
+                # Speak element
+                elif element.tag == 'Speak':
+                    child_instance = elements.Speak()
+                    child_instance.parse_element(element)
+                    text = child_instance.text
+                    # escape simple quote
+                    text = text.replace("'", "\\'")
+                    loop = child_instance.loop_times
+                    child_type = child_instance.item_type
+                    method = child_instance.method
+                    say_str = ''
+                    if child_type and method:
+                        language = child_instance.language
+                        say_args = "%s.wav %s %s %s '%s'" \
+                                        % (language, language, child_type, method, text)
+                        say_str = "${say_string %s}" % say_args
+                    else:
+                        engine = child_instance.engine
+                        voice = child_instance.voice
+                        say_str = "say:%s:%s:'%s'" % (engine, voice, text)
+                    if not say_str:
+                        continue
+                    for i in range(loop):
+                        sound_files.append(say_str)
+                # Wait element
+                elif element.tag == 'Wait':
+                    child_instance = elements.Wait()
+                    child_instance.parse_element(element)
+                    pause_secs = child_instance.length
+                    pause_str = 'file_string://silence_stream://%s' % (pause_secs * 1000)
+                    sound_files.append(pause_str)
+        except Exception, e:
+            self._rest_inbound_socket.log.warn('Fetching remote sound from restxml failed: %s' % str(e))
+        finally:
+            self._rest_inbound_socket.log.info('Fetching remote sound from restxml done for %s' % remote_url)
+            return sound_files
+
 
     def _prepare_call_request(self, caller_id, caller_name, to, extra_dial_string, gw, gw_codecs,
                                 gw_timeouts, gw_retries, send_digits, send_preanswer, time_limit,
@@ -1588,11 +1659,20 @@ class PlivoRestApi(object):
         # set confirm
         confirm_options = ""
         if confirm_sound:
-            if confirm_key:
-                confirm_options = "group_confirm_file=%s,group_confirm_key=%s" \
-                        % (confirm_sound, confirm_key)
-            else:
-                confirm_options = "group_confirm_file=playback %s" % confirm_sound
+            confirm_sounds = self._prepare_play_string(self._rest_inbound_socket, confirm_sound)
+            if confirm_sounds:
+                play_str = '!'.join(confirm_sounds)
+                play_str = "file_string://silence_stream://1!%s" % play_str
+                # Use confirm key if present else just play music
+                if confirm_key:
+                    confirm_music_str = "group_confirm_file=%s" % play_str
+                    confirm_key_str = "group_confirm_key=%s" % confirm_key
+                else:
+                    confirm_music_str = "group_confirm_file=playback %s" % play_str
+                    confirm_key_str = "group_confirm_key=exec"
+                # Cancel the leg timeout after the call is answered
+                confirm_cancel = "group_confirm_cancel_timeout=1"
+                confirm_options = "%s,%s,%s,playback_delimiter=!" % (confirm_music_str, confirm_key_str, confirm_cancel)
         group_options.append(confirm_options)
 
         # build calls
