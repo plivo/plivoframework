@@ -22,6 +22,8 @@ from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
                                             HTTPRequest
 import plivo.rest.freeswitch.elements as elements
 
+MAX_LOOPS = elements.MAX_LOOPS
+
 
 def auth_protect(decorated_func):
     def wrapper(obj):
@@ -1659,7 +1661,7 @@ class PlivoRestApi(object):
         # set confirm
         confirm_options = ""
         if confirm_sound:
-            confirm_sounds = self._prepare_play_string(self._rest_inbound_socket, confirm_sound)
+            confirm_sounds = self._prepare_play_string(confirm_sound)
             if confirm_sounds:
                 play_str = '!'.join(confirm_sounds)
                 play_str = "file_string://silence_stream://1!%s" % play_str
