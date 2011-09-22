@@ -785,13 +785,18 @@ class Dial(Element):
         # Set timeout
         outbound_socket.set("call_timeout=%d" % self.timeout)
         outbound_socket.set("answer_timeout=%d" % self.timeout)
+
         # Set callerid or unset if not provided
-        if self.caller_id:
+        if self.caller_id == 'none':
+            outbound_socket.set("effective_caller_id_number= ")
+        elif self.caller_id:
             outbound_socket.set("effective_caller_id_number=%s" % self.caller_id)
         else:
             outbound_socket.unset("effective_caller_id_number")
         # Set callername or unset if not provided
-        if self.caller_name:
+        if self.caller_name == 'none':
+            outbound_socket.set("effective_caller_id_name= ")
+        elif self.caller_name:
             outbound_socket.set("effective_caller_id_name=%s" % self.caller_name)
         else:
             outbound_socket.unset("effective_caller_id_name")
