@@ -568,6 +568,7 @@ class RESTInboundSocket(InboundEventSocket):
         self.log.debug("Call try for RequestUUID %s with Gateway %s" \
                     % (request_uuid, gw.gw))
         # Execute originate on background
+        self.log.debug("spawn_originate: %s" % str(dial_str))
         bg_api_response = self.bgapi(dial_str)
         job_uuid = bg_api_response.get_job_uuid()
         self.bk_jobs[job_uuid] = request_uuid
