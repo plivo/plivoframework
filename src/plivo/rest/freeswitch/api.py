@@ -230,7 +230,7 @@ class PlivoRestApi(object):
         args_list.append("plivo_hangup_url=%s" % hangup_url)
         args_list.append("origination_caller_id_number=%s" % caller_id)
         if caller_name:
-            args_list.append("origination_caller_id_name=%s" % caller_name)
+            args_list.append("origination_caller_id_name='%s'" % caller_name)
 
         # set extra_dial_string
         if extra_dial_string:

@@ -797,7 +797,7 @@ class Dial(Element):
         if self.caller_name == 'none':
             outbound_socket.set("effective_caller_id_name= ")
         elif self.caller_name:
-            outbound_socket.set("effective_caller_id_name=%s" % self.caller_name)
+            outbound_socket.set("effective_caller_id_name='%s'" % self.caller_name)
         else:
             outbound_socket.unset("effective_caller_id_name")
         # Set continue on fail
