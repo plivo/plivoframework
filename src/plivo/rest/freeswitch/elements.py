@@ -1096,13 +1096,16 @@ class GetDigits(Element):
                             play_beep=self.play_beep)
         event = outbound_socket.wait_for_action()
         digits = outbound_socket.get_var('pagd_input')
-        if digits is not None and self.action:
+        # digits received
+        if digits is not None:
             outbound_socket.log.info("GetDigits, Digits '%s' Received" % str(digits))
-            # Redirect
-            params = {'Digits': digits}
-            self.fetch_rest_xml(self.action, params, self.method)
-        else:
-            outbound_socket.log.info("GetDigits, No Digits Received")
+            if self.action:
+                # Redirect
+                params = {'Digits': digits}
+                self.fetch_rest_xml(self.action, params, self.method)
+            return
+        # no digits received
+        outbound_socket.log.info("GetDigits, No Digits Received")
 
 
 class Hangup(Element):
