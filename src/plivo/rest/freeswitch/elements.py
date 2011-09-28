@@ -862,7 +862,7 @@ class Dial(Element):
 
         # Play Dial music or bridge the early media accordingly
         ringbacks = ''
-        if self.dial_music:
+        if self.dial_music and self.dial_music != "none":
             ringbacks = self._prepare_play_string(outbound_socket, self.dial_music)
             if ringbacks:
                 outbound_socket.set("playback_delimiter=!")
@@ -871,10 +871,16 @@ class Dial(Element):
                 outbound_socket.set("bridge_early_media=true")
                 outbound_socket.set("instant_ringback=true")
                 outbound_socket.set("ringback=%s" % play_str)
-        if not ringbacks:
+            else:
+                self.dialmusic = ''
+        if not self.dial_music:
             outbound_socket.set("bridge_early_media=true")
             outbound_socket.set("instant_ringback=false")
             outbound_socket.set("ringback=$${us-ring}}")
+        elif self.dial_music == "none":
+            outbound_socket.set("bridge_early_media=false")
+            outbound_socket.unset("instant_ringback")
+            outbound_socket.unset("ringback")
 
         # Start dial
         bleg_uuid = ''
