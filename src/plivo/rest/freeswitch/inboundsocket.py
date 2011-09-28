@@ -508,8 +508,8 @@ class RESTInboundSocket(InboundEventSocket):
         if not url:
             self.log.warn("Cannot send %s, no url !" % method)
             return None
-        http_obj = HTTPRequest(self.get_server().key, self.get_server().secret, self.get_server().proxy_url)
         try:
+            http_obj = HTTPRequest(self.get_server().key, self.get_server().secret, self.get_server().proxy_url)
             data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:

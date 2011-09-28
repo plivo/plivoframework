@@ -512,7 +512,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.log.warn("Cannot send %s, no url !" % method)
             return None
         params.update(self.session_params)
-        http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
+        try:
+            http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
             data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:
