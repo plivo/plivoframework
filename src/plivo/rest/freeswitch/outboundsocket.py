@@ -449,7 +449,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     raise RESTHangup()
                 if not self.xml_response:
                     self.log.warn('No XML Response')
-                    return
+                    if not self.has_hangup():
+                        self.hangup()
+                    raise RESTHangup()
                 # parse and execute restxml
                 self.lex_xml()
                 self.parse_xml()
@@ -495,11 +497,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         The url result expected is an XML content which will be stored in
         xml_response
         """
-        self.log.info("Fetching RESTXML from %s with %s" \
-                                % (self.target_url, params))
+        self.log.info("Fetching RESTXML from %s" % self.target_url)
         self.xml_response = self.send_to_url(self.target_url, params, method)
-        self.log.info("Requested RESTXML to %s with %s" \
-                                % (self.target_url, params))
+        self.log.info("Requested RESTXML to %s" % self.target_url)
 
     def send_to_url(self, url=None, params={}, method=None, use_proxy=False):
         """
@@ -515,13 +515,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
         try:
             if use_proxy:
-                data = http_obj.fetch_response(url, params, method, self.proxy_url)
-                self.log.info("Sent to %s %s with %s via proxy %s -- Result: %s" \
-                                            % (method, url, params, self.proxy_url, data))
+                data = http_obj.fetch_response(url, params, method, self.proxy_url, log=self.log)
             else:
-                data = http_obj.fetch_response(url, params, method)
-                self.log.info("Sent to %s %s with %s -- Result: %s" \
-                                            % (method, url, params, data))
+                data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:
             if use_proxy:

@@ -140,18 +140,18 @@ class HTTPRequest:
         if method and method == 'GET':
             uri = self._build_get_uri(uri, params)
             if self.proxy_url is not None:
-                request = HTTPUrlRequest(self.proxy_url)
+                _request = HTTPUrlRequest(self.proxy_url)
             else:
-                request = HTTPUrlRequest(uri)
+                _request = HTTPUrlRequest(uri)
         else:
             if self.proxy_url is not None:
-                request = HTTPUrlRequest(self.proxy_url, urllib.urlencode(params))
+                _request = HTTPUrlRequest(self.proxy_url, urllib.urlencode(params))
             else:
-                request = HTTPUrlRequest(uri, urllib.urlencode(params))
+                _request = HTTPUrlRequest(uri, urllib.urlencode(params))
             if method and (method == 'DELETE' or method == 'PUT'):
-                request.http_method = method
+                _request.http_method = method
 
-        request.add_header('User-Agent', self.USER_AGENT)
+        _request.add_header('User-Agent', self.USER_AGENT)
 
         if self.auth_id and self.auth_token:
             # append the POST variables sorted by key to the uri
@@ -168,32 +168,47 @@ class HTTPRequest:
             # compute signature and compare signatures
             signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
                                                                 digest()).strip()
-            request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
+            _request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
 
         if self.proxy_url is not None:
-            request.add_header("APP-URL", uri)
+            _request.add_header("APP-URL", uri)
 
         # be sure 100 continue is disabled
-        request.add_header("Expect", "")
-        return request
+        _request.add_header("Expect", "")
+        return _request
 
-    def fetch_response(self, uri, params={}, method='POST'):
+    def fetch_response(self, uri, params={}, method='POST', log=None):
         if not method in ('GET', 'POST'):
             raise NotImplementedError('HTTP %s method not implemented' \
                                                             % method)
         # Read all params in the query string and include them in params
+        _params = params.copy()
         query = urlparse.urlsplit(uri)[3]
-        args = query.split('&')
-        for arg in args:
-            try:
-                k, v = arg.split('=')
-                params[k] = v
-            except ValueError:
-                pass
-
-        request = self._prepare_http_request(uri, params, method)
-        response = urllib2.urlopen(request).read()
-        return response
+        if query:
+            if log:
+                log.debug("Extra params found in url query for %s %s" \
+                                % (method, uri))
+            qs = urlparse.parse_qs(query)
+            for k, v in qs.iteritems():
+                if v:
+                    _params[k] = v[-1]
+        if log:
+            if self.proxy_url:
+                log.info("Fetching %s %s with %s via proxy %s" \
+                            % (method, uri, _params, self.proxy_url))
+            else:
+                log.info("Fetching %s %s with %s" \
+                            % (method, uri, _params))
+        req = self._prepare_http_request(uri, _params, method)
+        res = urllib2.urlopen(req).read()
+        if log:
+            if self.proxy_url:
+                log.info("Sent to %s %s with %s via proxy %s -- Result: %s" \
+                                    % (method, uri, _params, self.proxy_url, res))
+            else:
+                log.info("Sent to %s %s with %s -- Result: %s" \
+                                % (method, uri, _params, res))
+        return res
 
 
 def get_config(filename):

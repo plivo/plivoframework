@@ -512,13 +512,9 @@ class RESTInboundSocket(InboundEventSocket):
         try:
             if use_proxy:
                 proxy_url = self.get_server().proxy_url
-                data = http_obj.fetch_response(url, params, method, proxy_url)
-                self.log.info("Sent to %s %s with %s via proxy %s -- Result: %s"
-                                            % (method, url, params, proxy_url, data))
+                data = http_obj.fetch_response(url, params, method, proxy_url, log=self.log)
             else:
-                data = http_obj.fetch_response(url, params, method)
-                self.log.info("Sent to %s %s with %s -- Result: %s"
-                                            % (method, url, params, data))
+                data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:
             if use_proxy:
