@@ -501,7 +501,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.xml_response = self.send_to_url(self.target_url, params, method)
         self.log.info("Requested RESTXML to %s" % self.target_url)
 
-    def send_to_url(self, url=None, params={}, method=None, use_proxy=False):
+    def send_to_url(self, url=None, params={}, method=None):
         """
         This method will do an http POST or GET request to the Url
         """
@@ -513,19 +513,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             return None
         params.update(self.session_params)
         http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
-        try:
-            if use_proxy:
-                data = http_obj.fetch_response(url, params, method, self.proxy_url, log=self.log)
-            else:
-                data = http_obj.fetch_response(url, params, method, log=self.log)
+            data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:
-            if use_proxy:
-                self.log.error("Sending to %s %s with %s via proxy %s -- Error: %s" \
-                                            % (method, url, params, self.proxy_url, e))
-            else:
-                self.log.error("Sending to %s %s with %s -- Error: %s" \
-                                            % (method, url, params, e))
+            self.log.error("Sending to %s %s with %s -- Error: %s" \
+                                        % (method, url, params, e))
         return None
 
     def lex_xml(self):

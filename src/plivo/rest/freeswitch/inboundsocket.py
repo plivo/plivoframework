@@ -501,7 +501,7 @@ class RESTInboundSocket(InboundEventSocket):
             params['CallStatus'] = 'completed'
             spawn_raw(self.send_to_url, hangup_url, params)
 
-    def send_to_url(self, url=None, params={}, method=None, use_proxy=False):
+    def send_to_url(self, url=None, params={}, method=None):
         if method is None:
             method = self.get_server().default_http_method
 
@@ -510,20 +510,11 @@ class RESTInboundSocket(InboundEventSocket):
             return None
         http_obj = HTTPRequest(self.get_server().key, self.get_server().secret, self.get_server().proxy_url)
         try:
-            if use_proxy:
-                proxy_url = self.get_server().proxy_url
-                data = http_obj.fetch_response(url, params, method, proxy_url, log=self.log)
-            else:
-                data = http_obj.fetch_response(url, params, method, log=self.log)
+            data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:
-            if use_proxy:
-                proxy_url = self.get_server().proxy_url
-                self.log.error("Sending to %s %s with %s via proxy %s -- Error: %s"
-                                            % (method, url, params, proxy_url, e))
-            else:
-                self.log.error("Sending to %s %s with %s -- Error: %s"
-                                            % (method, url, params, e))
+            self.log.error("Sending to %s %s with %s -- Error: %s"
+                                        % (method, url, params, e))
         return None
 
     def spawn_originate(self, request_uuid):
