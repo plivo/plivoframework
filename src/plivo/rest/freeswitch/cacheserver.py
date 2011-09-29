@@ -112,7 +112,7 @@ class PlivoCacheServer(PlivoCacheApi):
             else:
                 new_log = StdoutLogger()
             log_level = config.get('cache_server', 'LOG_LEVEL', default='INFO')
-            if log_level == 'DEBUG' or self._trace is True:
+            if log_level == 'DEBUG':
                 new_log.set_debug()
                 self.app.debug = True
             elif log_level == 'INFO':
