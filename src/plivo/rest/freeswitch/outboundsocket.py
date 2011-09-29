@@ -359,6 +359,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.info("Using AnswerUrl %s" % self.target_url)
             else:
                 self.log.error('Aborting -- No Call Url found !')
+                if not self.has_hangup():
+                    self.hangup()
+                    raise RESTHangup()
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = channel.get_header('variable_plivo_sched_hangup_id')
@@ -390,6 +393,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.log.info("Using DefaultAnswerUrl %s" % self.target_url)
             else:
                 self.log.error('Aborting -- No Call Url found !')
+                if not self.has_hangup():
+                    self.hangup()
+                    raise RESTHangup()
                 return
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')

@@ -17,8 +17,6 @@ import urlparse
 import uuid
 import traceback
 
-import redis
-import redis.exceptions
 import ujson as json
 from werkzeug.datastructures import MultiDict
 
