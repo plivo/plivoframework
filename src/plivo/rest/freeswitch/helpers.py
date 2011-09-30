@@ -118,7 +118,7 @@ class HTTPRequest:
         returns a HTTPRequest object
         """
         self.auth_id = auth_id
-        self.auth_token = auth_token
+        self.auth_token = auth_token.encode('ascii')
         self.opener = None
         self.proxy_url = proxy_url
 
