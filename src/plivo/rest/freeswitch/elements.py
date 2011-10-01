@@ -1138,6 +1138,8 @@ class Hangup(Element):
             self.reason = ""
 
     def execute(self, outbound_socket):
+        if self.text:
+            self.log.info("Hangup Report: %s" % str(self.text))
         try:
             self.schedule = int(self.schedule)
         except ValueError:
