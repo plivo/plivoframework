@@ -550,7 +550,7 @@ class RESTInboundSocket(InboundEventSocket):
         outbound_str = "&socket(%s async full)" \
                         % self.get_server().fs_out_address
 
-        dial_str = "originate {%s,%s}%s/%s %s" \
+        dial_str = "originate {%s,%s}%s%s %s" \
             % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
         self.log.debug("Call try for RequestUUID %s with Gateway %s" \
                     % (request_uuid, gw.gw))
@@ -592,7 +592,7 @@ class RESTInboundSocket(InboundEventSocket):
                     _options.append(gw.extra_dial_string)
                 # Build gateway dial string
                 options = ','.join(_options)
-                gw_str = '[%s]%s/%s' % (options, gw.gw, gw.to)
+                gw_str = '[%s]%s%s' % (options, gw.gw, gw.to)
                 dial_gws.append(gw_str)
             # Build call dial string
             dial_call_str = ",".join(dial_gws)

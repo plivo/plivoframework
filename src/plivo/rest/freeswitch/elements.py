@@ -773,7 +773,7 @@ class Dial(Element):
                 options = '[%s]' % (','.join(num_options))
             else:
                 options = ''
-            num_str = "%s%s/%s" % (options, gw, number_instance.number)
+            num_str = "%s%s%s" % (options, gw, number_instance.number)
             dial_num = '|'.join([num_str for retry in range(gw_retries)])
             num_gw.append(dial_num)
             count += 1
@@ -1204,8 +1204,8 @@ class Number(Element):
         gateway_retries = self.extract_attribute_value('gatewayRetries')
 
         if gateways:
-            # get list of gateways removing trailing '/' if found
-            self.gateways = [ gw.rstrip('/').strip() for gw in gateways.split(',') ]
+            # get list of gateways
+            self.gateways = gateways.split(',')
         # split gw codecs by , but only outside the ''
         if gateway_codecs:
             self.gateway_codecs = \
