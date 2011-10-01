@@ -205,8 +205,6 @@ class PlivoRestServer(PlivoRestApi):
 
             self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
 
-            self.proxy_url = config.get('common', 'PROXY_URL', default=None)
-
             # get call_heartbeat url
             self.call_heartbeat_url = config.get('rest_server', 'CALL_HEARTBEAT_URL', default='')
 
