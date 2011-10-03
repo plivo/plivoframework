@@ -547,7 +547,7 @@ class RESTInboundSocket(InboundEventSocket):
         _options.append("ignore_early_media=true")
         # Build originate dial string
         options = ','.join(_options)
-        outbound_str = "&socket(%s async full)" \
+        outbound_str = "&socket('%s async full')" \
                         % self.get_server().fs_out_address
 
         dial_str = "originate {%s,%s}%s%s %s" \
@@ -568,7 +568,7 @@ class RESTInboundSocket(InboundEventSocket):
     def group_originate(self, request_uuid, group_list, group_options=[], reject_causes=''):
         self.log.debug("GroupCall => %s %s" % (str(request_uuid), str(group_options)))
 
-        outbound_str = "&socket(%s async full)" % self.get_server().fs_out_address
+        outbound_str = "&socket('%s async full')" % self.get_server().fs_out_address
         # Set plivo app flag and request uuid
         group_options.append('plivo_request_uuid=%s' % request_uuid)
         group_options.append("plivo_app=true")
