@@ -92,8 +92,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  auth_id='',
                  auth_token='',
                  request_id=0,
-                 trace=False,
-                 proxy_url=None):
+                 trace=False):
         # the request id
         self._request_id = request_id
         # set logger
@@ -125,7 +124,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         self.cache = cache
-        self.proxy_url = proxy_url
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter=None,
                                      eventjson=True, pool_size=200, trace=trace)
@@ -519,7 +517,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             return None
         params.update(self.session_params)
         try:
-            http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
+            http_obj = HTTPRequest(self.key, self.secret)
             data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:

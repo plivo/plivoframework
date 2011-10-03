@@ -509,7 +509,7 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.warn("Cannot send %s, no url !" % method)
             return None
         try:
-            http_obj = HTTPRequest(self.get_server().key, self.get_server().secret, self.get_server().proxy_url)
+            http_obj = HTTPRequest(self.get_server().key, self.get_server().secret)
             data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:
@@ -550,7 +550,7 @@ class RESTInboundSocket(InboundEventSocket):
         outbound_str = "&socket(%s async full)" \
                         % self.get_server().fs_out_address
 
-        dial_str = "originate {%s,%s}%s/%s %s" \
+        dial_str = "originate {%s,%s}%s%s %s" \
             % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
         self.log.debug("Call try for RequestUUID %s with Gateway %s" \
                     % (request_uuid, gw.gw))
@@ -592,7 +592,7 @@ class RESTInboundSocket(InboundEventSocket):
                     _options.append(gw.extra_dial_string)
                 # Build gateway dial string
                 options = ','.join(_options)
-                gw_str = '[%s]%s/%s' % (options, gw.gw, gw.to)
+                gw_str = '[%s]%s%s' % (options, gw.gw, gw.to)
                 dial_gws.append(gw_str)
             # Build call dial string
             dial_call_str = ",".join(dial_gws)

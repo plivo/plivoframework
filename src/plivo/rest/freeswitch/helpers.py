@@ -109,7 +109,7 @@ class HTTPRequest:
     """
     USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.35 Safari/535.1'
 
-    def __init__(self, auth_id='', auth_token='', proxy_url=None):
+    def __init__(self, auth_id='', auth_token=''):
         """initialize a object
 
         auth_id: Plivo SID/ID
@@ -120,7 +120,6 @@ class HTTPRequest:
         self.auth_id = auth_id
         self.auth_token = auth_token.encode('ascii')
         self.opener = None
-        self.proxy_url = proxy_url
 
     def _build_get_uri(self, uri, params):
         if params:
@@ -137,15 +136,9 @@ class HTTPRequest:
 
         if method and method == 'GET':
             uri = self._build_get_uri(uri, params)
-            if self.proxy_url is not None:
-                _request = HTTPUrlRequest(self.proxy_url)
-            else:
-                _request = HTTPUrlRequest(uri)
+            _request = HTTPUrlRequest(uri)
         else:
-            if self.proxy_url is not None:
-                _request = HTTPUrlRequest(self.proxy_url, urllib.urlencode(params))
-            else:
-                _request = HTTPUrlRequest(uri, urllib.urlencode(params))
+            _request = HTTPUrlRequest(uri, urllib.urlencode(params))
             if method and (method == 'DELETE' or method == 'PUT'):
                 _request.http_method = method
 
@@ -168,9 +161,6 @@ class HTTPRequest:
                                                                 digest()).strip()
             _request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
 
-        if self.proxy_url is not None:
-            _request.add_header("APP-URL", uri)
-
         # be sure 100 continue is disabled
         _request.add_header("Expect", "")
         return _request
@@ -191,20 +181,12 @@ class HTTPRequest:
                 if v:
                     _params[k] = v[-1]
         if log:
-            if self.proxy_url:
-                log.info("Fetching %s %s with %s via proxy %s" \
-                            % (method, uri, _params, self.proxy_url))
-            else:
-                log.info("Fetching %s %s with %s" \
+            log.info("Fetching %s %s with %s" \
                             % (method, uri, _params))
         req = self._prepare_http_request(uri, _params, method)
         res = urllib2.urlopen(req).read()
         if log:
-            if self.proxy_url:
-                log.info("Sent to %s %s with %s via proxy %s -- Result: %s" \
-                                    % (method, uri, _params, self.proxy_url, res))
-            else:
-                log.info("Sent to %s %s with %s -- Result: %s" \
+            log.info("Sent to %s %s with %s -- Result: %s" \
                                 % (method, uri, _params, res))
         return res
 

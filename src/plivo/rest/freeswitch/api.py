@@ -211,7 +211,7 @@ class PlivoRestApi(object):
         # don't allow "|" and "," in 'to' (destination) to avoid call injection
         to = re.split(',|\|', to)[0]
         # build gateways list removing trailing '/' character
-        gw_list = [ gateway.rstrip('/').strip() for gateway in gw.split(',') ]
+        gw_list = gw.split(',')
         # split gw codecs by , but only outside the ''
         if gw_codecs:
             gw_codec_list = re.split(''',(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''',
