@@ -68,13 +68,13 @@ def normalize_url_space(url):
 def get_post_param(request, key):
     try:
         return request.form[key]
-    except MultiDict.KeyError:
+    except KeyError:
         return ""
 
 def get_http_param(request, key):
     try:
         return request.args[key]
-    except MultiDict.KeyError:
+    except KeyError:
         return ""
 
 def is_valid_url(value):
