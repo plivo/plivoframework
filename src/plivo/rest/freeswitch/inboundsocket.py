@@ -176,18 +176,17 @@ class RESTInboundSocket(InboundEventSocket):
                 if not called_num or called_num == '_undef_':
                     called_num = event['Caller-Destination-Number'] or ''
                 called_num = called_num.lstrip('+')
-                caller_num = event['Caller-Caller-ID-Number']
+                caller_num = event['Caller-Caller-ID-Number'] or ''
                 call_uuid = event['Unique-ID'] or ''
                 self.log.info("Call from %s to %s Ringing for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
-                params = {
-                        'To': called_num,
-                        'RequestUUID': request_uuid,
-                        'Direction': direction,
-                        'CallStatus': 'ringing',
-                        'From': caller_num,
-                        'CallUUID': call_uuid
-                    }
+                params = {'To': called_num,
+                          'RequestUUID': request_uuid,
+                          'Direction': direction,
+                          'CallStatus': 'ringing',
+                          'From': caller_num,
+                          'CallUUID': call_uuid
+                         }
                 # add extra params
                 extra_params = self.get_extra_fs_vars(event)
                 if extra_params:
@@ -202,6 +201,7 @@ class RESTInboundSocket(InboundEventSocket):
         # Detect early media state
         # See http://wiki.freeswitch.org/wiki/Early_media#Early_Media_And_Dialing_Out
         if request_uuid and direction == 'outbound':
+            accountsid = event['variable_plivo_accountsid']
             # case BulkCall and Call
             try:
                 call_req = self.call_requests[request_uuid]
@@ -224,18 +224,17 @@ class RESTInboundSocket(InboundEventSocket):
                 if not called_num or called_num == '_undef_':
                     called_num = event['Caller-Destination-Number'] or ''
                 called_num = called_num.lstrip('+')
-                caller_num = event['Caller-Caller-ID-Number']
+                caller_num = event['Caller-Caller-ID-Number'] or ''
                 call_uuid = event['Unique-ID'] or ''
                 self.log.info("Call from %s to %s in EarlyMedia for RequestUUID %s" \
                                 % (caller_num, called_num, request_uuid))
-                params = {
-                        'To': called_num,
-                        'RequestUUID': request_uuid,
-                        'Direction': direction,
-                        'CallStatus': 'ringing',
-                        'From': caller_num,
-                        'CallUUID': call_uuid
-                    }
+                params = {'To': called_num,
+                          'RequestUUID': request_uuid,
+                          'Direction': direction,
+                          'CallStatus': 'ringing',
+                          'From': caller_num,
+                          'CallUUID': call_uuid
+                         }
                 # add extra params
                 extra_params = self.get_extra_fs_vars(event)
                 if extra_params:
