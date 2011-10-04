@@ -115,11 +115,17 @@ class RESTInboundSocket(InboundEventSocket):
                 if call_req.state_flag in ('Ringing', 'EarlyMedia'):
                     self.log.warn("Call Attempt Done (%s) for RequestUUID %s but Failed (%s)" \
                                                     % (call_req.state_flag, request_uuid, reason))
+                    # notify end
+                    self.log.debug("Notify Call success for RequestUUID %s" % request_uuid)
+                    call_req.notify_call_end()
                     return
                 # If no more gateways, release call request
                 elif not call_req.gateways:
                     self.log.warn("Call Failed for RequestUUID %s but No More Gateways (%s)" \
                                                     % (request_uuid, reason))
+                    # notify end
+                    self.log.debug("Notify Call success for RequestUUID %s" % request_uuid)
+                    call_req.notify_call_end()
                     # set an empty call_uuid
                     call_uuid = ''
                     hangup_url = call_req.hangup_url
@@ -131,7 +137,9 @@ class RESTInboundSocket(InboundEventSocket):
                 elif call_req.gateways:
                     self.log.warn("Call Failed without Ringing/EarlyMedia for RequestUUID %s - Retrying Now (%s)" \
                                                     % (request_uuid, reason))
-                    self.spawn_originate(request_uuid)
+                    # notify try a new call
+                    self.log.debug("Notify Call retry for RequestUUID %s" % request_uuid)
+                    call_req.notify_call_try()
         elif job_cmd == 'conference' and job_uuid:
             result = event.get_body().strip() or ''
             async_res = self.conf_sync_jobs.pop(job_uuid, None)
@@ -159,6 +167,9 @@ class RESTInboundSocket(InboundEventSocket):
                     call_req = self.call_requests[request_uuid]
                 except (KeyError, AttributeError):
                     return
+                # notify call and
+                self.log.debug("Notify Call success (Ringing) for RequestUUID %s" % request_uuid)
+                call_req.notify_call_end()
                 # only send if not already ringing/early state
                 if not call_req.state_flag:
                     # set state flag to 'Ringing'
@@ -207,6 +218,9 @@ class RESTInboundSocket(InboundEventSocket):
                 call_req = self.call_requests[request_uuid]
             except (KeyError, AttributeError):
                 return
+            # notify call end
+            self.log.debug("Notify Call success (EarlyMedia) for RequestUUID %s" % request_uuid)
+            call_req.notify_call_end()
             # only send if not already ringing/early state
             if not call_req.state_flag:
                 # set state flag to 'EarlyMedia'
@@ -337,10 +351,15 @@ class RESTInboundSocket(InboundEventSocket):
                 if call_req.gateways:
                     self.log.debug("Call Failed for RequestUUID %s - Retrying (%s)" \
                                     % (request_uuid, reason))
-                    self.spawn_originate(request_uuid)
+                    # notify try call
+                    self.log.debug("Notify Call retry for RequestUUID %s" % request_uuid)
+                    call_req.notify_call_try()
                     return
                 # else clean call request
                 hangup_url = call_req.hangup_url
+                # notify call end
+                self.log.debug("Notify Call success for RequestUUID %s" % request_uuid)
+                call_req.notify_call_end()
 
             # send hangup
             try:
@@ -521,48 +540,66 @@ class RESTInboundSocket(InboundEventSocket):
             call_req = self.call_requests[request_uuid]
         except KeyError:
             self.log.warn("Call Request not found for RequestUUID %s" % request_uuid)
-            return
-        try:
-            gw = call_req.gateways.pop(0)
-        except IndexError:
-            self.log.warn("No more Gateways to call for RequestUUID %s" % request_uuid)
-            try:
-                self.call_requests[request_uuid] = None
-                del self.call_requests[request_uuid]
-            except KeyError:
-                pass
-            return
-
-        _options = []
-        # Set plivo app flag
-        _options.append("plivo_app=true")
-        # Add codecs option
-        if gw.codecs:
-            _options.append("absolute_codec_string=%s" % gw.codecs)
-        # Add timeout option
-        if gw.timeout:
-            _options.append("originate_timeout=%s" % gw.timeout)
-        # Set early media
-        _options.append("ignore_early_media=true")
-        # Build originate dial string
-        options = ','.join(_options)
-        outbound_str = "&socket('%s async full')" \
-                        % self.get_server().fs_out_address
-
-        dial_str = "originate {%s,%s}%s%s %s" \
-            % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
-        self.log.debug("Call try for RequestUUID %s with Gateway %s" \
-                    % (request_uuid, gw.gw))
-        # Execute originate on background
-        self.log.debug("spawn_originate: %s" % str(dial_str))
-        bg_api_response = self.bgapi(dial_str)
-        job_uuid = bg_api_response.get_job_uuid()
-        self.bk_jobs[job_uuid] = request_uuid
-        if not job_uuid:
-            self.log.error("Call Failed for RequestUUID %s -- JobUUID not received" \
-                                                            % request_uuid)
             return False
+        spawn_raw(self._spawn_originate, call_req)
+        self.log.warn("Call Request Spawned for RequestUUID %s" % request_uuid)
         return True
+
+    def _spawn_originate(self, call_req):
+        try:
+            request_uuid = call_req.request_uuid
+            gw_count = len(call_req.gateways)
+            for x in range(gw_count):
+                try:
+                    gw = call_req.gateways.pop(0)
+                except IndexError:
+                    self.log.warn("No more Gateways to call for RequestUUID %s" % request_uuid)
+                    try:
+                        self.call_requests[request_uuid] = None
+                        del self.call_requests[request_uuid]
+                    except KeyError:
+                        pass
+                    return
+
+                _options = []
+                # Set plivo app flag
+                _options.append("plivo_app=true")
+                # Add codecs option
+                if gw.codecs:
+                    _options.append("absolute_codec_string=%s" % gw.codecs)
+                # Add timeout option
+                if gw.timeout:
+                    _options.append("originate_timeout=%s" % gw.timeout)
+                # Set early media
+                _options.append("ignore_early_media=true")
+                # Build originate dial string
+                options = ','.join(_options)
+                outbound_str = "&socket('%s async full')" \
+                                % self.get_server().fs_out_address
+
+                dial_str = "originate {%s,%s}%s%s %s" \
+                    % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
+                self.log.debug("Call try for RequestUUID %s with Gateway %s" \
+                            % (request_uuid, gw.gw))
+                # Execute originate on background
+                self.log.debug("spawn_originate: %s" % str(dial_str))
+                bg_api_response = self.bgapi(dial_str)
+                job_uuid = bg_api_response.get_job_uuid()
+                self.bk_jobs[job_uuid] = request_uuid
+                if not job_uuid:
+                    self.log.error("Call Failed for RequestUUID %s -- JobUUID not received" \
+                                                                    % request_uuid)
+                    continue
+                # wait for current call attempt to finish
+                self.log.debug("Waiting Call attempt for RequestUUID %s ..." % request_uuid)
+                success = call_req.wait_call_attempt()
+                if success is True:
+                    self.log.info("Call Attempt OK for RequestUUID %s" % request_uuid)
+                    return
+                self.log.info("Call Attempt Failed for RequestUUID %s, retrying next gateway ..." % request_uuid)
+                continue
+        except Exception, e:
+            self.log.error(str(e))
 
     def group_originate(self, request_uuid, group_list, group_options=[], reject_causes=''):
         self.log.debug("GroupCall => %s %s" % (str(request_uuid), str(group_options)))

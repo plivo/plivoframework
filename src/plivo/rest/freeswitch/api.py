@@ -16,6 +16,7 @@ import ujson as json
 import flask
 from flask import request
 from werkzeug.exceptions import Unauthorized
+import gevent.queue
 
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
                                             get_post_param, get_resource, \
@@ -67,6 +68,7 @@ class CallRequest(object):
                  'to',
                  '_from',
                  '_accountsid',
+                 '_qe',
                 )
 
     def __init__(self, request_uuid, gateways,
@@ -81,6 +83,16 @@ class CallRequest(object):
         self.to = to
         self._from = _from
         self._accountsid = accountsid
+        self._qe = gevent.queue.Queue()
+
+    def notify_call_try(self):
+        self._qe.put(False)
+
+    def notify_call_end(self):
+        self._qe.put(True)
+
+    def wait_call_attempt(self):
+        return self._qe.get(timeout=86400)
 
     def __repr__(self):
         return "<CallRequest RequestUUID=%s AccountSID=%s To=%s From=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s>" \
