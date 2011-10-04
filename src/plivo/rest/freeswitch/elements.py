@@ -1358,6 +1358,8 @@ class Record(Element):
     fileName: Default empty, if given this will be used for the recording
     bothLegs: record both legs (true/false, default false)
               no beep will be played
+    redirect: if 'false', don't redirect to 'action', only request url
+        and continue to next element. (default 'true')
     """
     def __init__(self):
         Element.__init__(self)
@@ -1372,6 +1374,7 @@ class Record(Element):
         self.both_legs = False
         self.action = ''
         self.method = ''
+        self.redirect = False
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1387,6 +1390,7 @@ class Record(Element):
             raise RESTFormatException("Format must be 'wav' or 'mp3'")
         self.filename = self.extract_attribute_value("fileName")
         self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
+        self.redirect = self.extract_attribute_value("redirect") == 'true'
 
         self.action = self.extract_attribute_value("action")
         method = self.extract_attribute_value("method")
@@ -1480,7 +1484,10 @@ class Record(Element):
                 else:
                     params['Digits'] = ""
             # fetch xml
-            self.fetch_rest_xml(self.action, params, method=self.method)
+            if self.redirect:
+                self.fetch_rest_xml(self.action, params, method=self.method)
+            else:
+                spawn_raw(outbound_socket.send_to_url, self.action, params, method=self.method)
 
 
 class SIPTransfer(Element):
