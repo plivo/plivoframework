@@ -105,6 +105,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'filePath': '/usr/local/freeswitch/recordings/',
                 'fileFormat': 'mp3',
                 'fileName': '',
+                'redirect': 'true',
                 'bothLegs': 'false'
         },
         'SIPTransfer': {
@@ -613,7 +614,7 @@ class Dial(Element):
         self.confirm_sound = ''
         self.confirm_key = ''
         self.dial_music = ''
-        self.redirect = False
+        self.redirect = True
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1374,7 +1375,7 @@ class Record(Element):
         self.both_legs = False
         self.action = ''
         self.method = ''
-        self.redirect = False
+        self.redirect = True
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
