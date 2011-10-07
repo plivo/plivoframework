@@ -288,7 +288,7 @@ class PlivoCacheApi(object):
                                   direct_passthrough=False)
         except Exception, e:
             self.log.error("/Cache/ Error: %s" % str(e))
-            [ self.log.debug('/Cache/ Error: %s' % line) for line in \
+            [ self.log.error('/Cache/ Error: %s' % line) for line in \
                             traceback.format_exc().splitlines() ]
             raise e
 
@@ -308,7 +308,7 @@ class PlivoCacheApi(object):
             return flask.jsonify(CacheType=resource_type)
         except Exception, e:
             self.log.error("/CacheType/ Error: %s" % str(e))
-            [ self.log.debug('/CacheType/ Error: %s' % line) for line in \
+            [ self.log.error('/CacheType/ Error: %s' % line) for line in \
                             traceback.format_exc().splitlines() ]
             raise e
 
@@ -319,7 +319,7 @@ class PlivoCacheApi(object):
             return flask.jsonify(Success=True, Message="ReloadConfig done")
         except Exception, e:
             self.log.error("/ReloadConfig/ Error: %s" % str(e))
-            [ self.log.debug('/ReloadConfig/ Error: %s' % line) for line in \
+            [ self.log.error('/ReloadConfig/ Error: %s' % line) for line in \
                             traceback.format_exc().splitlines() ]
             raise e
 
