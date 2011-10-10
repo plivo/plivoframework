@@ -1603,8 +1603,6 @@ class PlivoRestApi(object):
         request_uuid = str(uuid.uuid1())
         default_reject_causes = "NO_ANSWER ORIGINATOR_CANCEL ALLOTTED_TIMEOUT NO_USER_RESPONSE CALL_REJECTED"
 
-        accountsid = request.headers.get('X-ACCOUNT-SID', '')
-
         caller_id = get_post_param(request, 'From')
         to_str = get_post_param(request, 'To')
         gw_str = get_post_param(request, 'Gateways')
@@ -1643,6 +1641,7 @@ class PlivoRestApi(object):
         confirm_key = get_post_param(request, 'ConfirmKey')
         reject_causes = get_post_param(request, 'RejectCauses')
         caller_name_str = get_post_param(request, 'CallerName')
+        accountsid = get_post_param(request, 'AccountSID') or ''
         if reject_causes:
             reject_causes = " ".join([ r.strip() for r in reject_causes.split(',') ])
 
