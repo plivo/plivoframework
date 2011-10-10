@@ -282,7 +282,7 @@ class PlivoConfig(object):
 
     def get(self, section, key, **kwargs):
         try:
-            return self._cache[section][key]
+            return self._cache[section][key].strip()
         except KeyError, e:
             try:
                 d = kwargs['default']
