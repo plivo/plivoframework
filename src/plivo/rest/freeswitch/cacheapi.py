@@ -43,6 +43,7 @@ def ip_protect(decorated_func):
     return wrapper
 
 
+
 class UnsupportedResourceFormat(Exception):
     pass
 
@@ -216,6 +217,7 @@ class PlivoCacheApi(object):
         remote_ip = request.remote_addr.strip()
         if remote_ip in self.allowed_ips:
             return True
+        self.log.debug("IP Auth Failed: remote ip %s not in %s" % (remote_ip, str(self.allowed_ips)))
         raise Unauthorized("IP Auth Failed")
 
     @ip_protect
