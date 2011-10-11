@@ -34,14 +34,6 @@ MIME_TYPES = {'audio/mpeg': 'mp3',
               }
 
 
-def auth_protect(decorated_func):
-    def wrapper(obj):
-        if obj._validate_http_auth() and obj._validate_ip_auth():
-            return decorated_func(obj)
-    wrapper.__name__ = decorated_func.__name__
-    wrapper.__doc__ = decorated_func.__doc__
-    return wrapper
-
 def ip_protect(decorated_func):
     def wrapper(obj):
         if obj._validate_ip_auth():
@@ -215,52 +207,20 @@ class PlivoCacheApi(object):
     _config = None
     log = None
     allowed_ips = []
-    key = ''
-    secret = ''
 
     def _validate_ip_auth(self):
         """Verify request is from allowed ips
         """
         if not self.allowed_ips:
             return True
-        for ip in self.allowed_ips:
-            if ip.strip() == request.remote_addr.strip():
-                return True
+        remote_ip = request.remote_addr.strip()
+        if remote_ip in self.allowed_ips:
+            return True
         raise Unauthorized("IP Auth Failed")
 
-    def _validate_http_auth(self):
-        """Verify http auth request with values in "Authorization" header
-        """
-        if not self.key or not self.secret:
-            return True
-        try:
-            auth_type, encoded_auth_str = \
-                request.headers['Authorization'].split(' ', 1)
-            if auth_type == 'Basic':
-                decoded_auth_str = base64.decodestring(encoded_auth_str)
-                auth_id, auth_token = decoded_auth_str.split(':', 1)
-                if auth_id == self.key and auth_token == self.secret:
-                    return True
-        except (KeyError, ValueError, TypeError):
-            pass
-        raise Unauthorized("HTTP Auth Failed")
-
-    @auth_protect
+    @ip_protect
     def index(self):
-        message = """
-        Welcome to Plivo - http://www.plivo.org/<br>
-        <br>
-        Plivo is a Communication Framework to rapidly build Voice based apps,
-        to make and receive calls, using your existing web development skills
-        and infrastructure.<br>
-        <br>
-        <br>
-        For further information please visit our website :
-        http://www.plivo.org/ <br>
-        <br>
-        <br>
-        """
-        return message
+        return "OK"
 
     @ip_protect
     def do_cache(self):
@@ -312,7 +272,7 @@ class PlivoCacheApi(object):
                             traceback.format_exc().splitlines() ]
             raise e
 
-    @auth_protect
+    @ip_protect
     def do_reload_config(self):
         try:
             self.reload()
