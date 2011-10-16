@@ -1032,7 +1032,7 @@ class PlivoRestApi(object):
         # mute members
         for member in member_id.split(','):
             res = self._rest_inbound_socket.conference_api(room, "mute %s" % member, async=False)
-            if not res:
+            if not res or res[:2] != 'OK':
                 self._rest_inbound_socket.log.warn("Conference Mute Failed for %s" % str(member))
             elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
                 self._rest_inbound_socket.log.warn("Conference Mute %s for %s" % (str(res), str(member)))
@@ -1072,7 +1072,7 @@ class PlivoRestApi(object):
         # unmute members
         for member in member_id.split(','):
             res = self._rest_inbound_socket.conference_api(room, "unmute %s" % member, async=False)
-            if not res:
+            if not res or res[:2] != 'OK':
                 self._rest_inbound_socket.log.warn("Conference Unmute Failed for %s" % str(member))
             elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
                 self._rest_inbound_socket.log.warn("Conference Unmute %s for %s" % (str(res), str(member)))
@@ -1192,7 +1192,7 @@ class PlivoRestApi(object):
         # deaf members
         for member in member_id.split(','):
             res = self._rest_inbound_socket.conference_api(room, "deaf %s" % member, async=False)
-            if not res:
+            if not res or res[:2] != 'OK':
                 self._rest_inbound_socket.log.warn("Conference Deaf Failed for %s" % str(member))
             elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
                 self._rest_inbound_socket.log.warn("Conference Deaf %s for %s" % (str(res), str(member)))
@@ -1232,7 +1232,7 @@ class PlivoRestApi(object):
         # deaf members
         for member in member_id.split(','):
             res = self._rest_inbound_socket.conference_api(room, "undeaf %s" % member, async=False)
-            if not res:
+            if not res or res[:2] != 'OK':
                 self._rest_inbound_socket.log.warn("Conference Undeaf Failed for %s" % str(member))
             elif res.startswith('Conference %s not found' % str(room)) or res.startswith('Non-Existant'):
                 self._rest_inbound_socket.log.warn("Conference Undeaf %s for %s" % (str(res), str(member)))
