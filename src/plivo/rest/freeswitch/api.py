@@ -1411,7 +1411,7 @@ class PlivoRestApi(object):
         if member_id == 'all':
             res = self._rest_inbound_socket.conference_api(room, "say %s" % text, async=False)
         else:
-            res = self._rest_inbound_socket.conference_api(room, "saymember %s %s" % (text, member_id), async=False)
+            res = self._rest_inbound_socket.conference_api(room, "saymember %s '%s'" % (member_id, text), async=False)
         if not res:
             msg = "Conference Speak Failed"
             result = False
