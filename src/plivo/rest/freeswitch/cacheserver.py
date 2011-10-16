@@ -175,13 +175,12 @@ class PlivoCacheServer(PlivoCacheApi):
                 self.log.warn("New cache %s" % str(self.cache))
 
 
-            # get auth_id and auth_token
-            self.key = config.get('common', 'AUTH_ID', default='')
-            self.secret = config.get('common', 'AUTH_TOKEN', default='')
-            # get allowed ips
-            allowed_ips = config.get('cache_server', 'ALLOWED_IPS', default='')
-            if allowed_ips:
-                self.allowed_ips = allowed_ips.split(",")
+            # allowed ips to access cache server
+            allowed_ips = config.get('common', 'ALLOWED_IPS', default='')
+            if not allowed_ips.strip():
+                self.allowed_ips = []
+            else:
+                self.allowed_ips = [ ip.strip() for ip in allowed_ips.split(',') ]
 
             # set new config
             self._config = config

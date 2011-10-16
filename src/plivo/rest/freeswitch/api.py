@@ -522,8 +522,6 @@ class PlivoRestApi(object):
         result = False
         request_uuid = ""
 
-        accountsid = request.headers.get('X-ACCOUNT-SID', '')
-
         caller_id = get_post_param(request, 'From')
         to = get_post_param(request, 'To')
         gw = get_post_param(request, 'Gateways')
@@ -550,6 +548,7 @@ class PlivoRestApi(object):
                 time_limit = get_post_param(request, 'TimeLimit')
                 hangup_on_ring = get_post_param(request, 'HangupOnRing')
                 caller_name = get_post_param(request, 'CallerName') or ''
+                accountsid = get_post_param(request, 'AccountSID') or ''
 
                 call_req = self._prepare_call_request(
                                     caller_id, caller_name, to, extra_dial_string,
@@ -640,8 +639,6 @@ class PlivoRestApi(object):
         request_uuid_list = []
         i = 0
 
-        accountsid = request.headers.get('X-ACCOUNT-SID', '')
-
         caller_id = get_post_param(request, 'From')
         to_str = get_post_param(request, 'To')
         gw_str = get_post_param(request, 'Gateways')
@@ -674,6 +671,7 @@ class PlivoRestApi(object):
                 time_limit_str = get_post_param(request, 'TimeLimit')
                 hangup_on_ring_str = get_post_param(request, 'HangupOnRing')
                 caller_name_str = get_post_param(request, 'CallerName')
+                accountsid = get_post_param(request, 'AccountSID') or ''
 
                 to_str_list = to_str.split(delimiter)
                 gw_str_list = gw_str.split(delimiter)
@@ -1605,8 +1603,6 @@ class PlivoRestApi(object):
         request_uuid = str(uuid.uuid1())
         default_reject_causes = "NO_ANSWER ORIGINATOR_CANCEL ALLOTTED_TIMEOUT NO_USER_RESPONSE CALL_REJECTED"
 
-        accountsid = request.headers.get('X-ACCOUNT-SID', '')
-
         caller_id = get_post_param(request, 'From')
         to_str = get_post_param(request, 'To')
         gw_str = get_post_param(request, 'Gateways')
@@ -1645,6 +1641,7 @@ class PlivoRestApi(object):
         confirm_key = get_post_param(request, 'ConfirmKey')
         reject_causes = get_post_param(request, 'RejectCauses')
         caller_name_str = get_post_param(request, 'CallerName')
+        accountsid = get_post_param(request, 'AccountSID') or ''
         if reject_causes:
             reject_causes = " ".join([ r.strip() for r in reject_causes.split(',') ])
 
