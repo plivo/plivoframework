@@ -597,7 +597,7 @@ class Dial(Element):
     callbackUrl: url to request when bridge starts and bridge ends
     callbackMethod: submit to 'callbackUrl' url using GET or POST
     """
-    DEFAULT_TIMEOUT = 30
+    DEFAULT_TIMELIMIT = 14400
 
     def __init__(self):
         Element.__init__(self)
