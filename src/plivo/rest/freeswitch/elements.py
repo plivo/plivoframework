@@ -608,7 +608,7 @@ class Dial(Element):
         self.caller_id = ''
         self.caller_name = ''
         self.time_limit = self.DEFAULT_TIMELIMIT
-        self.timeout = self.DEFAULT_TIMEOUT
+        self.timeout = -1
         self.dial_str = ''
         self.confirm_sound = ''
         self.confirm_key = ''
