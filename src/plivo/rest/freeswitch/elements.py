@@ -598,7 +598,6 @@ class Dial(Element):
     callbackMethod: submit to 'callbackUrl' url using GET or POST
     """
     DEFAULT_TIMEOUT = 30
-    DEFAULT_TIMELIMIT = 14400
 
     def __init__(self):
         Element.__init__(self)
@@ -623,18 +622,17 @@ class Dial(Element):
         self.caller_name = self.extract_attribute_value('callerName')
         try:
             self.time_limit = int(self.extract_attribute_value('timeLimit',
-                                  self.DEFAULT_TIMELIMIT))
+                                                      self.DEFAULT_TIMELIMIT))
         except ValueError:
             self.time_limit = self.DEFAULT_TIMELIMIT
         if self.time_limit <= 0:
             self.time_limit = self.DEFAULT_TIMELIMIT
         try:
-            self.timeout = int(self.extract_attribute_value("timeout",
-                               self.DEFAULT_TIMEOUT))
+            self.timeout = int(self.extract_attribute_value("timeout", -1))
         except ValueError:
-            self.timeout = self.DEFAULT_TIMEOUT
+            self.timeout = -1
         if self.timeout <= 0:
-            self.timeout = self.DEFAULT_TIMEOUT
+            self.timeout = -1
         self.confirm_sound = self.extract_attribute_value("confirmSound")
         self.confirm_key = self.extract_attribute_value("confirmKey")
         self.dial_music = self.extract_attribute_value("dialMusic")
@@ -784,8 +782,10 @@ class Dial(Element):
     def execute(self, outbound_socket):
         numbers = []
         # Set timeout
-        outbound_socket.set("call_timeout=%d" % self.timeout)
-        outbound_socket.set("answer_timeout=%d" % self.timeout)
+        if self.timeout > 0:
+            outbound_socket.set("call_timeout=%d" % self.timeout)
+        else:
+            outbound_socket.unset("call_timeout")
 
         # Set callerid or unset if not provided
         if self.caller_id == 'none':
