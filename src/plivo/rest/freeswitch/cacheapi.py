@@ -51,15 +51,16 @@ class UnsupportedResourceFormat(Exception):
 class ResourceCache(object):
     """Uses redis cache as a backend for storing cached files infos and datas.
     """
-    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0, proxy_url=None):
+    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0, redis_pw=None, proxy_url=None):
         self.host = redis_host
         self.port = redis_port
         self.db = redis_db
+        self.pw = redis_pw
         self.proxy_url = proxy_url
 
     def get_cx(self):
         return redis.Redis(host=self.host, port=self.port, db=self.db,
-                                    socket_timeout=5.0)
+                            socket_timeout=5.0, password=self.pw)
 
     def get_resource_params(self, url):
         resource_key = self.get_resource_key(url)

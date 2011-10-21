@@ -15,7 +15,7 @@ PLIVO_GIT_REPO=git://github.com/plivo/plivo.git
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 PLIVO_ENV=$1
 
-CENTOS_PYTHON_VERSION=2.7.2
+LAST_PYTHON_VERSION=2.7.2
 
 # Check if Install Directory Present
 if [ ! $1 ] || [ -z "$1" ] ; then
@@ -64,7 +64,7 @@ PY_MINOR_VERSION=$(python -V 2>&1 |sed -e 's/Python[[:space:]]\+[0-9]\+\.\([0-9]
 
 if [ $PY_MAJOR_VERSION -ne 2 ] || [ $PY_MINOR_VERSION -lt 4 ]; then
     echo ""
-    echo "Python version supported between 2.4.X - 2.7.X"
+    echo "Need Python version >= 2.4.X to install Plivo"
     echo "Please install a compatible version of python."
     echo ""
     exit 1
@@ -85,17 +85,44 @@ case $DIST in
             apt-get -y update
             apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
         fi
-        easy_install virtualenv
-        easy_install pip
+        if [ $PY_MAJOR_VERSION -eq 2 ] && [ $PY_MINOR_VERSION -lt 7 ]; then
+                # Setup Env
+                mkdir -p $REAL_PATH/deploy
+                DEPLOY=$REAL_PATH/deploy
+                cd $DEPLOY
+                cd $REAL_PATH/deploy
+
+                # Install Isolated copy of python
+		if [ ! -f $REAL_PATH/bin/python ]; then
+			mkdir source
+			cd source
+			wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
+			tar -xvf Python-$LAST_PYTHON_VERSION.tgz
+			cd Python-$LAST_PYTHON_VERSION
+			./configure --prefix=$DEPLOY
+			make && make install
+		fi
+                # This is what does all the magic by setting upgraded python
+                export PATH=$DEPLOY/bin:$PATH
+
+                # Install easy_install
+                cd $DEPLOY/source
+                wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+                $DEPLOY/bin/python ez_setup.py
+
+                EASY_INSTALL=$(which easy_install)
+                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
+                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
+	else:
+		easy_install virtualenv
+		easy_install pip
+	fi
     ;;
     'CENTOS')
         yum -y update
         yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
         yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel which sox bison
-        if [ $PY_MAJOR_VERSION -eq 2 ]; then
-
-            if [ $PY_MINOR_VERSION -lt 6 ]; then
-
+        if [ $PY_MAJOR_VERSION -eq 2 ] && [ $PY_MINOR_VERSION -lt 6 ]; then
                 which git &>/dev/null
                 if [ $? -ne 0 ]; then
                     #install the RPMFORGE Repository
@@ -126,9 +153,9 @@ gpgcheck = 1
 		if [ ! -f $REAL_PATH/bin/python ]; then
 			mkdir source
 			cd source
-			wget http://www.python.org/ftp/python/$CENTOS_PYTHON_VERSION/Python-$CENTOS_PYTHON_VERSION.tgz
-			tar -xvf Python-$CENTOS_PYTHON_VERSION.tgz
-			cd Python-$CENTOS_PYTHON_VERSION
+			wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
+			tar -xvf Python-$LAST_PYTHON_VERSION.tgz
+			cd Python-$LAST_PYTHON_VERSION
 			./configure --prefix=$DEPLOY
 			make && make install
 		fi
@@ -143,11 +170,10 @@ gpgcheck = 1
                 EASY_INSTALL=$(which easy_install)
                 $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
                 $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
-            else
+        else
                 yum -y install git-core
                 easy_install virtualenv
                 easy_install pip
-            fi
         fi
     ;;
 esac

@@ -57,11 +57,13 @@ class PlivoCacheServer(PlivoCacheApi):
         self.redis_host = config.get('cache_server', 'REDIS_HOST', default='')
         self.redis_port = config.get('cache_server', 'REDIS_PORT', default='')
         self.redis_db = config.get('cache_server', 'REDIS_DB', default='')
+        self.redis_pw = config.get('cache_server', 'REDIS_PASSWORD', default=None)
         self.proxy_url = config.get('cache_server', 'PROXY_URL', default=None)
         if self.redis_host and self.redis_port and self.redis_db:
             self.cache = cacheapi.ResourceCache(self.redis_host,
                                         int(self.redis_port),
                                         int(self.redis_db),
+                                        self.redis_pw,
                                         self.proxy_url)
             return True
 
