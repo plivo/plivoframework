@@ -869,14 +869,14 @@ class Dial(Element):
                 outbound_socket.set("playback_delimiter=!")
                 play_str = '!'.join(ringbacks)
                 play_str = "file_string://silence_stream://1!%s" % play_str
-                outbound_socket.set("bridge_early_media=true")
+                outbound_socket.set("bridge_early_media=false")
                 outbound_socket.set("instant_ringback=true")
                 outbound_socket.set("ringback=%s" % play_str)
             else:
                 self.dialmusic = ''
         if not self.dial_music:
-            outbound_socket.set("bridge_early_media=true")
-            outbound_socket.set("instant_ringback=false")
+            outbound_socket.set("bridge_early_media=false")
+            outbound_socket.set("instant_ringback=true")
             outbound_socket.set("ringback=$${us-ring}}")
         elif self.dial_music == "none":
             outbound_socket.set("bridge_early_media=false")
@@ -890,6 +890,8 @@ class Dial(Element):
         hangup_cause = 'NORMAL_CLEARING'
         outbound_socket.log.info("Dial Started %s" % self.dial_str)
         try:
+            # send ring ready to originator
+            outbound_socket.ring_ready()
             # execute bridge
             outbound_socket.bridge(self.dial_str, lock=False)
 
