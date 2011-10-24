@@ -2,6 +2,7 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 
+import os
 import os.path
 from datetime import datetime
 import re
@@ -16,7 +17,7 @@ from gevent import spawn_raw
 
 from plivo.rest.freeswitch.helpers import is_valid_url, is_sip_url, \
                                         file_exists, normalize_url_space, \
-                                        get_resource
+                                        get_resource, get_grammar_resource
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
@@ -129,7 +130,8 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'timeout': 5,
                 'playBeep': 'false',
                 'engine': 'pocketsphinx',
-                'grammar': ''
+                'grammar': '',
+                'grammarPath': '/usr/local/freeswitch/grammar'
         }
     }
 
@@ -1650,6 +1652,7 @@ class GetSpeech(Element):
     playBeep: play a beep after all plays and says finish
     engine: engine to be used by detect speech
     grammar: grammar to load
+    grammarPath: grammar path directory (default /usr/local/freeswitch/grammar )
     """
     def __init__(self):
         Element.__init__(self)
@@ -1671,6 +1674,7 @@ class GetSpeech(Element):
         self.grammar = self.extract_attribute_value("grammar")
         if not self.grammar:
             raise RESTAttributeException("GetSpeech 'grammar' is mandatory")
+        self.grammarPath = self.extract_attribute_value("grammarPath").rstrip(os.sep)
 
         self.engine = self.extract_attribute_value("engine")
         if not self.engine:
@@ -1708,6 +1712,19 @@ class GetSpeech(Element):
         return speech_result
 
     def execute(self, outbound_socket):
+        raw_grammar = None
+        gpath = None
+        raw_grammar = get_grammar_resource(self.grammar)
+        if raw_grammar:
+            grammar_file = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                        outbound_socket.get_channel_unique_id())
+            gpath = self.grammarPath + os.sep + grammar_file + '.gram'
+            f = open(gpath, 'w')
+            f.write(gpath)
+            f.close()
+        else:
+            grammar_file = self.grammar
+
         speech_result = ''
         for child_instance in self.children:
             if isinstance(child_instance, Play):
@@ -1763,11 +1780,16 @@ class GetSpeech(Element):
         # unload previous grammars
         outbound_socket.execute("detect_speech", "grammarsalloff")
         # load grammar
-        speech_args = "%s %s undefined" % (self.engine, self.grammar)
+        speech_args = "%s %s undefined" % (self.engine, grammar_file)
         res = outbound_socket.execute("detect_speech", speech_args)
         if not res.is_success():
             outbound_socket.log.error("GetSpeech Failed - %s" \
                             % str(res.get_response()))
+            if gpath:
+                try:
+                    os.remove(gpath) 
+                except:
+                    pass
             return
         if play_str:
             outbound_socket.playback(play_str)
@@ -1804,6 +1826,11 @@ class GetSpeech(Element):
             return
         finally:
             timer.cancel()
+            if gpath:
+                try:
+                    os.remove(gpath) 
+                except:
+                    pass
 
         outbound_socket.execute("detect_speech", "stop")
         outbound_socket.bgapi("uuid_break %s all" \

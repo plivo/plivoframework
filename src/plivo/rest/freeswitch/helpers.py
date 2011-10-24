@@ -336,6 +336,46 @@ def get_resource(socket, url):
     return url
 
 
-
+def get_grammar_resource(socket, grammar):
+    try:
+        # don't do cache if not a remote file
+        # (local file or raw grammar)
+        if grammar[:4] == 'raw:':
+            return grammar[4:]
+        elif (not grammar[:7].lower() == "http://" \
+            and not grammar[:8].lower() == "https://"):
+            return None
+        # do cache
+        if socket.cache:
+            cache_url = socket.cache['url'].strip('/')
+            data = {}
+            data['url'] = grammar
+            url_values = urllib.urlencode(data)
+            full_url = '%s/CacheType/?%s' % (cache_url, url_values)
+            req = urllib2.Request(full_url)
+            handler = urllib2.urlopen(req)
+            response = handler.read()
+            result = json.loads(response)
+            cache_type = result['CacheType']
+            if not cache_type in ('grxml', 'jsgf'):
+                socket.log.warn("Unsupported format %s" % str(cache_type))
+                raise("Unsupported format %s" % str(cache_type))
+            full_url = '%s/Cache/?%s' % (cache_url, url_values)
+            socket.log.debug("Fetch grammar from %s" % str(full_url))
+            req = urllib2.Request(full_url)
+            handler = urllib2.urlopen(req)
+            response = handler.read()
+            return response
+        # or fetch direct url
+        else:
+            socket.log.debug("Fetch grammar from %s" % str(grammar))
+            req = urllib2.Request(grammar)
+            handler = urllib2.urlopen(req)
+            response = handler.read()
+            return response
+    except Exception, e:
+        socket.log.error("Cache Error !")
+        socket.log.error("Cache Error: %s" % str(e))
+    return None
 
 

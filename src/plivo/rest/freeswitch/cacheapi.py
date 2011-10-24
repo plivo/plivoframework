@@ -31,7 +31,10 @@ from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
 
 MIME_TYPES = {'audio/mpeg': 'mp3',
               'audio/x-wav': 'wav',
-              }
+              'application/srgs+xml': 'grxml',
+              'application/x-jsgf': 'jsgf',
+             }
+
 
 
 def ip_protect(decorated_func):
@@ -173,7 +176,7 @@ def get_resource(server, url):
                 try:
                     stream, resource_type = server.cache.cache_resource(url)
                 except UnsupportedResourceFormat:
-                    server.log.error("Cache -- Ignoring Unsupported Audio File at - %s" % url)
+                    server.log.error("Cache -- Ignoring Unsupported File at - %s" % url)
             else:
                 server.log.debug("Cache -- Checking if %s source is newer" % url)
                 updated, new_etag, new_last_modified = server.cache.is_resource_updated(url, etag, last_modified)
@@ -185,7 +188,7 @@ def get_resource(server, url):
                     try:
                         stream, resource_type = server.cache.cache_resource(url)
                     except UnsupportedResourceFormat:
-                        server.log.error("Cache -- Ignoring Unsupported Audio File at - %s" % url)
+                        server.log.error("Cache -- Ignoring Unsupported File at - %s" % url)
         except Exception, e:
             server.log.error("Cache -- Failure !")
             [ server.log.debug('Cache -- Error: %s' % line) for line in \
@@ -241,6 +244,10 @@ class PlivoCacheApi(object):
                 _type = 'audio/mp3'
             elif resource_type == 'wav':
                 _type = 'audio/wav'
+            elif resource_type == 'grxml':
+                _type = 'application/srgs+xml'
+            elif resource_type == 'jsgf':
+                _type = 'application/x-jsgf'
             else:
                 self.log.debug("Url %s: not supported format" % str(url))
                 return "NOT SUPPORTED FORMAT", 404
