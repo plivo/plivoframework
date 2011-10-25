@@ -1722,7 +1722,7 @@ class GetSpeech(Element):
             gpath = self.grammarPath + os.sep + grammar_file + '.gram'
             outbound_socket.log.debug("Writing grammar to %s" % str(gpath))
             f = open(gpath, 'w')
-            f.write(gpath)
+            f.write(raw_grammar)
             f.close()
         else:
             outbound_socket.log.debug("Using grammar %s" % str(self.grammar))
