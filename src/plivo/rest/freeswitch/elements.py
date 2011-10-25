@@ -1714,7 +1714,7 @@ class GetSpeech(Element):
     def execute(self, outbound_socket):
         raw_grammar = None
         gpath = None
-        raw_grammar = get_grammar_resource(self.grammar)
+        raw_grammar = get_grammar_resource(outbound_socket, self.grammar)
         if raw_grammar:
             grammar_file = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                                         outbound_socket.get_channel_unique_id())
