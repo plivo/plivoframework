@@ -1716,13 +1716,16 @@ class GetSpeech(Element):
         gpath = None
         raw_grammar = get_grammar_resource(outbound_socket, self.grammar)
         if raw_grammar:
+            outbound_socket.log.debug("Found grammar : %s" % str(raw_grammar))
             grammar_file = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
                                         outbound_socket.get_channel_unique_id())
             gpath = self.grammarPath + os.sep + grammar_file + '.gram'
+            outbound_socket.log.debug("Writing grammar to %s" % str(gpath))
             f = open(gpath, 'w')
             f.write(gpath)
             f.close()
         else:
+            outbound_socket.log.debug("Using grammar %s" % str(self.grammar))
             grammar_file = self.grammar
 
         speech_result = ''
