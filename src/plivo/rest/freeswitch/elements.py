@@ -1431,9 +1431,10 @@ class Record(Element):
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
 
         if self.both_legs:
-            outbound_socket.set("RECORD_STEREO=true")
-            outbound_socket.set("media_bug_answer_req=true")
-            outbound_socket.record_session(record_file)
+            outbound_socket.api("uuid_record %s start %s" \
+                                % (outbound_socket.get_channel_unique_id(),
+                                   record_file)
+                               )
             outbound_socket.api("sched_api +%s none uuid_record %s stop %s" \
                                 % (self.max_length,
                                    outbound_socket.get_channel_unique_id(),
