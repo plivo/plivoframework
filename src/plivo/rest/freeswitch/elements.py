@@ -1739,7 +1739,10 @@ class GetSpeech(Element):
             outbound_socket.log.error("GetSpeech result failure, cannot get grammar: %s" % str(self.grammar))
 
         if grammar_file:
-            grammar_full_path = self.grammarPath + os.sep + grammar_file + '.gram'
+            if self.grammarPath:
+                grammar_full_path = self.grammarPath + os.sep + grammar_file + '.gram'
+            else:
+                grammar_full_path = grammar_file
             for child_instance in self.children:
                 if isinstance(child_instance, Play):
                     sound_file = child_instance.sound_file_path
