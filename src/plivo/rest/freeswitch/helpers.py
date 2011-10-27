@@ -380,6 +380,6 @@ def get_grammar_resource(socket, grammar):
     except Exception, e:
         socket.log.error("Grammar Cache Error !")
         socket.log.error("Grammar Cache Error: %s" % str(e))
-    return None
+    return False
 
 
