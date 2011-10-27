@@ -131,7 +131,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'playBeep': 'false',
                 'engine': 'pocketsphinx',
                 'grammar': '',
-                'grammarPath': ''
+                'grammarPath': '/usr/local/freeswitch/grammar'
         }
     }
 
@@ -1654,7 +1654,7 @@ class GetSpeech(Element):
     playBeep: play a beep after all plays and says finish
     engine: engine to be used by detect speech
     grammar: grammar to load
-    grammarPath: grammar path directory (default empty)
+    grammarPath: grammar path directory (default /usr/local/freeswitch/grammar)
     """
     def __init__(self):
         Element.__init__(self)
