@@ -1431,8 +1431,9 @@ class Record(Element):
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
 
         if self.both_legs:
+            outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.api("uuid_record %s start %s" \
-                                % (outbound_socket.get_channel_unique_id(),
+                                %  (outbound_socket.get_channel_unique_id(),
                                    record_file)
                                )
             outbound_socket.api("sched_api +%s none uuid_record %s stop %s" \
@@ -1729,14 +1730,13 @@ class GetSpeech(Element):
                 f.write(raw_grammar)
                 f.close()
             except Exception, e:
-                outbound_socket.log.error("GetSpeech result failure, canot write grammar: %s" % str(grammar_file))
+                outbound_socket.log.error("GetSpeech result failure, cannot write grammar: %s" % str(grammar_file))
                 grammar_file = ''
-
         elif raw_grammar is None:
             outbound_socket.log.debug("Using grammar %s" % str(self.grammar))
             grammar_file = self.grammar
         else:
-            outbound_socket.log.error("GetSpeech result failure, canot get grammar: %s" % str(self.grammar))
+            outbound_socket.log.error("GetSpeech result failure, cannot get grammar: %s" % str(self.grammar))
 
         if grammar_file:
             for child_instance in self.children:

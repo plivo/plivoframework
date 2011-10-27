@@ -341,10 +341,13 @@ def get_grammar_resource(socket, grammar):
         # don't do cache if not a remote file
         # (local file or raw grammar)
         if grammar[:4] == 'raw:':
+            socket.log.debug("Using raw grammar")
             return grammar[4:]
-        elif not grammar[:7].lower() == "http://" \
-            or not grammar[:8].lower() == "https://":
+        if grammar[:7].lower() != "http://" \
+            and grammar[:8].lower() != "https://":
+            socket.log.debug("Using local grammar file")
             return None
+        socket.log.debug("Using remote grammar url")
         # do cache
         if socket.cache:
             try:
@@ -375,7 +378,9 @@ def get_grammar_resource(socket, grammar):
         req = urllib2.Request(grammar)
         handler = urllib2.urlopen(req)
         response = handler.read()
-        socket.log.debug("Grammar fetched from %s" % str(grammar))
+        socket.log.debug("Grammar fetched from %s: %s" % (str(grammar), str(response)))
+        if not response:
+            raise Exception("No Grammar response")
         return response
     except Exception, e:
         socket.log.error("Grammar Cache Error !")
