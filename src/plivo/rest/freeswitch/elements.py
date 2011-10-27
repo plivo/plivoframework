@@ -131,7 +131,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'playBeep': 'false',
                 'engine': 'pocketsphinx',
                 'grammar': '',
-                'grammarPath': '/usr/local/freeswitch/grammar'
+                'grammarPath': ''
         }
     }
 
@@ -1654,7 +1654,7 @@ class GetSpeech(Element):
     playBeep: play a beep after all plays and says finish
     engine: engine to be used by detect speech
     grammar: grammar to load
-    grammarPath: grammar path directory (default /usr/local/freeswitch/grammar )
+    grammarPath: grammar path directory (default empty)
     """
     def __init__(self):
         Element.__init__(self)
@@ -1740,7 +1740,7 @@ class GetSpeech(Element):
 
         if grammar_file:
             if self.grammarPath:
-                grammar_full_path = self.grammarPath + os.sep + grammar_file + '.gram'
+                grammar_full_path = self.grammarPath + os.sep + grammar_file
             else:
                 grammar_full_path = grammar_file
             for child_instance in self.children:
