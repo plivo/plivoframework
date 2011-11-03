@@ -1865,7 +1865,7 @@ class GetSpeech(Element):
                         raise RESTFormatException('No result Tag Present')
                     outbound_socket.log.debug("GetSpeech %s %s %s" % (str(doc), str(sinterp), str(sinput)))
                     params['Grammar'] = sinterp.get('grammar', '')
-                    params['Confidence'] = sinput.get('confidence', '-1')
+                    params['Confidence'] = sinput.get('confidence', '0')
                     params['Mode'] = sinput.get('mode', '')
                     params['SpeechResult'] = sinput.text
                 except Exception, e:
