@@ -879,7 +879,7 @@ class Dial(Element):
         if not self.dial_music:
             outbound_socket.set("bridge_early_media=false")
             outbound_socket.set("instant_ringback=true")
-            outbound_socket.set("ringback=$${us-ring}}")
+            outbound_socket.set("ringback=${us-ring}")
         elif self.dial_music == "none":
             outbound_socket.set("bridge_early_media=false")
             outbound_socket.unset("instant_ringback")
