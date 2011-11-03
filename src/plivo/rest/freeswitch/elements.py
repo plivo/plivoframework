@@ -1854,7 +1854,7 @@ class GetSpeech(Element):
                                 % outbound_socket.get_channel_unique_id())
 
         if self.action:
-            params = {'Grammar':'', 'Confidence':'-1', 'Mode':'', 'SpeechResult':''}
+            params = {'Grammar':'', 'Confidence':'0', 'Mode':'', 'SpeechResult':''}
             if speech_result:
                 try:
                     result = ' '.join(speech_result.splitlines())
@@ -1869,6 +1869,7 @@ class GetSpeech(Element):
                     params['Mode'] = sinput.get('mode', '')
                     params['SpeechResult'] = sinput.text
                 except Exception, e:
+                    params['Confidence'] = "-1"
                     outbound_socket.log.error("GetSpeech result failure, cannot parse result: %s" % str(e))
             # Redirect
             self.fetch_rest_xml(self.action, params, self.method)
