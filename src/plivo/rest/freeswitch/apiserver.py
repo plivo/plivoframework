@@ -208,6 +208,9 @@ class PlivoRestServer(PlivoRestApi):
             # get call_heartbeat url
             self.call_heartbeat_url = config.get('rest_server', 'CALL_HEARTBEAT_URL', default='')
 
+            # get record url
+            self.record_url = config.get('rest_server', 'RECORD_URL', default='')
+
             # load cache params
             # load cache params
             self.cache['url'] = config.get('common', 'CACHE_URL', default='')

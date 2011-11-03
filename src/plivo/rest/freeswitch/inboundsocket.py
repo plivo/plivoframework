@@ -22,7 +22,7 @@ from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring, \
                                         get_resource
 
 
-EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE"
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE RECORD_STOP"
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -68,6 +68,22 @@ class RESTInboundSocket(InboundEventSocket):
                     val = ''
                 params[var] = val
         return params
+
+    def on_record_stop(self, event):
+        if not self.get_server().record_url:
+            return
+        rpath = event['Record-File-Path'] or ''
+        if not rpath or rpath == 'all':
+            return
+        calluuid = event['Unique-ID'] or ''
+        rms = event['variable_record_seconds'] or ''
+        params = {'CallUUID': calluuid,
+                  'RecordFile': rpath,
+                  'RecordDuration': rms}
+        self.log.info("Record Stop event %s"  % str(params))
+        self.send_to_url(self.get_server().record_url, 
+                         params)
+            
 
     def on_background_job(self, event):
         """

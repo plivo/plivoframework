@@ -1431,8 +1431,9 @@ class Record(Element):
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
 
         if self.both_legs:
+            outbound_socket.set("RECORD_STEREO=true")
             outbound_socket.api("uuid_record %s start %s" \
-                                % (outbound_socket.get_channel_unique_id(),
+                                %  (outbound_socket.get_channel_unique_id(),
                                    record_file)
                                )
             outbound_socket.api("sched_api +%s none uuid_record %s stop %s" \
@@ -1653,7 +1654,7 @@ class GetSpeech(Element):
     playBeep: play a beep after all plays and says finish
     engine: engine to be used by detect speech
     grammar: grammar to load
-    grammarPath: grammar path directory (default /usr/local/freeswitch/grammar )
+    grammarPath: grammar path directory (default /usr/local/freeswitch/grammar)
     """
     def __init__(self):
         Element.__init__(self)
@@ -1713,6 +1714,8 @@ class GetSpeech(Element):
         return speech_result
 
     def execute(self, outbound_socket):
+        speech_result = ''
+        grammar_file = ''
         raw_grammar = None
         gpath = None
         raw_grammar = get_grammar_resource(outbound_socket, self.grammar)
@@ -1722,123 +1725,133 @@ class GetSpeech(Element):
                                         outbound_socket.get_channel_unique_id())
             gpath = self.grammarPath + os.sep + grammar_file + '.gram'
             outbound_socket.log.debug("Writing grammar to %s" % str(gpath))
-            f = open(gpath, 'w')
-            f.write(raw_grammar)
-            f.close()
-        else:
+            try:
+                f = open(gpath, 'w')
+                f.write(raw_grammar)
+                f.close()
+            except Exception, e:
+                outbound_socket.log.error("GetSpeech result failure, cannot write grammar: %s" % str(grammar_file))
+                grammar_file = ''
+        elif raw_grammar is None:
             outbound_socket.log.debug("Using grammar %s" % str(self.grammar))
             grammar_file = self.grammar
-
-        speech_result = ''
-        for child_instance in self.children:
-            if isinstance(child_instance, Play):
-                sound_file = child_instance.sound_file_path
-                if sound_file:
-                    loop = child_instance.loop_times
-                    if loop == 0:
-                        loop = MAX_LOOPS  # Add a high number to Play infinitely
-                    # Play the file loop number of times
-                    for i in range(loop):
-                        self.sound_files.append(sound_file)
-                    # Infinite Loop, so ignore other children
-                    if loop == MAX_LOOPS:
-                        break
-            elif isinstance(child_instance, Wait):
-                pause_secs = child_instance.length
-                pause_str = 'file_string://silence_stream://%s'\
-                                % (pause_secs * 1000)
-                self.sound_files.append(pause_str)
-            elif isinstance(child_instance, Speak):
-                text = child_instance.text
-                # escape simple quote
-                text = text.replace("'", "\\'")
-                loop = child_instance.loop_times
-                child_type = child_instance.item_type
-                method = child_instance.method
-                say_str = ''
-                if child_type and method:
-                    language = child_instance.language
-                    say_args = "%s.wav %s %s %s '%s'" \
-                                    % (language, language, child_type, method, text)
-                    say_str = "${say_string %s}" % say_args
-                else:
-                    engine = child_instance.engine
-                    voice = child_instance.voice
-                    say_str = "say:%s:%s:'%s'" % (engine, voice, text)
-                if not say_str:
-                    continue
-                for i in range(loop):
-                    self.sound_files.append(say_str)
-
-        outbound_socket.log.info("GetSpeech Started %s" % self.sound_files)
-        if self.play_beep:
-            outbound_socket.log.debug("GetSpeech play Beep enabled")
-            self.sound_files.append('tone_stream://%(300,200,700)')
-
-        if self.sound_files:
-            play_str = "!".join(self.sound_files)
-            outbound_socket.set("playback_delimiter=!")
         else:
-            play_str = ''
+            outbound_socket.log.error("GetSpeech result failure, cannot get grammar: %s" % str(self.grammar))
 
-        # unload previous grammars
-        outbound_socket.execute("detect_speech", "grammarsalloff")
-        # load grammar
-        speech_args = "%s %s undefined" % (self.engine, grammar_file)
-        res = outbound_socket.execute("detect_speech", speech_args)
-        if not res.is_success():
-            outbound_socket.log.error("GetSpeech Failed - %s" \
-                            % str(res.get_response()))
-            if gpath:
-                try:
-                    os.remove(gpath) 
-                except:
-                    pass
-            return
-        if play_str:
-            outbound_socket.playback(play_str)
-            event = outbound_socket.wait_for_action()
-            # Log playback execute response
-            outbound_socket.log.debug("GetSpeech prompt played (%s)" \
-                            % str(event.get_header('Application-Response')))
-            outbound_socket.execute("detect_speech", "resume")
+        if grammar_file:
+            if self.grammarPath:
+                grammar_full_path = self.grammarPath + os.sep + grammar_file
+            else:
+                grammar_full_path = grammar_file
+            for child_instance in self.children:
+                if isinstance(child_instance, Play):
+                    sound_file = child_instance.sound_file_path
+                    if sound_file:
+                        loop = child_instance.loop_times
+                        if loop == 0:
+                            loop = MAX_LOOPS  # Add a high number to Play infinitely
+                        # Play the file loop number of times
+                        for i in range(loop):
+                            self.sound_files.append(sound_file)
+                        # Infinite Loop, so ignore other children
+                        if loop == MAX_LOOPS:
+                            break
+                elif isinstance(child_instance, Wait):
+                    pause_secs = child_instance.length
+                    pause_str = 'file_string://silence_stream://%s'\
+                                    % (pause_secs * 1000)
+                    self.sound_files.append(pause_str)
+                elif isinstance(child_instance, Speak):
+                    text = child_instance.text
+                    # escape simple quote
+                    text = text.replace("'", "\\'")
+                    loop = child_instance.loop_times
+                    child_type = child_instance.item_type
+                    method = child_instance.method
+                    say_str = ''
+                    if child_type and method:
+                        language = child_instance.language
+                        say_args = "%s.wav %s %s %s '%s'" \
+                                        % (language, language, child_type, method, text)
+                        say_str = "${say_string %s}" % say_args
+                    else:
+                        engine = child_instance.engine
+                        voice = child_instance.voice
+                        say_str = "say:%s:%s:'%s'" % (engine, voice, text)
+                    if not say_str:
+                        continue
+                    for i in range(loop):
+                        self.sound_files.append(say_str)
 
-        timer = gevent.timeout.Timeout(self.timeout)
-        timer.start()
-        try:
-            for x in range(1000):
+            outbound_socket.log.info("GetSpeech Started %s" % self.sound_files)
+            if self.play_beep:
+                outbound_socket.log.debug("GetSpeech play Beep enabled")
+                self.sound_files.append('tone_stream://%(300,200,700)')
+
+            if self.sound_files:
+                play_str = "!".join(self.sound_files)
+                outbound_socket.set("playback_delimiter=!")
+            else:
+                play_str = ''
+
+            # unload previous grammars
+            outbound_socket.execute("detect_speech", "grammarsalloff")
+            # load grammar
+            speech_args = "%s %s undefined" % (self.engine, grammar_full_path)
+            res = outbound_socket.execute("detect_speech", speech_args)
+            if not res.is_success():
+                outbound_socket.log.error("GetSpeech Failed - %s" \
+                                % str(res.get_response()))
+                if gpath:
+                    try:
+                        os.remove(gpath) 
+                    except:
+                        pass
+                return
+            if play_str:
+                outbound_socket.playback(play_str)
                 event = outbound_socket.wait_for_action()
-                if event.is_empty():
-                    outbound_socket.log.warn("GetSpeech Break (empty event)")
-                    outbound_socket.execute("detect_speech", "stop")
+                # Log playback execute response
+                outbound_socket.log.debug("GetSpeech prompt played (%s)" \
+                                % str(event.get_header('Application-Response')))
+                outbound_socket.execute("detect_speech", "resume")
+
+            timer = gevent.timeout.Timeout(self.timeout)
+            timer.start()
+            try:
+                for x in range(1000):
+                    event = outbound_socket.wait_for_action()
+                    if event.is_empty():
+                        outbound_socket.log.warn("GetSpeech Break (empty event)")
+                        outbound_socket.execute("detect_speech", "stop")
+                        outbound_socket.bgapi("uuid_break %s all" \
+                            % outbound_socket.get_channel_unique_id())
+                        return
+                    elif event['Event-Name'] == 'DETECTED_SPEECH'\
+                        and event['Speech-Type'] == 'detected-speech':
+                            speech_result = event.get_body()
+                            if speech_result is None:
+                                speech_result = ''
+                            outbound_socket.log.info("GetSpeech, result '%s'" % str(speech_result))
+                            break
+            except gevent.timeout.Timeout:
+                outbound_socket.log.warn("GetSpeech Break (timeout)")
+                outbound_socket.execute("detect_speech", "stop")
+                if play_str:
                     outbound_socket.bgapi("uuid_break %s all" \
                         % outbound_socket.get_channel_unique_id())
-                    return
-                elif event['Event-Name'] == 'DETECTED_SPEECH'\
-                    and event['Speech-Type'] == 'detected-speech':
-                        speech_result = event.get_body()
-                        if speech_result is None:
-                            speech_result = ''
-                        outbound_socket.log.info("GetSpeech, result '%s'" % str(speech_result))
-                        break
-        except gevent.timeout.Timeout:
-            outbound_socket.log.warn("GetSpeech Break (timeout)")
-            outbound_socket.execute("detect_speech", "stop")
-            if play_str:
-                outbound_socket.bgapi("uuid_break %s all" \
-                    % outbound_socket.get_channel_unique_id())
-            return
-        finally:
-            timer.cancel()
-            if gpath:
-                try:
-                    os.remove(gpath) 
-                except:
-                    pass
+                return
+            finally:
+                timer.cancel()
+                if gpath:
+                    try:
+                        os.remove(gpath) 
+                    except:
+                        pass
 
-        outbound_socket.execute("detect_speech", "stop")
-        outbound_socket.bgapi("uuid_break %s all" \
-                            % outbound_socket.get_channel_unique_id())
+            outbound_socket.execute("detect_speech", "stop")
+            outbound_socket.bgapi("uuid_break %s all" \
+                                % outbound_socket.get_channel_unique_id())
 
         if self.action:
             params = {'Grammar':'', 'Confidence':'-1', 'Mode':'', 'SpeechResult':''}
@@ -1852,7 +1865,7 @@ class GetSpeech(Element):
                         raise RESTFormatException('No result Tag Present')
                     outbound_socket.log.debug("GetSpeech %s %s %s" % (str(doc), str(sinterp), str(sinput)))
                     params['Grammar'] = sinterp.get('grammar', '')
-                    params['Confidence'] = sinterp.get('confidence', '-1')
+                    params['Confidence'] = sinput.get('confidence', '-1')
                     params['Mode'] = sinput.get('mode', '')
                     params['SpeechResult'] = sinput.text
                 except Exception, e:
