@@ -113,7 +113,7 @@ case $DIST in
             EASY_INSTALL=$(which easy_install)
             $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
             $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
-	    else:
+	    else
 		    easy_install virtualenv
 		    easy_install pip
 	    fi
