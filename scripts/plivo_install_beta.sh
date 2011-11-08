@@ -5,11 +5,14 @@
 # Copyright (c) 2011 Plivo Team. See LICENSE for details.
 
 
+PLIVO_GIT_REPO=git://github.com/plivo/plivo.git
+PLIVO_SETUP_SCRIPT=https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+
+
 BRANCH=$2
 if [ ! $BRANCH ]; then
     BRANCH=master
 fi
-PLIVO_GIT_REPO=git://github.com/plivo/plivo.git
 
 #####################################################
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
@@ -107,7 +110,7 @@ case $DIST in
 
             # Install easy_install
             cd $DEPLOY/source
-            wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+            wget --no-check-certificate $PLIVO_SETUP_SCRIPT
             $DEPLOY/bin/python ez_setup.py
 
             EASY_INSTALL=$(which easy_install)
