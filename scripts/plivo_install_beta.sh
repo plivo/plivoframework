@@ -86,51 +86,51 @@ case $DIST in
             apt-get -y install git-core python-setuptools python-dev build-essential libevent-dev
         fi
         if [ $PY_MAJOR_VERSION -eq 2 ] && [ $PY_MINOR_VERSION -lt 7 ]; then
-                # Setup Env
-                mkdir -p $REAL_PATH/deploy
-                DEPLOY=$REAL_PATH/deploy
-                cd $DEPLOY
-                cd $REAL_PATH/deploy
+            # Setup Env
+            mkdir -p $REAL_PATH/deploy
+            DEPLOY=$REAL_PATH/deploy
+            cd $DEPLOY
+            cd $REAL_PATH/deploy
 
-                # Install Isolated copy of python
-		if [ ! -f $REAL_PATH/bin/python ]; then
-			mkdir source
-			cd source
-			wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
-			tar -xvf Python-$LAST_PYTHON_VERSION.tgz
-			cd Python-$LAST_PYTHON_VERSION
-			./configure --prefix=$DEPLOY
-			make && make install
-		fi
-                # This is what does all the magic by setting upgraded python
-                export PATH=$DEPLOY/bin:$PATH
+            # Install Isolated copy of python
+		    if [ ! -f $REAL_PATH/bin/python ]; then
+			    mkdir source
+			    cd source
+			    wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
+			    tar -xvf Python-$LAST_PYTHON_VERSION.tgz
+			    cd Python-$LAST_PYTHON_VERSION
+			    ./configure --prefix=$DEPLOY
+			    make && make install
+		    fi
+            # This is what does all the magic by setting upgraded python
+            export PATH=$DEPLOY/bin:$PATH
 
-                # Install easy_install
-                cd $DEPLOY/source
-                wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
-                $DEPLOY/bin/python ez_setup.py
+            # Install easy_install
+            cd $DEPLOY/source
+            wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+            $DEPLOY/bin/python ez_setup.py
 
-                EASY_INSTALL=$(which easy_install)
-                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
-                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
-	else:
-		easy_install virtualenv
-		easy_install pip
-	fi
+            EASY_INSTALL=$(which easy_install)
+            $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
+            $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
+	    else:
+		    easy_install virtualenv
+		    easy_install pip
+	    fi
     ;;
     'CENTOS')
         yum -y update
         yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
         yum -y install python-setuptools python-tools gcc python-devel libevent libevent-devel zlib-devel readline-devel which sox bison
         if [ $PY_MAJOR_VERSION -eq 2 ] && [ $PY_MINOR_VERSION -lt 6 ]; then
-                which git &>/dev/null
-                if [ $? -ne 0 ]; then
-                    #install the RPMFORGE Repository
-                    if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
-                    then
-                        # Install RPMFORGE Repo
-                        rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
-                        echo '
+            which git &>/dev/null
+            if [ $? -ne 0 ]; then
+                #install the RPMFORGE Repository
+                if [ ! -f /etc/yum.repos.d/rpmforge.repo ];
+                then
+                    # Install RPMFORGE Repo
+                    rpm --import http://apt.sw.be/RPM-GPG-KEY.dag.txt
+                    echo '
 [rpmforge]
 name = Red Hat Enterprise $releasever - RPMforge.net - dag
 mirrorlist = http://apt.sw.be/redhat/el5/en/mirrors-rpmforge
@@ -139,41 +139,41 @@ protect = 0
 gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmforge-dag
 gpgcheck = 1
 ' > /etc/yum.repos.d/rpmforge.repo
-                    fi
-                    yum -y --enablerepo=rpmforge install git-core
                 fi
+                yum -y --enablerepo=rpmforge install git-core
+            fi
 
-                # Setup Env
-                mkdir -p $REAL_PATH/deploy
-                DEPLOY=$REAL_PATH/deploy
-                cd $DEPLOY
-                cd $REAL_PATH/deploy
+            # Setup Env
+            mkdir -p $REAL_PATH/deploy
+            DEPLOY=$REAL_PATH/deploy
+            cd $DEPLOY
+            cd $REAL_PATH/deploy
 
-                # Install Isolated copy of python
-		if [ ! -f $REAL_PATH/bin/python ]; then
-			mkdir source
-			cd source
-			wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
-			tar -xvf Python-$LAST_PYTHON_VERSION.tgz
-			cd Python-$LAST_PYTHON_VERSION
-			./configure --prefix=$DEPLOY
-			make && make install
-		fi
-                # This is what does all the magic by setting upgraded python
-                export PATH=$DEPLOY/bin:$PATH
+            # Install Isolated copy of python
+		    if [ ! -f $REAL_PATH/bin/python ]; then
+			    mkdir source
+			    cd source
+			    wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
+			    tar -xvf Python-$LAST_PYTHON_VERSION.tgz
+			    cd Python-$LAST_PYTHON_VERSION
+			    ./configure --prefix=$DEPLOY
+			    make && make install
+		    fi
+            # This is what does all the magic by setting upgraded python
+            export PATH=$DEPLOY/bin:$PATH
 
-                # Install easy_install
-                cd $DEPLOY/source
-                wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
-                $DEPLOY/bin/python ez_setup.py
+            # Install easy_install
+            cd $DEPLOY/source
+            wget --no-check-certificate https://github.com/plivo/plivo/raw/master/scripts/ez_setup.py
+            $DEPLOY/bin/python ez_setup.py
 
-                EASY_INSTALL=$(which easy_install)
-                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
-                $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
+            EASY_INSTALL=$(which easy_install)
+            $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY virtualenv
+            $DEPLOY/bin/python $EASY_INSTALL --prefix $DEPLOY pip
         else
-                yum -y install git-core
-                easy_install virtualenv
-                easy_install pip
+            yum -y install git-core
+            easy_install virtualenv
+            easy_install pip
         fi
     ;;
 esac
@@ -199,33 +199,33 @@ if [ ! -f $REAL_PATH/bin/plivo ]; then
     exit 1
 fi
 
-
 clear
 
 # Install configs
 CONFIG_OVERWRITE=no
 case $ACTION in
-"UPDATE")
-    while [ 1 ]; do
-        clear
-	echo "Do you want to overwrite the following config files"
-	echo " - $REAL_PATH/etc/plivo/default.conf"
-	echo " - $REAL_PATH/etc/plivo/cache/cache.conf"
-	echo "yes/no ?"
-	read INPUT
-	if [ "$INPUT" = "yes" ]; then
-	    CONFIG_OVERWRITE=yes
-            break
-        elif [ "$INPUT" = "no" ]; then
-	    CONFIG_OVERWRITE=no
-            break
-        fi
-    done
-;;
-"INSTALL")
+    "UPDATE")
+        while [ 1 ]; do
+            clear
+	    echo "Do you want to overwrite the following config files"
+	    echo " - $REAL_PATH/etc/plivo/default.conf"
+	    echo " - $REAL_PATH/etc/plivo/cache/cache.conf"
+	    echo "yes/no ?"
+	    read INPUT
+	    if [ "$INPUT" = "yes" ]; then
+	        CONFIG_OVERWRITE=yes
+                break
+            elif [ "$INPUT" = "no" ]; then
+	        CONFIG_OVERWRITE=no
+                break
+            fi
+        done
+    ;;
+    "INSTALL")
         CONFIG_OVERWRITE=yes
-;;
+    ;;
 esac
+
 if [ "$CONFIG_OVERWRITE" = "yes" ]; then
     mkdir -p $REAL_PATH/etc/plivo &>/dev/null
     mkdir -p $REAL_PATH/etc/plivo/cache &>/dev/null
@@ -244,24 +244,23 @@ $REAL_PATH/bin/plivo-postinstall &>/dev/null
 
 # Install init scripts
 case $DIST in
-"DEBIAN")
-   cp -f $REAL_PATH/bin/plivo /etc/init.d/plivo
-   cp -f $REAL_PATH/bin/cacheserver /etc/init.d/plivocache
-   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivo
-   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivocache
-   cd /etc/rc2.d
-   ln -s /etc/init.d/plivocache S99plivocache
-   ln -s /etc/init.d/plivo S99plivo
-;;
-
-"CENTOS")
-   cp -f $REAL_PATH/src/plivo/src/initscripts/centos/plivo /etc/init.d/plivo
-   cp -f $REAL_PATH/src/plivo/src/initscripts/centos/plivocache /etc/init.d/plivocache
-   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivo
-   sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivocache
-   chkconfig --add plivo
-   chkconfig --add plivocache
-;;
+    "DEBIAN")
+        cp -f $REAL_PATH/bin/plivo /etc/init.d/plivo
+        cp -f $REAL_PATH/bin/cacheserver /etc/init.d/plivocache
+        sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivo
+        sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivocache
+        cd /etc/rc2.d
+        ln -s /etc/init.d/plivocache S99plivocache
+        ln -s /etc/init.d/plivo S99plivo
+    ;;
+    "CENTOS")
+        cp -f $REAL_PATH/src/plivo/src/initscripts/centos/plivo /etc/init.d/plivo
+        cp -f $REAL_PATH/src/plivo/src/initscripts/centos/plivocache /etc/init.d/plivocache
+        sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivo
+        sed -i "s#/usr/local/plivo#$REAL_PATH#g" /etc/init.d/plivocache
+        chkconfig --add plivo
+        chkconfig --add plivocache
+    ;;
 esac
 
 
