@@ -298,6 +298,10 @@ class RESTInboundSocket(InboundEventSocket):
                       'DialBLegStatus': 'answer',
                       'CallUUID': aleg_uuid
                      }
+            # add extra params
+            extra_params = self.get_extra_fs_vars(event)
+            if extra_params:
+                params.update(extra_params)
             spawn_raw(self.send_to_url, ck_url, params, ck_method)
             return
 
@@ -305,6 +309,7 @@ class RESTInboundSocket(InboundEventSocket):
         """Capture Channel Hangup Complete
         """
         # if plivo_app != 'true', check b leg Dial callback
+
         plivo_app_flag = event['variable_plivo_app'] == 'true'
         if not plivo_app_flag:
             # request Dial callbackUrl if needed
@@ -322,12 +327,17 @@ class RESTInboundSocket(InboundEventSocket):
             if hangup_cause == 'LOSE_RACE':
                 return
             bleg_uuid = event['Unique-ID']
+            
             params = {'DialBLegUUID': bleg_uuid,
                       'DialALegUUID': aleg_uuid,
                       'DialBLegStatus': 'hangup',
                       'DialBLegHangupCause': hangup_cause,
                       'CallUUID': aleg_uuid
                      }
+            # add extra params
+            extra_params = self.get_extra_fs_vars(event)
+            if extra_params:
+                params.update(extra_params)
             spawn_raw(self.send_to_url, ck_url, params, ck_method)
             return
 
