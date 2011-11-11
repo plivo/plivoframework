@@ -1870,6 +1870,7 @@ class GetSpeech(Element):
                     params['SpeechResult'] = sinput.text
                 except Exception, e:
                     params['Confidence'] = "-1"
+                    params['SpeechResultError'] = str(speech_result)
                     outbound_socket.log.error("GetSpeech result failure, cannot parse result: %s" % str(e))
             # Redirect
             self.fetch_rest_xml(self.action, params, self.method)
