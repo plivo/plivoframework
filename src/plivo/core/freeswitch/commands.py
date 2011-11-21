@@ -468,7 +468,7 @@ class Commands(object):
                 d = '\*'
             reg.append(d)
         regexp = '|'.join(reg)
-        regexp = '(%s)+' % regexp
+        regexp = '^(%s)+' % regexp
 
         args = "%d %d %d %d '%s' %s %s %s %s %d" % (min_digits, max_digits, max_tries, \
                                                     timeout, terminators, play_str,
