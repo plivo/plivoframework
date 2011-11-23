@@ -767,7 +767,7 @@ class RESTInboundSocket(InboundEventSocket):
             self.log.error("Conference Api Failed -- 'command' is empty")
             return False
         if room:
-            cmd = "conference %s %s" % (room, command)
+            cmd = "conference '%s' %s" % (room, command)
         else:
             cmd = "conference %s" % command
         # async mode
