@@ -604,7 +604,7 @@ class RESTInboundSocket(InboundEventSocket):
                                 % self.get_server().fs_out_address
 
                 dial_str = "originate {%s,%s}%s%s %s" \
-                    % (gw.extra_dial_string, options, gw.gw, gw.to, outbound_str)
+                    % (call_req.extra_dial_string, options, gw.gw, gw.to, outbound_str)
                 self.log.debug("Call try for RequestUUID %s with Gateway %s" \
                             % (request_uuid, gw.gw))
                 # Execute originate on background
@@ -638,7 +638,8 @@ class RESTInboundSocket(InboundEventSocket):
 
         dial_calls = []
 
-        for call in group_list:
+        for call_req in group_list:
+            extras = []
             dial_gws = []
             for gw in call.gateways:
                 _options = []
@@ -650,16 +651,21 @@ class RESTInboundSocket(InboundEventSocket):
                     _options.append("originate_timeout=%s" % gw.timeout)
                 # Set early media
                 _options.append("ignore_early_media=true")
-                if gw.extra_dial_string:
-                    _options.append(gw.extra_dial_string)
                 # Build gateway dial string
                 options = ','.join(_options)
                 gw_str = '[%s]%s%s' % (options, gw.gw, gw.to)
                 dial_gws.append(gw_str)
             # Build call dial string
             dial_call_str = ",".join(dial_gws)
+
+            if call_req.extra_dial_string:
+                extras.append(call_req.extra_dial_string)
             if reject_causes:
-                dial_call_str = "{fail_on_single_reject='%s'}%s" % (reject_causes, dial_call_str)
+                extras.append("fail_on_single_reject='%s'" % reject_causes)
+            # set extra options
+            extra_opts = ','.join(extras)
+            # set dial string and append to global dial string
+            dial_call_str = "{%s}%s" % (extra_opts, dial_call_str)
             dial_calls.append(dial_call_str)
 
         # Build global dial string

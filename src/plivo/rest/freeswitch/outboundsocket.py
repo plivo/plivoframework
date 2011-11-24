@@ -322,16 +322,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.set('hangup_after_bridge=false')
         channel = self.get_channel()
         self.call_uuid = self.get_channel_unique_id()
-        called_no = channel.get_header("variable_plivo_destination_number")
-        if not called_no or called_no == '_undef_':
-            called_no = channel.get_header('Caller-Destination-Number')
-        called_no = called_no or ''
-        from_no = channel.get_header('Caller-Caller-ID-Number') or ''
-        from_caller_name = channel.get_header('Caller-Caller-ID-Name') or ''
-        # Set To to Session Params
-        self.session_params['To'] = called_no.lstrip('+')
-        # Set From to Session Params
-        self.session_params['From'] = from_no.lstrip('+')
         # Set CallerName to Session Params
         self.session_params['CallerName'] = from_caller_name
         # Set CallUUID to Session Params
@@ -343,7 +333,22 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         forwarded_from = get_substring(':', '@',
                             channel.get_header('variable_sip_h_Diversion'))
 
+        # Case Outbound
         if self.session_params['Direction'] == 'outbound':
+            # Set To / From
+            called_no = channel.get_header("variable_plivo_to")
+            if not called_no or called_no == '_undef_':
+                called_no = channel.get_header('Caller-Destination-Number')
+            called_no = called_no or ''
+            from_no = channel.get_header("variable_plivo_from")
+            if not from_no or from_no == '_undef_':
+                from_no = channel.get_header('Caller-Caller-ID-Number') or ''
+            from_caller_name = channel.get_header('Caller-Caller-ID-Name') or ''
+            # Set To to Session Params
+            self.session_params['To'] = called_no.lstrip('+')
+            # Set From to Session Params
+            self.session_params['From'] = from_no.lstrip('+')
+
             # Look for variables in channel headers
             aleg_uuid = channel.get_header('Caller-Unique-ID')
             aleg_request_uuid = channel.get_header('variable_plivo_request_uuid')
@@ -375,8 +380,20 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             accountsid = channel.get_header("variable_plivo_accountsid")
             if accountsid:
                 self.session_params['AccountSID'] = accountsid
-
+        # Case Inbound
         else:
+            # Set To / From
+            called_no = channel.get_header("variable_plivo_destination_number")
+            if not called_no or called_no == '_undef_':
+                called_no = channel.get_header('Caller-Destination-Number')
+            called_no = called_no or ''
+            from_no = channel.get_header('Caller-Caller-ID-Number') or ''
+            from_caller_name = channel.get_header('Caller-Caller-ID-Name') or ''
+            # Set To to Session Params
+            self.session_params['To'] = called_no.lstrip('+')
+            # Set From to Session Params
+            self.session_params['From'] = from_no.lstrip('+')
+            
             # Look for target url in order below :
             #  get plivo_transfer_url from channel var
             #  get plivo_answer_url from channel var

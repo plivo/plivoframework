@@ -40,21 +40,19 @@ class Gateway(object):
     __slots__ = ('__weakref__',
                  'request_uuid',
                  'to', 'gw', 'codecs',
-                 'timeout', 'extra_dial_string'
+                 'timeout'
                 )
 
-    def __init__(self, request_uuid, to, gw, codecs,
-                 timeout, extra_dial_string):
+    def __init__(self, request_uuid, to, gw, codecs, timeout):
         self.request_uuid = request_uuid
         self.to = to
         self.gw = gw
         self.codecs = codecs
         self.timeout = timeout
-        self.extra_dial_string = extra_dial_string
 
     def __repr__(self):
-        return "<Gateway RequestUUID=%s To=%s Gw=%s Codecs=%s Timeout=%s ExtraDialString=%s>" \
-            % (self.request_uuid, self.to, self.gw, self.codecs, self.timeout, self.extra_dial_string)
+        return "<Gateway RequestUUID=%s To=%s Gw=%s Codecs=%s Timeout=%s>" \
+            % (self.request_uuid, self.to, self.gw, self.codecs, self.timeout)
 
 
 class CallRequest(object):
@@ -65,6 +63,7 @@ class CallRequest(object):
                  'ring_url',
                  'hangup_url',
                  'state_flag',
+                 'extra_dial_string',
                  'to',
                  '_from',
                  '_accountsid',
@@ -73,7 +72,8 @@ class CallRequest(object):
 
     def __init__(self, request_uuid, gateways,
                  answer_url, ring_url, hangup_url, 
-                 to='', _from='', accountsid=''):
+                 to='', _from='', accountsid='',
+                 extra_dial_string=''):
         self.request_uuid = request_uuid
         self.gateways = gateways
         self.answer_url = answer_url
@@ -83,6 +83,7 @@ class CallRequest(object):
         self.to = to
         self._from = _from
         self._accountsid = accountsid
+        self.extra_dial_string = extra_dial_string
         self._qe = gevent.queue.Queue()
 
     def notify_call_try(self):
@@ -95,9 +96,10 @@ class CallRequest(object):
         return self._qe.get(timeout=86400)
 
     def __repr__(self):
-        return "<CallRequest RequestUUID=%s AccountSID=%s To=%s From=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s>" \
+        return "<CallRequest RequestUUID=%s AccountSID=%s To=%s From=%s Gateways=%s AnswerUrl=%s RingUrl=%s HangupUrl=%s StateFlag=%s ExtraDialString=%s>" \
             % (self.request_uuid, self._accountsid, self.gateways, self.to, self._from,
-               self.answer_url, self.ring_url, self.hangup_url, str(self.state_flag))
+               self.answer_url, self.ring_url, self.hangup_url, str(self.state_flag),
+               str(self.extra_dial_string))
 
 
 
@@ -256,16 +258,18 @@ class PlivoRestApi(object):
             hangup_on_ring = int(hangup_on_ring)
         except ValueError:
             hangup_on_ring = -1
-        if hangup_on_ring == 0:
-            args_list.append("execute_on_ring='hangup ORIGINATOR_CANCEL'")
-        elif hangup_on_ring > 0:
-            args_list.append("execute_on_ring='sched_hangup +%d ORIGINATOR_CANCEL'" \
-                                                                % hangup_on_ring)
+        exec_on_media = 1
+        if hangup_on_ring >= 0:
+            args_list.append("execute_on_media_%d='sched_hangup +%d ORIGINATOR_CANCEL'" \
+                                                        % (hangup_on_ring, exec_on_media))
+            exec_on_media += 1
 
         # set send_digits
         if send_digits:
             if send_preanswer:
-                args_list.append("execute_on_media='send_dtmf %s'" % send_digits)
+                args_list.append("execute_on_media_%d='send_dtmf %s'" \
+                                                    % (send_digits, exec_on_media))
+                exec_on_media += 1
             else:
                 args_list.append("execute_on_answer='send_dtmf %s'" % send_digits)
 
@@ -280,6 +284,15 @@ class PlivoRestApi(object):
             args_list.append("api_on_answer_1='sched_api +%d %s hupall ALLOTTED_TIMEOUT plivo_request_uuid %s'" \
                                                 % (time_limit, sched_hangup_id, request_uuid))
             args_list.append("plivo_sched_hangup_id=%s" % sched_hangup_id)
+
+        # set plivo_from / plivo_to
+        if caller_id:
+            var_from = "plivo_from=%s" % caller_id
+        else:
+            var_from = "plivo_from=' '" % caller_id
+        var_to = "plivo_to=%s" % to
+        args_list.append(var_from)
+        args_list.append(var_to)
 
         # build originate string
         args_str = ','.join(args_list)
@@ -298,12 +311,12 @@ class PlivoRestApi(object):
             except (ValueError, IndexError):
                 timeout = 60 # TODO allow no timeout ?
             for i in range(retry):
-                gateway = Gateway(request_uuid, to, gw, codecs, timeout, args_str)
+                gateway = Gateway(request_uuid, to, gw, codecs, timeout)
                 gateways.append(gateway)
 
         call_req = CallRequest(request_uuid, gateways, answer_url, ring_url, hangup_url, 
-                               to=to, _from=caller_id,
-                               accountsid=accountsid)
+                               to=to, _from=caller_id, accountsid=accountsid,
+                               extra_dial_string=args_str)
         return call_req
 
     @staticmethod
