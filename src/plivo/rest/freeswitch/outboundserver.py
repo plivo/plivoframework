@@ -82,6 +82,7 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
             self.secret = config.get('common', 'AUTH_TOKEN', default='')
 
             self.extra_fs_vars = config.get('common', 'EXTRA_FS_VARS', default='')
+            self.proxy_url = config.get('common', 'PROXY_URL', default=None)
 
             # load cache params
             self.cache['url'] = config.get('common', 'CACHE_URL', default='')
@@ -132,7 +133,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                            auth_id=self.key,
                            auth_token=self.secret,
                            request_id=request_id,
-                           trace=self._trace
+                           trace=self._trace,
+                           proxy_url=self.proxy_url
                            )
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 

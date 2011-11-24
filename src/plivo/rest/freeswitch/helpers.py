@@ -109,7 +109,7 @@ class HTTPRequest:
     """
     USER_AGENT = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.35 Safari/535.1'
 
-    def __init__(self, auth_id='', auth_token=''):
+    def __init__(self, auth_id='', auth_token='', proxy_url=None):
         """initialize a object
 
         auth_id: Plivo SID/ID
@@ -120,6 +120,7 @@ class HTTPRequest:
         self.auth_id = auth_id
         self.auth_token = auth_token.encode('ascii')
         self.opener = None
+        self.proxy_url = proxy_url
 
     def _build_get_uri(self, uri, params):
         if params:
@@ -133,6 +134,13 @@ class HTTPRequest:
         if self.opener is None:
             self.opener = urllib2.build_opener(HTTPErrorProcessor)
             urllib2.install_opener(self.opener)
+
+        proxy_url = self.proxy_url
+        if proxy_url:
+            proxy = proxy_url.split('http://')[1]
+            proxyhandler = urllib2.ProxyHandler({'http': proxy})
+            opener = urllib2.build_opener(proxyhandler)
+            urllib2.install_opener(opener)
 
         if method and method == 'GET':
             uri = self._build_get_uri(uri, params)
