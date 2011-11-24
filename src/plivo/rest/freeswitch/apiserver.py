@@ -155,6 +155,7 @@ class PlivoRestServer(PlivoRestApi):
             self._trace = config.get('rest_server', 'TRACE', default='false') == 'true'
             self.key = config.get('common', 'AUTH_ID', default='')
             self.secret = config.get('common', 'AUTH_TOKEN', default='')
+            self.proxy_url = config.get('common', 'PROXY_URL', default=None)
             allowed_ips = config.get('rest_server', 'ALLOWED_IPS', default='')
             if allowed_ips:
                 self.allowed_ips = allowed_ips.split(",")
