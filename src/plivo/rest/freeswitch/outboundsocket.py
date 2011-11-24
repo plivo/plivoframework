@@ -92,7 +92,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  auth_id='',
                  auth_token='',
                  request_id=0,
-                 trace=False):
+                 trace=False,
+                 proxy_url=None):
         # the request id
         self._request_id = request_id
         # set logger
@@ -117,6 +118,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.default_answer_url = default_answer_url
         # set default hangup_url
         self.default_hangup_url = default_hangup_url
+        # set proxy url
+        self.proxy_url =  proxy_url
         # set default http method POST or GET
         self.default_http_method = default_http_method
         # identify the extra FS variables to be passed along
@@ -517,7 +520,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             return None
         params.update(self.session_params)
         try:
-            http_obj = HTTPRequest(self.key, self.secret)
+            http_obj = HTTPRequest(self.key, self.secret, proxy_url=self.proxy_url)
             data = http_obj.fetch_response(url, params, method, log=self.log)
             return data
         except Exception, e:
