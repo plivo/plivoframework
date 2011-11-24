@@ -136,7 +136,7 @@ class HTTPRequest:
             urllib2.install_opener(self.opener)
 
         proxy_url = self.proxy_url
-        if proxy_url is None:
+        if proxy_url:
             proxy = proxy_url.split('http://')[1]
             proxyhandler = urllib2.ProxyHandler({'http': proxy})
             opener = urllib2.build_opener(proxyhandler)
