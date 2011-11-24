@@ -133,7 +133,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                            auth_id=self.key,
                            auth_token=self.secret,
                            request_id=request_id,
-                           trace=self._trace
+                           trace=self._trace,
+                           proxy_url=self.proxy_url
                            )
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
 
