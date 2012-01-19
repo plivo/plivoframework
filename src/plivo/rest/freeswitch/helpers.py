@@ -169,8 +169,6 @@ class HTTPRequest:
                                                                 digest()).strip()
             _request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
 
-        # be sure 100 continue is disabled
-        _request.add_header("Expect", "")
         return _request
 
     def fetch_response(self, uri, params={}, method='POST', log=None):
