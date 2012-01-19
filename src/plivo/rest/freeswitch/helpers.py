@@ -168,7 +168,6 @@ class HTTPRequest:
             signature =  base64.encodestring(hmac.new(self.auth_token, s, sha1).\
                                                                 digest()).strip()
             _request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
-
         return _request
 
     def fetch_response(self, uri, params={}, method='POST', log=None):
