@@ -20,6 +20,7 @@ import gevent.queue
 
 from plivo.rest.freeswitch.helpers import is_valid_url, get_conf_value, \
                                             get_post_param, get_resource, \
+                                            normalize_url_space, \
                                             HTTPRequest
 import plivo.rest.freeswitch.elements as elements
 
@@ -1379,7 +1380,12 @@ class PlivoRestApi(object):
             arg = "async"
         else:
             arg = member_id
-        res = self._rest_inbound_socket.conference_api(room, "play %s %s" % (filepath, arg), async=False)
+        if is_valid_url(filepath):
+            url = normalize_url_space(filepath)
+            filepath = get_resource(self, url)
+            res = self._rest_inbound_socket.conference_api(room, "play '%s' %s" % (filepath, arg), async=False)
+        else:
+            res = self._rest_inbound_socket.conference_api(room, "play %s %s" % (filepath, arg), async=False)
         if not res:
             msg = "Conference Play Failed"
             result = False
