@@ -2073,7 +2073,7 @@ class PlivoRestApi(object):
         if pitch_p:
             try:
                 pitch_p = float(pitch_p)
-                if pitch_o <= 0:
+                if pitch_p <= 0:
                     msg = "Pitch Parameter must be > 0"
                     return self.send_response(Success=result, Message=msg)
             except (ValueError, TypeError):
