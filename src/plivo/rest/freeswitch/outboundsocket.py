@@ -484,7 +484,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 # double check channel exists/hung up
                 if self.has_hangup():
                     raise RESTHangup()
-                if self.api('uuid_exists %s' % self.get_channel_unique_id()) != 'true':
+                res = self.api('uuid_exists %s' % self.get_channel_unique_id()):
+                if res.get_response() != 'true':
                     self.log.warn("Call doesn't exist !")
                     raise RESTHangup()
                 # Set target URL to Redirect URL
