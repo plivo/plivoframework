@@ -22,7 +22,7 @@ from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring, \
                                         get_resource
 
 
-EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE RECORD_STOP"
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE RECORD_STOP CUSTOM conference::maintenance"
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -81,9 +81,26 @@ class RESTInboundSocket(InboundEventSocket):
                   'RecordFile': rpath,
                   'RecordDuration': rms}
         self.log.info("Record Stop event %s"  % str(params))
-        self.send_to_url(self.get_server().record_url, 
-                         params)
-            
+        self.send_to_url(self.get_server().record_url, params)
+
+    def on_custom(self, event):
+        if event['Event-Subclass'] == 'conference::maintenance' \
+            and event['Action'] == 'stop-recording':
+            if not self.get_server().record_url:
+                return
+            # special case to manage record files
+            rpath = event['Path']
+            # if filename is empty or 'all', skip upload
+            if not rpath or rpath == 'all':
+                return
+            # get room name
+            room = event["Conference-Name"]
+            rms = event['variable_record_seconds'] or ''
+            params = {'ConferenceName': room,
+                      'RecordFile': rpath,
+                      'RecordDuration': rms}
+            self.log.info("Conference Record Stop event %s"  % str(params))
+            self.send_to_url(self.get_server().record_url, params)
 
     def on_background_job(self, event):
         """
