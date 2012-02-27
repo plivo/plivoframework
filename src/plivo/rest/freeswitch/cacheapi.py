@@ -54,12 +54,14 @@ class UnsupportedResourceFormat(Exception):
 class ResourceCache(object):
     """Uses redis cache as a backend for storing cached files infos and datas.
     """
-    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0, redis_pw=None, proxy_url=None):
+    def __init__(self, redis_host='localhost', redis_port=6379, redis_db=0, redis_pw=None, 
+                 proxy_url=None, http_timeout=60):
         self.host = redis_host
         self.port = redis_port
         self.db = redis_db
         self.pw = redis_pw
         self.proxy_url = proxy_url
+        self.http_timeout = http_timeout
 
     def get_cx(self):
         return redis.Redis(host=self.host, port=self.port, db=self.db,
@@ -104,7 +106,7 @@ class ResourceCache(object):
         request = urllib2.Request(url)
         user_agent = 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.35 Safari/535.1'
         request.add_header('User-Agent', user_agent)
-        handler = urllib2.urlopen(request)
+        handler = urllib2.urlopen(request, timeout=self.http_timeout)
         try:
             resource_type = MIME_TYPES[handler.headers.get('Content-Type')]
             if not resource_type:
