@@ -470,7 +470,7 @@ class Commands(object):
         regexp = '|'.join(reg)
         regexp = '^(%s)+' % regexp
 
-        args = "%d %d %d %d '%s' %s %s %s %s %d" % (min_digits, max_digits, max_tries, \
+        args = "%d %d %d %d '%s' '%s' %s %s %s %d" % (min_digits, max_digits, max_tries, \
                                                     timeout, terminators, play_str,
                                                     invalid_file, var_name, regexp,
                                                     digit_timeout)
