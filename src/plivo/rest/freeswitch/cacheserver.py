@@ -59,7 +59,7 @@ class PlivoCacheServer(PlivoCacheApi):
         self.redis_db = config.get('cache_server', 'REDIS_DB', default='')
         self.redis_pw = config.get('cache_server', 'REDIS_PASSWORD', default=None)
         self.proxy_url = config.get('cache_server', 'PROXY_URL', default=None)
-        self.http_timeout = int(config.get('cache_server', 'HTTP_TIMEOUT', default=60)
+        self.http_timeout = int(config.get('cache_server', 'HTTP_TIMEOUT', default=60))
         if self.redis_host and self.redis_port and self.redis_db:
             self.cache = cacheapi.ResourceCache(self.redis_host,
                                         int(self.redis_port),
