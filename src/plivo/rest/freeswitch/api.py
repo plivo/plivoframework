@@ -1428,7 +1428,7 @@ class PlivoRestApi(object):
             msg = "MemberID Parameter must be present"
             return self.send_response(Success=result, Message=msg)
         if member_id == 'all':
-            res = self._rest_inbound_socket.conference_api(room, "say %s" % text, async=False)
+            res = self._rest_inbound_socket.conference_api(room, "say '%s'" % text, async=False)
         else:
             res = self._rest_inbound_socket.conference_api(room, "saymember %s '%s'" % (member_id, text), async=False)
         if not res:
