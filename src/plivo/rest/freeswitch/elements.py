@@ -118,6 +118,10 @@ ELEMENTS_DEFAULT_PARAMS = {
                 #url: SET IN ELEMENT BODY
                 'method': 'POST'
         },
+        'Callback': {
+                #url: SET IN ELEMENT BODY
+                'method': 'POST'
+        },
         'Speak': {
                 'voice': 'slt',
                 'language': 'en',
