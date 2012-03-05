@@ -17,7 +17,9 @@ from gevent import spawn_raw
 
 from plivo.rest.freeswitch.helpers import is_valid_url, is_sip_url, \
                                         file_exists, normalize_url_space, \
-                                        get_resource, get_grammar_resource
+                                        get_resource, get_grammar_resource, \
+                                        HTTPRequest
+
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
@@ -1555,6 +1557,53 @@ class Redirect(Element):
             return
         raise RESTFormatException("Redirect must have an URL")
 
+class Callback(Element):
+    """Callback to Url to notify this element has been executed.
+    Url is set in element body
+    method: GET or POST
+    """
+    def __init__(self):
+        Element.__init__(self)
+        self.method = ""
+        self.url = ""
+
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
+        method = self.extract_attribute_value("method")
+        if not method in ('GET', 'POST'):
+            raise RESTAttributeException("Method must be 'GET' or 'POST'")
+        url = element.text.strip()
+        if not url:
+            raise RESTFormatException("Callback must have an URL")
+        if is_valid_url(url):
+            self.method = method
+            self.url = url
+            return
+        raise RESTFormatException("Callback URL '%s' not valid!" % str(url))
+
+    def execute(self, outbound_socket):
+        if self.url:
+            self.fetch_rest_xml(self.url, method=self.method)
+            return
+        raise RESTFormatException("Callback must have an URL")
+
+        if self.method is None:
+            self.method = outbound_socket.default_http_method
+
+        if not self.url:
+            self.log.warn("Cannot send %s, no url !" % self.method)
+            return None
+
+        params = outbound_socket.session_params
+
+        try:
+            http_obj = HTTPRequest(outbound_socket.key, outbound_socket.secret, proxy_url=outbound_socket.proxy_url)
+            data = http_obj.fetch_response(self.url, params, self.method, log=outbound_socket.log)
+            return data
+        except Exception, e:
+            self.log.error("Sending to %s %s with %s -- Error: %s" \
+                                        % (self.method, self.url, params, e))
+        return None
 
 class Speak(Element):
     """Speak text
