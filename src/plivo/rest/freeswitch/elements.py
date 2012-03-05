@@ -1586,9 +1586,6 @@ class Callback(Element):
         raise RESTFormatException("Callback URL '%s' not valid!" % str(url))
 
     def execute(self, outbound_socket):
-        if self.url:
-            self.fetch_rest_xml(self.url, method=self.method)
-            return
         raise RESTFormatException("Callback must have an URL")
 
         if self.method is None:
