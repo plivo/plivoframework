@@ -118,7 +118,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 #url: SET IN ELEMENT BODY
                 'method': 'POST'
         },
-        'Callback': {
+        'Notify': {
                 #url: SET IN ELEMENT BODY
                 'method': 'POST'
         },
@@ -1561,7 +1561,7 @@ class Redirect(Element):
             return
         raise RESTFormatException("Redirect must have an URL")
 
-class Callback(Element):
+class Notify(Element):
     """Callback to Url to notify this element has been executed.
     Url is set in element body
     method: GET or POST
@@ -1578,16 +1578,16 @@ class Callback(Element):
             raise RESTAttributeException("Method must be 'GET' or 'POST'")
         url = element.text.strip()
         if not url:
-            raise RESTFormatException("Callback must have an URL")
+            raise RESTFormatException("Notify must have an URL")
         if is_valid_url(url):
             self.method = method
             self.url = url
             return
-        raise RESTFormatException("Callback URL '%s' not valid!" % str(url))
+        raise RESTFormatException("Notify URL '%s' not valid!" % str(url))
 
     def execute(self, outbound_socket):
         if not self.url:
-            raise RESTFormatException("Callback must have an URL")
+            raise RESTFormatException("Notify must have an URL")
 
         if self.method is None:
             self.method = outbound_socket.default_http_method
