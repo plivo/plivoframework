@@ -470,7 +470,7 @@ class Commands(object):
         regexp = '|'.join(reg)
         regexp = '^(%s)+' % regexp
 
-        play_str = play_str.replace("'", "\'")
+        play_str = play_str.replace("'", "\\'")
 
         args = "%d %d %d %d '%s' '%s' %s %s %s %d" % (min_digits, max_digits, max_tries, \
                                                     timeout, terminators, play_str,
