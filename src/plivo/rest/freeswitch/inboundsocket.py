@@ -22,7 +22,7 @@ from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring, \
                                         get_resource
 
 
-EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE RECORD_STOP CUSTOM conference::maintenance"
+EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CHANNEL_BRIDGE CALL_UPDATE RECORD_STOP CUSTOM conference::maintenance"
 
 
 class RESTInboundSocket(InboundEventSocket):
@@ -291,6 +291,8 @@ class RESTInboundSocket(InboundEventSocket):
                 spawn_raw(self.send_to_url, ring_url, params)
 
     def on_call_update(self, event):
+        """A Leg from API outbound call answered
+        """
         # if plivo_app != 'true', check b leg Dial callback
         plivo_app_flag = event['variable_plivo_app'] == 'true'
         if not plivo_app_flag:
@@ -321,6 +323,35 @@ class RESTInboundSocket(InboundEventSocket):
                 params.update(extra_params)
             spawn_raw(self.send_to_url, ck_url, params, ck_method)
             return
+
+    def on_channel_bridge(self, event):
+        """B Leg from Dial element answered
+        """
+        # if plivo_app != 'true', check b leg Dial callback
+        # request Dial callbackUrl if needed
+        aleg_uuid = event['Bridge-A-Unique-ID']
+        if not aleg_uuid:
+            return
+        bleg_uuid = event['Bridge-B-Unique-ID']
+        if not bleg_uuid:
+            return
+        disposition = event['variable_endpoint_disposition']
+        if disposition != 'ANSWER':
+            return
+        app_vars = event['variable_current_application_data']
+        if not 'plivo_dial_callback_url' in app_vars:
+            return
+        ck_url = app_vars.split('plivo_dial_callback_url=')[1].split(',')[0]
+        if not 'plivo_dial_callback_method' in app_vars:
+            return
+        ck_method = app_vars.split('plivo_dial_callback_method=')[1].split(',')[0]
+        params = {'DialBLegUUID': bleg_uuid,
+                  'DialALegUUID': aleg_uuid,
+                  'DialBLegStatus': 'answer',
+                  'CallUUID': aleg_uuid
+                 }
+        spawn_raw(self.send_to_url, ck_url, params, ck_method)
+        return
 
     def on_channel_hangup_complete(self, event):
         """Capture Channel Hangup Complete
