@@ -16,7 +16,7 @@ import urllib2
 import urlparse
 import uuid
 import traceback
-
+import re
 import ujson as json
 from werkzeug.datastructures import MultiDict
 
@@ -32,6 +32,13 @@ MIME_TYPES = {'audio/mpeg': 'mp3',
               'audio/x-wav': 'wav',
               }
 
+
+VALID_SOUND_PROTOCOLS = (
+    "tone_stream://",
+    "shout://",
+)
+
+_valid_sound_proto_re = re.compile(r"^({0})".format("|".join(VALID_SOUND_PROTOCOLS)))
 
 def get_substring(start_char, end_char, data):
     if data is None or not data:
@@ -86,6 +93,12 @@ def is_sip_url(value):
     if not value:
         return False
     return value[:4] == 'sip:'
+
+
+def is_valid_sound_proto(value):
+    if not value:
+        return False
+    return True if _valid_sound_proto_re.match(value) else False
 
 
 class HTTPErrorProcessor(urllib2.HTTPErrorProcessor):

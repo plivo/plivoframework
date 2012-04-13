@@ -19,7 +19,8 @@ from plivo.core.freeswitch.inboundsocket import InboundEventSocket
 from plivo.rest.freeswitch.helpers import HTTPRequest, get_substring, \
                                         is_valid_url, \
                                         file_exists, normalize_url_space, \
-                                        get_resource
+                                        get_resource, \
+                                        is_valid_sound_proto
 
 
 EVENT_FILTER = "BACKGROUND_JOB CHANNEL_PROGRESS CHANNEL_PROGRESS_MEDIA CHANNEL_HANGUP_COMPLETE CHANNEL_STATE SESSION_HEARTBEAT CALL_UPDATE RECORD_STOP CUSTOM conference::maintenance"
@@ -892,7 +893,9 @@ class RESTInboundSocket(InboundEventSocket):
         # get sound files
         sounds_to_play = []
         for sound in sounds_list:
-            if not is_valid_url(sound):
+            if is_valid_sound_proto(sound):
+                sounds_to_play.append(sound)
+            elif not is_valid_url(sound):
                 if file_exists(sound):
                     sounds_to_play.append(sound)
                 else:
