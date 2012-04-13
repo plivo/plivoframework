@@ -1789,6 +1789,8 @@ class PlivoRestApi(object):
 
         [Mix]: 'true'|'false'. Mix with current audio stream (default 'true')
 
+        [Delimiter]: The delimiter used in the sounds list (default: ',')
+
         """
         self._rest_inbound_socket.log.debug("RESTAPI Play with %s" \
                                         % str(request.form.items()))
@@ -1801,6 +1803,8 @@ class PlivoRestApi(object):
         length = get_post_param(request, 'Length')
         loop = get_post_param(request, 'Loop') == 'true'
         mix = get_post_param(request, 'Mix')
+        delimiter = get_post_param(request, 'Delimiter')
+        
         if mix == 'false':
             mix = False
         else:
@@ -1826,7 +1830,9 @@ class PlivoRestApi(object):
                 msg = "Length Parameter must be a positive integer"
                 return self.send_response(Success=result, Message=msg)
 
-        sounds_list = sounds.split(',')
+        if not delimiter: delimiter = ','
+        
+        sounds_list = sounds.split(delimiter)
         if not sounds_list:
             msg = "Sounds Parameter is Invalid"
             return self.send_response(Success=result, Message=msg)
