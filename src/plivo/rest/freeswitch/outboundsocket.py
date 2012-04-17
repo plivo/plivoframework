@@ -437,6 +437,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
         # Run application
         self.log.info('Processing Call')
+        self.answered = True
         try:
             self.process_call()
         except RESTHangup:
