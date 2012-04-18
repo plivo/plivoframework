@@ -376,6 +376,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.hangup_url = None
             # Set CallStatus to Session Params
             self.session_params['CallStatus'] = 'in-progress'
+            # Set answered flag to true in case outbound call
+            self.answered = True
             accountsid = channel.get_header("variable_plivo_accountsid")
             if accountsid:
                 self.session_params['AccountSID'] = accountsid
@@ -437,7 +439,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
         # Run application
         self.log.info('Processing Call')
-        self.answered = True
         try:
             self.process_call()
         except RESTHangup:

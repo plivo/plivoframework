@@ -1304,6 +1304,7 @@ class Play(Element):
 
     def execute(self, outbound_socket):
         if self.sound_file_path:
+            outbound_socket.set("playback_sleep_val=0")
             if self.loop_times == 1:
                 play_str = self.sound_file_path
             else:
