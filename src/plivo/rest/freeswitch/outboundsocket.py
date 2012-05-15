@@ -81,6 +81,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                           'PreAnswer',
                           'Hangup',
                           'Dial',
+                          'Notify',
                          )
 
     def __init__(self, socket, address,
