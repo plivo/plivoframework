@@ -1,20 +1,18 @@
-Plivo
+Plivo Framework
 -----
 
 Description
 ~~~~~~~~~~~
 
-Plivo is a rapid communication application development framework you can use to create
-a wide variety of complex applications(IVRs, Billing System, Voicemail, Click to Call etc)
-in a simple and extensible manner, using the languages you know.
-
-Currently, it supports FreeSWITCH. Future support is planned for Yate etc.
+Plivo Framework is an open source telephony application prototyping framework you can use to create
+a wide variety of applications(IVRs, Billing System, Voicemail, Click to Call etc)
+in a simple and extensible manner, using any web language you know.
 
 
 Documentation
 ~~~~~~~~~~~~~~
 
-See `Plivo Documentation <http://www.plivo.org/docs/>`_ for more information.
+See `Plivo Documentation <http://docs.plivo.org>`_ for more information.
 
 
 License
@@ -22,4 +20,4 @@ License
 
 Copyright (c) 2011 Plivo Inc <hello@plivo.com>
 
-Plivo is distributed under the terms of the Mozilla Public License Version 1.1, see `LICENSE`.
+Plivo Framework is distributed under the terms of the Mozilla Public License Version 1.1, see `LICENSE`.
