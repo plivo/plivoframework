@@ -9,23 +9,23 @@ else:
     etc_prefix = sys.prefix + '/etc'
 
 
-author = "Plivo Team"
-author_email = "hello@plivo.org"
-maintainer = "Plivo Team"
-maintainer_email = "hello@plivo.org"
+author = "Plivo Inc"
+author_email = "hello@plivo.com"
+maintainer = "Plivo Inc"
+maintainer_email = "hello@plivo.com"
 license = "MPL 1.1"
 
 setup_args = {
       'name':'plivo',
       'version':'0.1.0',
-      'description':'Plivo - Rapid Communication Application Development Framework',
-      'url':'http://github.com/plivo/plivo',
+      'description':'Plivo Framework - Rapid Telephony Application Prototyping Framework',
+      'url':'http://github.com/plivo/plivoframework',
       'author':author,
       'author_email':author_email,
       'maintainer':maintainer,
       'maintainer_email':maintainer_email,
       'platforms':['linux'],
-      'long_description':'Framework to create communication applications rapidly in any language',
+      'long_description':'Framework to prototype telephony applications rapidly in any language',
       'package_dir':{'': 'src'},
       'packages':find_packages('src'),
       'include_package_data':True,
