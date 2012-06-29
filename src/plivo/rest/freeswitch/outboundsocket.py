@@ -161,8 +161,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         and return action event.
         """
         self.log.debug("wait for action start")
-        event = self._action_queue.get(timeout=3600)
-        self.log.debug("wait for action end %s" % str(event))
+        try:
+            event = self._action_queue.get(timeout=3600)
+            self.log.debug("wait for action end %s" % str(event))
+        except gevent.queue.Empty:
+            self.log.warning("wait for action end timed out!")
+
         return event
 
     # In order to "block" the execution of our service until the
