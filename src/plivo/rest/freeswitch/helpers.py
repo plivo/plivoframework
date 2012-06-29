@@ -36,6 +36,7 @@ MIME_TYPES = {'audio/mpeg': 'mp3',
 VALID_SOUND_PROTOCOLS = (
     "tone_stream://",
     "shout://",
+    "vlc://",
 )
 
 _valid_sound_proto_re = re.compile(r"^({0})".format("|".join(VALID_SOUND_PROTOCOLS)))
