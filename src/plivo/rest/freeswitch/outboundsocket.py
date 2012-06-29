@@ -160,7 +160,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         Wait until an action is over
         and return action event.
         """
-        return self._action_queue.get(timeout=3600)
+        self.log.debug("wait for action start")
+        event = self._action_queue.get(timeout=3600)
+        self.log.debug("wait for action end %s" % str(event))
+        return event
 
     # In order to "block" the execution of our service until the
     # command is finished, we use a synchronized queue from gevent
