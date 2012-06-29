@@ -136,10 +136,8 @@ class EventSocket(Commands):
             self.transport.sockfd.close()
             self.trace("handle_events socket.close success")
         except Exception, e:
-            self.trace("handle_eventssocket.close ERROR")
-            self.trace(str(e))
-            pass
-        
+            self.trace("handle_eventssocket.close ERROR: %s" % e)
+
         self.connected = False
         # prevent any pending request to be stuck
         self._flush_commands()
