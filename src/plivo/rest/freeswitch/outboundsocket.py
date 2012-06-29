@@ -114,7 +114,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # flag to track current element
         self.current_element = None
         # create queue for waiting actions
-        self._action_queue = gevent.queue.Queue()
+        self._action_queue = gevent.queue.Queue(10)
         # set default answer url
         self.default_answer_url = default_answer_url
         # set default hangup_url
@@ -160,7 +160,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         Wait until an action is over
         and return action event.
         """
-        return self._action_queue.get()
+        return self._action_queue.get(timeout=3600)
 
     # In order to "block" the execution of our service until the
     # command is finished, we use a synchronized queue from gevent

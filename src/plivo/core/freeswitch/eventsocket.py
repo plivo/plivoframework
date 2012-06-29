@@ -131,8 +131,6 @@ class EventSocket(Commands):
 
         try: 
             self.trace("handle_events socket.close")
-            self.transport.sock.shutdown(2)
-            self.transport.sock.close()
             self.transport.sockfd.close()
             self.trace("handle_events socket.close success")
         except Exception, e:
