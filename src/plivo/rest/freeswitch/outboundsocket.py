@@ -164,10 +164,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         try:
             event = self._action_queue.get(timeout=3600)
             self.log.debug("wait for action end %s" % str(event))
+            return event
         except gevent.queue.Empty:
-            self.log.warning("wait for action end timed out!")
+            self.log.warn("wait for action end timed out!")
+            return Event()
 
-        return event
 
     # In order to "block" the execution of our service until the
     # command is finished, we use a synchronized queue from gevent
