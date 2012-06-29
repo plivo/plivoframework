@@ -613,23 +613,39 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         parent_instance.children.append(child_element_instance)
 
     def execute_xml(self):
-        for element_instance in self.parsed_element:
-            if hasattr(element_instance, 'prepare'):
-                # TODO Prepare element concurrently
-                element_instance.prepare(self)
-            # Check if it's an inbound call
-            if self.session_params['Direction'] == 'inbound':
-                # Answer the call if element need it
-                if not self.answered and \
-                    not element_instance.name in self.NO_ANSWER_ELEMENTS:
-                    self.log.debug("Answering because Element %s need it" \
-                        % element_instance.name)
-                    self.answer()
-                    self.answered = True
-                    # After answer, update callstatus to 'in-progress'
-                    self.session_params['CallStatus'] = 'in-progress'
-            # execute Element
-            element_instance.run(self)
+        try:
+            while True:
+                try:
+                    element_instance = self.parsed_element.pop(0)
+                except IndexError:
+                    self.log.warn("No more Elements !")
+                    break
+                if hasattr(element_instance, 'prepare'):
+                    # TODO Prepare element concurrently
+                    element_instance.prepare(self)
+                # Check if it's an inbound call
+                if self.session_params['Direction'] == 'inbound':
+                    # Answer the call if element need it
+                    if not self.answered and \
+                        not element_instance.name in self.NO_ANSWER_ELEMENTS:
+                        self.log.debug("Answering because Element %s need it" \
+                            % element_instance.name)
+                        self.answer()
+                        self.answered = True
+                        # After answer, update callstatus to 'in-progress'
+                        self.session_params['CallStatus'] = 'in-progress'
+                # execute Element
+                element_instance.run(self)
+                try:
+                    del element_instance
+                except:
+                    pass
+        finally:
+            # clean parsed elements
+            for element in self.parsed_element:
+                element = None
+            self.parsed_element = []
+
         # If transfer is in progress, don't hangup call
         if not self.has_hangup():
             xfer_progress = self.get_var('plivo_transfer_progress') == 'true'
@@ -639,4 +655,5 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.session_params['HangupCause'] = 'NORMAL_CLEARING'
                 self.hangup()
             else:
-                self.log.info('No more Elements, Transfer In Progress !')
+                self.log.info('Transfer In Progress !')
+
