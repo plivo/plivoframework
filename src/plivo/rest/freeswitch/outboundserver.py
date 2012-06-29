@@ -125,18 +125,23 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
     def handle_request(self, socket, address):
         request_id = self._get_request_id()
         self.log.info("(%d) New request from %s" % (request_id, str(address)))
-        self._requestClass(socket, address, self.log, self.cache,
-                           default_answer_url=self.default_answer_url,
-                           default_hangup_url=self.default_hangup_url,
-                           default_http_method=self.default_http_method,
-                           extra_fs_vars=self.extra_fs_vars,
-                           auth_id=self.key,
-                           auth_token=self.secret,
-                           request_id=request_id,
-                           trace=self._trace,
-                           proxy_url=self.proxy_url
-                           )
+        req = self._requestClass(socket, address, self.log, self.cache,
+                                 default_answer_url=self.default_answer_url,
+                                 default_hangup_url=self.default_hangup_url,
+                                 default_http_method=self.default_http_method,
+                                 extra_fs_vars=self.extra_fs_vars,
+                                 auth_id=self.key,
+                                 auth_token=self.secret,
+                                 request_id=request_id,
+                                 trace=self._trace,
+                                 proxy_url=self.proxy_url
+                                )
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
+        try:
+            req = None
+            del req
+        except:
+            pass
 
     def create_logger(self, config):
         """This will create a logger using helpers.PlivoConfig instance
