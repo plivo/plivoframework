@@ -1158,7 +1158,9 @@ class Hangup(Element):
             return
         # Schedule the call for hangup at a later time if 'schedule' param > 0
         if self.schedule > 0:
-            res = outbound_socket.sched_hangup("+%d ALLOTTED_TIMEOUT" % self.schedule,
+            if not self.reason:
+                self.reason = "NORMAL_CLEARING"
+            res = outbound_socket.sched_hangup("+%d %s" % (self.schedule, self.reason),
                                                lock=True)
             if res.is_success():
                 outbound_socket.log.info("Hangup (scheduled) will be fired in %d secs !" \
