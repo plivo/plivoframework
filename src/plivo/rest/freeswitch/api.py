@@ -548,6 +548,8 @@ class PlivoRestApi(object):
         else:
             hangup_url = get_post_param(request, 'HangupUrl')
             ring_url = get_post_param(request, 'RingUrl')
+            if not hangup_url:
+                hangup_url = answer_url
             if hangup_url and not is_valid_url(hangup_url):
                 msg = "HangupUrl is not Valid"
             elif ring_url and not is_valid_url(ring_url):
@@ -668,6 +670,8 @@ class PlivoRestApi(object):
             msg = "AnswerUrl is not Valid"
         else:
             hangup_url = get_post_param(request, 'HangupUrl')
+            if not hangup_url:
+                hangup_url = answer_url
             ring_url = get_post_param(request, 'RingUrl')
             if hangup_url and not is_valid_url(hangup_url):
                 msg = "HangupUrl is not Valid"
