@@ -922,7 +922,7 @@ class Dial(Element):
 
             # waiting event
             for x in range(10000):
-                event = wait_for_action(timeout=30, raise_on_hangup=True)
+                event = outbound_socket.wait_for_action(timeout=30, raise_on_hangup=True)
                 if event.is_empty():
                     continue
 
