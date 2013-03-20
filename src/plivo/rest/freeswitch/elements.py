@@ -921,12 +921,15 @@ class Dial(Element):
                 outbound_socket.digit_action_set_realm(digit_realm)
 
             # waiting event
-            event = outbound_socket.wait_for_action()
+            for x in range(10000):
+                event = wait_for_action(timeout=30, raise_on_hangup=True)
+                if event.is_empty():
+                    continue
 
             # parse received events
             if event['Event-Name'] == 'CHANNEL_UNBRIDGE':
                 bleg_uuid = event['variable_bridge_uuid'] or ''
-                event = outbound_socket.wait_for_action()
+                event = outbound_socket.wait_for_action(timeout=30, raise_on_hangup=True)
             reason = None
             originate_disposition = event['variable_originate_disposition']
             hangup_cause = originate_disposition
