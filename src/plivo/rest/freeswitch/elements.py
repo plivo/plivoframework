@@ -1769,37 +1769,88 @@ class GetSpeech(Element):
 
     def execute(self, outbound_socket):
         speech_result = ''
-        grammar_file = ''
-        raw_grammar = None
-        gpath = None
-        raw_grammar = get_grammar_resource(outbound_socket, self.grammar)
-        if raw_grammar:
-            outbound_socket.log.debug("Found grammar : %s" % str(raw_grammar))
-            grammar_file = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
-                                        outbound_socket.get_channel_unique_id())
-            gpath = self.grammarPath + os.sep + grammar_file + '.gram'
-            outbound_socket.log.debug("Writing grammar to %s" % str(gpath))
-            try:
-                f = open(gpath, 'w')
-                f.write(raw_grammar)
-                f.close()
-            except Exception, e:
-                outbound_socket.log.error("GetSpeech result failure, cannot write grammar: %s" % str(grammar_file))
-                grammar_file = ''
-        elif raw_grammar is None:
-            outbound_socket.log.debug("Using grammar %s" % str(self.grammar))
-            grammar_file = self.grammar
-        else:
-            outbound_socket.log.error("GetSpeech result failure, cannot get grammar: %s" % str(self.grammar))
+        grammar_loaded = False
+        grammars = self.grammar.split(';')
 
-        if grammar_file:
-            if self.grammarPath:
-                grammar_full_path = self.grammarPath + os.sep + grammar_file
+        # unload previous grammars
+        outbound_socket.execute("detect_speech", "grammarsalloff")
+
+        for i, grammar in enumerate(grammars):
+            grammar_file = ''
+            gpath = None
+            raw_grammar = get_grammar_resource(outbound_socket, grammar)
+            if raw_grammar:
+                outbound_socket.log.debug("Found grammar : %s" % str(raw_grammar))
+                grammar_file = "%s_%s" % (datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                          outbound_socket.get_channel_unique_id())
+                gpath = self.grammarPath + os.sep + grammar_file + '.gram'
+                outbound_socket.log.debug("Writing grammar to %s" % str(gpath))
+                try:
+                    f = open(gpath, 'w')
+                    f.write(raw_grammar)
+                    f.close()
+                except Exception, e:
+                    outbound_socket.log.error("GetSpeech result failure, cannot write grammar: %s" % str(grammar_file))
+                    grammar_file = ''
+            elif raw_grammar is None:
+                outbound_socket.log.debug("Using grammar %s" % str(grammar))
+                grammar_file = grammar
             else:
-                grammar_full_path = grammar_file
-            # set grammar tag name
-            grammar_tag = os.path.basename(grammar_file)
+                outbound_socket.log.error("GetSpeech result failure, cannot get grammar: %s" % str(grammar))
 
+            if grammar_file:
+                if self.grammarPath and grammar_file[:4] != 'url:' and grammar_file[:8] != 'builtin:':
+                    grammar_full_path = self.grammarPath + os.sep + grammar_file
+                else:
+                    if grammar_file[:4] == 'url:':
+                        grammar_file = grammar_file[4:]
+
+                    grammar_full_path = grammar_file
+                # set grammar tag name
+                grammar_tag = os.path.basename(grammar_file)
+
+                if i != len(grammars) - 1:
+                    # define grammar
+                    speech_args = "grammar %s %s" % (grammar_full_path, grammar_tag)
+                    res = outbound_socket.execute("detect_speech", speech_args)
+                    if not res.is_success():
+                        outbound_socket.log.error("GetSpeech Failed - %s" \
+                                                      % str(res.get_response()))
+                        if gpath:
+                            try:
+                                os.remove(gpath)
+                            except:
+                                pass
+                        return
+                    # enable grammar
+                    speech_args = "grammaron %s" % (grammar_full_path)
+                    res = outbound_socket.execute("detect_speech", speech_args)
+                    if not res.is_success():
+                        outbound_socket.log.error("GetSpeech Failed - %s" \
+                                                      % str(res.get_response()))
+                        if gpath:
+                            try:
+                                os.remove(gpath)
+                            except:
+                                pass
+                        return
+                else:
+                    # start detection
+                    speech_args = "%s %s %s" % (self.engine, grammar_full_path, grammar_tag)
+                    res = outbound_socket.execute("detect_speech", speech_args)
+                    if not res.is_success():
+                        outbound_socket.log.error("GetSpeech Failed - %s" \
+                                                      % str(res.get_response()))
+                        if gpath:
+                            try:
+                                os.remove(gpath)
+                            except:
+                                pass
+                        return
+                    else:
+                        grammar_loaded = True
+
+        if grammar_loaded == True:
             for child_instance in self.children:
                 if isinstance(child_instance, Play):
                     sound_file = child_instance.sound_file_path
@@ -1851,20 +1902,6 @@ class GetSpeech(Element):
             else:
                 play_str = ''
 
-            # unload previous grammars
-            outbound_socket.execute("detect_speech", "grammarsalloff")
-            # load grammar
-            speech_args = "%s %s %s" % (self.engine, grammar_full_path, grammar_tag)
-            res = outbound_socket.execute("detect_speech", speech_args)
-            if not res.is_success():
-                outbound_socket.log.error("GetSpeech Failed - %s" \
-                                % str(res.get_response()))
-                if gpath:
-                    try:
-                        os.remove(gpath) 
-                    except:
-                        pass
-                return
             if play_str:
                 outbound_socket.playback(play_str)
                 event = outbound_socket.wait_for_action()
@@ -1911,20 +1948,24 @@ class GetSpeech(Element):
                                 % outbound_socket.get_channel_unique_id())
 
         if self.action:
-            params = {'Grammar':'', 'Confidence':'0', 'Mode':'', 'SpeechResult':''}
+            params = {'Grammar':'', 'Confidence':'0', 'Mode':'', 'SpeechResult':'', 'SpeechInterpretation': ''}
             if speech_result:
                 try:
                     result = ' '.join(speech_result.splitlines())
                     doc = etree.fromstring(result)
                     sinterp = doc.find('interpretation')
                     sinput = doc.find('interpretation/input')
+                    sinstance = doc.find('interpretation/instance/*')
+                    if sinstance == None:
+                        sinstance = doc.find('interpretation/instance')
                     if doc.tag != 'result':
                         raise RESTFormatException('No result Tag Present')
                     outbound_socket.log.debug("GetSpeech %s %s %s" % (str(doc), str(sinterp), str(sinput)))
                     params['Grammar'] = sinterp.get('grammar', '')
-                    params['Confidence'] = sinput.get('confidence', '0')
+                    params['Confidence'] = sinterp.get('confidence', '0')
                     params['Mode'] = sinput.get('mode', '')
                     params['SpeechResult'] = sinput.text
+                    params['SpeechInterpretation'] = sinstance.text
                 except Exception, e:
                     params['Confidence'] = "-1"
                     params['SpeechResultError'] = str(speech_result)
