@@ -559,10 +559,12 @@ class Conference(Element):
 
                 # wait conference ending for this member
                 outbound_socket.log.debug("Conference: Room %s, waiting end ..." % self.room)
-                while outbound_socket.ready():
-                    event = outbound_socket.wait_for_action()
+                for x in range(10000):
+                    event = outbound_socket.wait_for_action(timeout=30, raise_on_hangup=True)
                     if event['Action'] == 'floor-change':
                         self._notify_floor_holder(outbound_socket)
+                        continue
+                    if event.is_empty():
                         continue
                     break
 
