@@ -1814,33 +1814,8 @@ class GetSpeech(Element):
                 # set grammar tag name
                 grammar_tag = os.path.basename(grammar_file)
 
-                if i != len(grammars) - 1:
-                    # define grammar
-                    speech_args = "grammar %s %s" % (grammar_full_path, grammar_tag)
-                    res = outbound_socket.execute("detect_speech", speech_args)
-                    if not res.is_success():
-                        outbound_socket.log.error("GetSpeech Failed - %s" \
-                                                      % str(res.get_response()))
-                        if gpath:
-                            try:
-                                os.remove(gpath)
-                            except:
-                                pass
-                        return
-                    # enable grammar
-                    speech_args = "grammaron %s" % (grammar_full_path)
-                    res = outbound_socket.execute("detect_speech", speech_args)
-                    if not res.is_success():
-                        outbound_socket.log.error("GetSpeech Failed - %s" \
-                                                      % str(res.get_response()))
-                        if gpath:
-                            try:
-                                os.remove(gpath)
-                            except:
-                                pass
-                        return
-                else:
-                    # start detection
+                if i == 0:
+                    # init detection
                     speech_args = "%s %s %s" % (self.engine, grammar_full_path, grammar_tag)
                     res = outbound_socket.execute("detect_speech", speech_args)
                     if not res.is_success():
@@ -1854,8 +1829,34 @@ class GetSpeech(Element):
                         return
                     else:
                         grammar_loaded = True
+                else:
+                    # define grammar
+                    speech_args = "grammar %s %s" % (grammar_full_path, grammar_tag)
+                    res = outbound_socket.execute("detect_speech", speech_args)
+                    if not res.is_success():
+                        outbound_socket.log.error("GetSpeech Failed - %s" \
+                                                      % str(res.get_response()))
+                        if gpath:
+                            try:
+                                os.remove(gpath)
+                            except:
+                                pass
+                        return
+                # enable grammar
+                speech_args = "grammaron %s" % (grammar_tag)
+                res = outbound_socket.execute("detect_speech", speech_args)
+                if not res.is_success():
+                    outbound_socket.log.error("GetSpeech Failed - %s" \
+                                                  % str(res.get_response()))
+                    if gpath:
+                        try:
+                            os.remove(gpath)
+                        except:
+                            pass
+                    return
 
         if grammar_loaded == True:
+            outbound_socket.execute("detect_speech", "resume")
             for child_instance in self.children:
                 if isinstance(child_instance, Play):
                     sound_file = child_instance.sound_file_path
