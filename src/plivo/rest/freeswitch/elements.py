@@ -883,7 +883,7 @@ class Dial(Element):
                 outbound_socket.set("instant_ringback=true")
                 outbound_socket.set("ringback=%s" % play_str)
             else:
-                self.dialmusic = ''
+                self.dial_music = ''
         if not self.dial_music:
             outbound_socket.set("bridge_early_media=false")
             outbound_socket.set("instant_ringback=true")
