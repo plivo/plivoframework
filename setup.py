@@ -1,7 +1,7 @@
 from setuptools import find_packages
 import sys
 
-requires = ['gevent', 'flask==0.7.2', 'ujson==1.9', 'redis==2.4.9']
+requires = ['gevent', 'flask==0.7.2', 'ujson==1.9', 'redis']
 
 if sys.prefix == '/usr':
     etc_prefix = '/etc'
