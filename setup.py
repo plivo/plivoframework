@@ -1,7 +1,7 @@
 from setuptools import find_packages
 import sys
 
-requires = ['gevent', 'flask==0.7.2', 'ujson==1.9', 'redis']
+requires = ['gevent', 'flask', 'ujson', 'redis']
 
 if sys.prefix == '/usr':
     etc_prefix = '/etc'
@@ -17,7 +17,7 @@ license = "MPL 1.1"
 
 setup_args = {
       'name':'plivo',
-      'version':'0.1.0',
+      'version':'0.1.1',
       'description':'Plivo Framework - Rapid Telephony Application Prototyping Framework',
       'url':'http://github.com/plivo/plivoframework',
       'author':author,

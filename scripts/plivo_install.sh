@@ -121,8 +121,7 @@ case $DIST in
     ;;
     'CENTOS')
         yum -y update
-        yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel
-        yum -y install python-setuptools python-tools gcc python-devel zlib-devel readline-devel which sox bison
+        yum -y install autoconf automake bzip2 cpio curl curl-devel curl-devel expat-devel fileutils gcc-c++ gettext-devel gnutls-devel libjpeg-devel libogg-devel libtiff-devel libtool libvorbis-devel make ncurses-devel nmap openssl openssl-devel openssl-devel perl patch unixODBC unixODBC-devel unzip wget zip zlib zlib-devel python-setuptools python-tools gcc python-devel readline-devel which sox bison libevent-devel
         if [ $PY_MAJOR_VERSION -eq 2 ] && [ $PY_MINOR_VERSION -lt 6 ]; then
             which git &>/dev/null
             if [ $? -ne 0 ]; then
@@ -151,15 +150,15 @@ gpgcheck = 1
             cd $REAL_PATH/deploy
 
             # Install Isolated copy of python
-		    if [ ! -f $REAL_PATH/bin/python ]; then
-			    mkdir source
-			    cd source
-			    wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
-			    tar -xvf Python-$LAST_PYTHON_VERSION.tgz
-			    cd Python-$LAST_PYTHON_VERSION
-			    ./configure --prefix=$DEPLOY
-			    make && make install
-		    fi
+	    if [ ! -f $REAL_PATH/bin/python ]; then
+		    mkdir source
+		    cd source
+		    wget http://www.python.org/ftp/python/$LAST_PYTHON_VERSION/Python-$LAST_PYTHON_VERSION.tgz
+		    tar -xvf Python-$LAST_PYTHON_VERSION.tgz
+		    cd Python-$LAST_PYTHON_VERSION
+		    ./configure --prefix=$DEPLOY
+		    make && make install
+	    fi
             # This is what does all the magic by setting upgraded python
             export PATH=$DEPLOY/bin:$PATH
 
