@@ -201,6 +201,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # Prevent command to be stuck while waiting response
         self._action_queue.put_nowait(Event())
 
+    def on_channel_bridge(self, event):
+        # send bridge event to Dial
+        if self.current_element == 'Dial':
+            self._action_queue.put(event)
+
     def on_channel_unbridge(self, event):
         # special case to get bleg uuid for Dial
         if self.current_element == 'Dial':

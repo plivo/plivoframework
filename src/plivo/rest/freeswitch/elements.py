@@ -907,7 +907,7 @@ class Dial(Element):
             # send ring ready to originator
             outbound_socket.ring_ready()
             # execute bridge
-            outbound_socket.bridge(self.dial_str, lock=False)
+            res = outbound_socket.bridge(self.dial_str, lock=False)
 
             # set bind digit actions
             if self.digits_match and self.callback_url:
@@ -931,6 +931,11 @@ class Dial(Element):
                 event = outbound_socket.wait_for_action(timeout=30, raise_on_hangup=True)
                 if event.is_empty():
                     continue
+                elif event['Event-Name'] == 'CHANNEL_BRIDGE':
+                    outbound_socket.log.info("Dial bridged")
+                elif event['Event-Name'] == 'CHANNEL_UNBRIDGE':
+                    outbound_socket.log.info("Dial unbridged")
+                    break
 
             # parse received events
             if event['Event-Name'] == 'CHANNEL_UNBRIDGE':
