@@ -936,6 +936,9 @@ class Dial(Element):
                 elif event['Event-Name'] == 'CHANNEL_UNBRIDGE':
                     outbound_socket.log.info("Dial unbridged")
                     break
+                elif event['Event-Name'] == 'CHANNEL_EXECUTE_COMPLETE':
+                    outbound_socket.log.info("Dial completed %s" % str(event))
+                    break
 
             # parse received events
             if event['Event-Name'] == 'CHANNEL_UNBRIDGE':
