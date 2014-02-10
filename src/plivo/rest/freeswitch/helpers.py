@@ -345,12 +345,14 @@ def get_resource(socket, url):
         socket.log.error("Cache Error !")
         socket.log.error("Cache Error: %s" % str(e))
 
-    if url[:7].lower() == "http://":
-        audio_path = url[7:]
-        url = "shout://%s" % audio_path
+     if url[:7].lower() == "http://":
+        if url[-4:] != ".wav":
+            audio_path = url[7:]
+            url = "shout://%s" % audio_path
     elif url[:8].lower() == "https://":
-        audio_path = url[8:]
-        url = "shout://%s" % audio_path
+        if url[-4:] != ".wav":
+            audio_path = url[8:]
+            url = "shout://%s" % audio_path
 
     return url
 
