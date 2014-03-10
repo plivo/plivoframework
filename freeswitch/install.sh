@@ -76,7 +76,7 @@ esac
 
 # Install FreeSWITCH
 cd $FS_BASE_PATH
-git clone $FS_GIT_REPO
+git clone $FS_GIT_REPO --depth=1
 cd $FS_BASE_PATH/freeswitch
 sh bootstrap.sh && ./configure --prefix=$FS_INSTALLED_PATH
 [ -f modules.conf ] && cp modules.conf modules.conf.bak
