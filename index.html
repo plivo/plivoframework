@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Plivoframework : Open Source Telephony Application Prototyping Framework" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Plivoframework</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/plivo/plivoframework">View on GitHub</a>
+
+          <h1 id="project_title">Plivoframework</h1>
+          <h2 id="project_tagline">Open Source Telephony Application Prototyping Framework</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/plivo/plivoframework/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/plivo/plivoframework/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h2>
+<a name="plivo-restxml" class="anchor" href="#plivo-restxml"><span class="octicon octicon-link"></span></a>Plivo RESTXML</h2>
+
+<p>Your application must use Plivo RESTXML to receive and control an incoming call. 
+Some possible control actions could be: playing a music file while the caller is on hold, 
+reading out specified text to the caller asking for inputs, dialing and connecting to another number.</p>
+
+<p><img src="https://dl.dropboxusercontent.com/u/9550560/PlivoFrameworkImages/rest-xml.png" alt="Plivo RESTXML"></p>
+
+<p>Here, Plivo works like an HTTP Client which receives the call and requests your web application for instructions to control the call.</p>
+
+<h2>
+<a name="plivo-restapis" class="anchor" href="#plivo-restapis"><span class="octicon octicon-link"></span></a>Plivo RESTAPIs</h2>
+
+<p>Your application must use Plivo RESTAPIs to initiate actions; such as making outbound calls, scheduling hang-up of calls, transferring calls etc.</p>
+
+<p><img src="https://dl.dropboxusercontent.com/u/9550560/PlivoFrameworkImages/rest-apis.png" alt="Plivo RESTAPIs"></p>
+
+<p>Here, Plivo works like an HTTP Server which receives API requests from your web application, and executes the specified action(s).</p>
+
+<h2>
+<a name="plivo-helper-libraries" class="anchor" href="#plivo-helper-libraries"><span class="octicon octicon-link"></span></a>Plivo Helper Libraries</h2>
+
+<p>The Plivo Helper Libraries provide a set of helper functions in a variety of programming 
+languages to simplify the process of connecting your web application to Plivo. 
+The Helper Library is by no means mandatory to interface with Plivo.</p>
+
+<p>Currently, Helper Libraries are available for: </p>
+
+<ol>
+<li>Java</li>
+<li>PHP</li>
+<li>Python</li>
+<li>Ruby</li>
+</ol>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Plivoframework maintained by <a href="https://github.com/plivo">plivo</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
