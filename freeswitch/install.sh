@@ -6,7 +6,7 @@
 
 
 FS_CONF_PATH=https://github.com/plivo/plivoframework/raw/master/freeswitch
-FS_GIT_REPO=git://git.freeswitch.org/freeswitch.git
+FS_GIT_REPO=https://stash.freeswitch.org/scm/fs/freeswitch.git
 FS_INSTALLED_PATH=/usr/local/freeswitch
 
 #####################################################
@@ -78,7 +78,8 @@ esac
 cd $FS_BASE_PATH
 git clone $FS_GIT_REPO --depth=1
 cd $FS_BASE_PATH/freeswitch
-sh bootstrap.sh && ./configure --prefix=$FS_INSTALLED_PATH
+git checkout -b v1.2.stable origin/v1.2.stable
+sh bootstrap.sh && ./configure --prefix=$FS_INSTALLED_PATH || exit 1
 [ -f modules.conf ] && cp modules.conf modules.conf.bak
 sed -i \
 -e "s/#applications\/mod_curl/applications\/mod_curl/g" \
