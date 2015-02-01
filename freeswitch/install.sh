@@ -6,7 +6,7 @@
 
 
 FS_CONF_PATH=https://github.com/plivo/plivoframework/raw/master/freeswitch
-FS_GIT_REPO=https://stash.freeswitch.org/scm/fs/freeswitch.git
+FS_GIT_REPO=https://freeswitch.org/stash/scm/fs/freeswitch.git
 FS_INSTALLED_PATH=/usr/local/freeswitch
 
 #####################################################
